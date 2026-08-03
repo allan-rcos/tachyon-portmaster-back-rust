@@ -1,0 +1,32 @@
+[package]
+name = "portmaster-domain"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Núcleo do PortMaster: traits de objeto de domínio, models, TableModules."
+
+# O domain é o núcleo: não depende de nenhum outro crate, não toca banco, rede ou
+# I/O, e não serializa nada (por isso nutype entra SEM a feature serde).
+[dependencies]
+thiserror = { workspace = true }
+nutype = { workspace = true }
+argon2 = { workspace = true }
+base62 = { workspace = true }
+chrono = { workspace = true }
+xxhash-rust = { workspace = true }
+rs-snowflake = { workspace = true, optional = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+fake = { workspace = true }
+
+# A estratégia de geração de id é decisão de ARQUITETURA: resolvida no build por
+# feature, nunca por um if de runtime. Os parâmetros de identidade (node_id,
+# server_id) continuam sendo segredo de runtime, em DomainSecrets.
+[features]
+default = ["id-snowflake"]
+id-snowflake = ["dep:rs-snowflake"]
+
+[lints]
+workspace = true

@@ -1,0 +1,25 @@
+# O que não vai para o contexto de build.
+#
+# `target/` é o que mais importa: são dezenas de gigabytes de artefato local, e
+# sem esta linha o `docker build` os empacota e transfere antes de executar a
+# primeira instrução — o build parece travado e não está.
+target
+
+.git
+.gitmodules
+.github
+.idea
+.claude
+node_modules
+
+# Nada disto participa da compilação nem da imagem final.
+db
+docs
+scripts
+tests
+tmp
+*.md
+*.tmp
+*.yaml
+*.yml
+.env

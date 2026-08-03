@@ -1,0 +1,104 @@
+name: Release
+
+# One job, and what it does depends on the version rather than on ceremony.
+#
+# Every push to main builds the artifact — the build has to be exercised on
+# ordinary days, because release day is the worst one to discover that
+# assembling it is broken. Whether that build is also *published* is decided by
+# `version` in the workspace manifest: if no tag `v<version>` exists yet, this
+# run cuts the release and creates the tag; if one exists, the build stops after
+# proving it still works. Pushing a tag by hand keeps working and publishes that
+# tag.
+#
+# The condition is "the tag does not exist yet", not "Cargo.toml changed in this
+# push". They agree on the normal path, and the first one keeps being right when
+# a run is retried, when several commits land at once, or when history is
+# rewritten — and it is what makes a release never overwrite an existing one.
+on:
+  push:
+    tags: ["v*"]
+    branches: [main]
+
+# Two pushes landing together must not both decide the tag is missing and race
+# to create it.
+concurrency:
+  group: release-${{ github.ref }}
+
+jobs:
+  artifact:
+    name: Build the production artifact
+    runs-on: ubuntu-latest
+    permissions:
+      # softprops/action-gh-release creates a release with the automatic
+      # GITHUB_TOKEN — no secret is involved — but the default token is
+      # read-only, so without this the publish step fails with a 403.
+      contents: write
+    steps:
+      # No `submodules: recursive`, unlike the CI jobs — and this one *does*
+      # need them: `build.rs` generates the wire types from the schemas. The
+      # difference from the PHP version, whose generated code was committed.
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl
+
+      # The static link needs a musl toolchain for the dependencies that carry C
+      # — `ring`, from the TLS stack, is the one that matters.
+      - name: Install the musl toolchain
+        run: sudo apt-get update && sudo apt-get install -y musl-tools zstd
+
+      - name: Cache
+        uses: Swatinem/rust-cache@v2
+
+      # The version is declared once, in the workspace manifest, and read from
+      # there by scripts/build-dist.sh; this only asks the same field the same
+      # way, to find out whether that version has been released already.
+      # `git ls-remote` rather than a local tag list, so the answer is what is
+      # actually published and not what this checkout happens to have fetched.
+      - name: Decide the version and whether it is new
+        id: version
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            version="${GITHUB_REF_NAME#v}"
+            publish=true
+            echo "building tag $GITHUB_REF_NAME"
+          else
+            version="$(cargo metadata --format-version 1 --no-deps \
+              | grep -o '"version":"[^"]*"' | head -1 | cut -d'"' -f4)"
+            [ -n "$version" ] || { echo "the workspace declares no version" >&2; exit 1; }
+            if git ls-remote --exit-code --tags origin "refs/tags/v${version}" >/dev/null 2>&1; then
+              publish=false
+              echo "v${version} is already released — building as a check, publishing nothing"
+            else
+              publish=true
+              echo "v${version} has no tag yet — this build publishes it"
+            fi
+          fi
+          {
+            echo "version=${version}"
+            echo "tag=v${version}"
+            echo "publish=${publish}"
+          } >> "$GITHUB_OUTPUT"
+
+      # One command, the same one a developer runs. Anything CI does here has to
+      # be reproducible locally, or the build only works on a machine nobody has.
+      - name: Build
+        run: scripts/build-dist.sh "${{ steps.version.outputs.version }}"
+
+      # tag_name creates the tag on this commit when it does not exist, so
+      # cutting a release is a change to the workspace version and nothing else.
+      # The step is skipped outright when the version is already out, which is
+      # what keeps a published release from ever being overwritten.
+      - if: steps.version.outputs.publish == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          generate_release_notes: true
+          files: |
+            dist/*.tar.zst
+            dist/*.tar.zst.sha256

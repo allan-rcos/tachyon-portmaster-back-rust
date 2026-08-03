@@ -1,0 +1,19 @@
+# Line endings are decided here, not by whoever cloned the repository.
+#
+# Without this file the working copy inherits core.autocrlf from the developer's
+# ~/.gitconfig, and on a machine where that is `true` every checkout writes CRLF.
+# Two things break, and both are confusing because neither mentions line endings:
+#
+#   1. Alpine refuses the shebang of a CRLF shell script — `#!/usr/bin/env bash\r`
+#      surfaces as "bad interpreter: no such file or directory", and only inside
+#      the container, so it never reproduces on the machine that pushed it.
+#   2. PHPStan's generated-code baseline stops matching. Its ignore patterns
+#      carry byte offsets and a literal `\r\n` shows up mid-token, so
+#      `composer phpstan` reports parse errors in files nobody edited.
+#
+# LF everywhere, for text Git identifies as text.
+* text=auto eol=lf
+
+# Explicit for the executables, since these are the ones a wrong ending makes
+# unrunnable rather than merely noisy.
+*.sh text eol=lf

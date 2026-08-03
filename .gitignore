@@ -1,0 +1,70 @@
+# O que não é versionado, e por quê.
+#
+# Escrito à mão em vez de colado de um gerador. O arquivo anterior tinha
+# quatrocentas linhas de template — Synopsys VCS, Dreamweaver, CodeKit, Bazaar,
+# Composer, PHP CodeSniffer — e o efeito colateral disso não é só ruído: `tmp/`
+# só estava coberto porque a seção do Eclipse casava com ele, e `dist/` porque a
+# do Emacs casava. Uma exclusão que existe por acidente some no dia em que
+# alguém limpa a seção que não tem nada a ver com ela.
+
+##### Artefatos de build
+
+# Dezenas de gigabytes. Também fora do contexto do Docker, pelo mesmo motivo.
+/target
+
+# Tarballs de release, produzidos por scripts/build-dist.sh.
+/dist
+
+# Cargo.lock **é** versionado, e não aparece aqui de propósito: isto é uma
+# aplicação, não uma biblioteca. O Dockerfile constrói com --locked, então a
+# imagem sai das versões exatas que foram testadas.
+
+##### Especificações e rascunho
+
+# As specs de arquitetura que guiaram a migração. Ficam na máquina de quem
+# trabalha nelas: o que sobreviveu delas está nos ADRs, nos READMEs e nos
+# comentários do código, que é onde alguém procura.
+tmp/
+
+##### Sessão de migração
+
+# Transcrições e handoff da migração PHP → Rust. Registro de como o trabalho foi
+# feito, não parte do projeto. Remova estas linhas se quiser versioná-los.
+/2026-*.txt
+/2026-*.yaml
+
+##### Segredos
+
+# Nunca versionados. A configuração inteira é por variável de ambiente, e o
+# docker-compose.yml carrega os padrões de desenvolvimento em claro justamente
+# porque não são segredo nenhum.
+.env
+.env.local
+
+##### Editores e IDEs
+
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+.claude
+
+# Swap e backup — de qualquer editor.
+*~
+*.bak
+*.orig
+[._]*.sw[a-p]
+
+##### Sistemas operacionais
+
+.DS_Store
+Thumbs.db
+[Dd]esktop.ini
+
+##### Testes
+
+# Binários que `go test -c` deixa para trás.
+tests/integration/*.test

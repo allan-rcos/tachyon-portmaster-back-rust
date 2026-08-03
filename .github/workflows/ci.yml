@@ -1,0 +1,95 @@
+name: CI
+
+# Only what is landing on main. The Go job builds an image and restarts a
+# container per test, so running it on every push to every branch spent most of
+# its budget on work-in-progress that nobody was waiting on. A branch still gets
+# checked before it merges, through the pull_request trigger.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  # A warning that only appears locally is a warning nobody fixes.
+  RUSTFLAGS: -D warnings
+
+jobs:
+  rust:
+    name: fmt, clippy, tests
+    runs-on: ubuntu-latest
+    steps:
+      # The FlatBuffers schemas are a submodule and `build.rs` generates the
+      # wire types from them, so a shallow checkout fails at compile time rather
+      # than at checkout — with an error that does not mention submodules.
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Rust
+        # rust-toolchain.toml pins the channel and the components; this action
+        # reads it, so the version here and the one a developer gets locally
+        # cannot drift apart.
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Format
+        run: cargo fmt --all --check
+
+      # --all-targets so the lint reaches test code too: a clippy failure that
+      # only shows up when someone runs the tests is a failure found late.
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Tests
+        run: cargo test --workspace
+
+      # The binary is what the integration suite actually runs, and a release
+      # build catches what a debug build does not — an overflow that only panics
+      # with debug assertions off, a dependency that fails to link optimised.
+      - name: Release build
+        run: cargo build --workspace --release --locked
+
+  go-integration:
+    name: Go integration (FlatBuffers, testcontainers)
+    runs-on: ubuntu-latest
+    # Building the API image and restarting a container per test makes this the
+    # slow job by a wide margin; the ceiling is here so a hung container fails
+    # rather than burning the default six hours.
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache-dependency-path: tests/integration/go.sum
+
+      # flatc is a test-side tool only: it regenerates the Go bindings the suite
+      # decodes responses with. The API itself never sees it — its own wire types
+      # come from planus, in Rust, at build time.
+      - name: Install flatc
+        run: |
+          FLATC_VERSION=25.12.19
+          curl -fsSL -o /tmp/flatc.zip \
+            "https://github.com/google/flatbuffers/releases/download/v${FLATC_VERSION}/Linux.flatc.binary.g++-13.zip"
+          sudo unzip -o /tmp/flatc.zip -d /usr/local/bin
+          flatc --version
+
+      - name: Verify generated Go bindings are up to date
+        run: |
+          scripts/generate-flatbuffers-go.sh
+          git diff --exit-code tests/integration/internal/fbs \
+            || (echo "::error::Go FlatBuffers bindings are stale — run scripts/generate-flatbuffers-go.sh" && exit 1)
+
+      # The suite builds the API image itself, from the repo Dockerfile. Nothing
+      # here has to prepare a database: testcontainers stands up a tmpfs MariaDB
+      # and migrates it per environment.
+      - name: Run integration suite
+        run: scripts/integration-test.sh

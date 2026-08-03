@@ -1,0 +1,39 @@
+[package]
+name = "portmaster-app"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Orquestração do PortMaster: UseCases, Commands, Queries, autorização."
+
+# Depende de domain e infra. Como conhece a infra, pega os ports dela
+# diretamente, e reexporta o Logger e as structs de segredos das duas camadas
+# para que a apresentação as monte sem depender delas.
+[dependencies]
+portmaster-domain = { path = "../domain" }
+portmaster-infra = { path = "../infra" }
+
+tokio = { workspace = true }
+trait-variant = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+
+[dev-dependencies]
+mockall = { workspace = true }
+tokio-test = { workspace = true }
+pretty_assertions = { workspace = true }
+fake = { workspace = true }
+
+[features]
+default = ["id-snowflake", "cache-moka", "pool-default"]
+id-snowflake = ["portmaster-domain/id-snowflake"]
+cache-moka = ["portmaster-infra/cache-moka"]
+cache-redis = ["portmaster-infra/cache-redis"]
+pool-default = ["portmaster-infra/pool-default"]
+pool-large = ["portmaster-infra/pool-large"]
+
+[lints]
+workspace = true

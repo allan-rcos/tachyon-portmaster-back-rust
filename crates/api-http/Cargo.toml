@@ -1,0 +1,62 @@
+[package]
+name = "portmaster-api-http"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Apresentação HTTP do PortMaster: wire negociado, handlers, router, JWT."
+
+[[bin]]
+name = "portmaster-api-http"
+path = "src/main.rs"
+
+# Depende SÓ do app — nunca alcança domain ou infra. É o único lugar do sistema
+# que conhece JWT, FlatBuffers e a lib config.
+[dependencies]
+portmaster-app = { path = "../app" }
+
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+tokio = { workspace = true }
+futures = { workspace = true }
+
+planus = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+jsonwebtoken = { workspace = true }
+config = { workspace = true }
+secrecy = { workspace = true }
+base64 = { workspace = true }
+
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+# Só o binário liga o subscriber: uma lib que instala um coletor global rouba a
+# decisão de quem a consome.
+tracing-subscriber = { workspace = true }
+chrono = { workspace = true }
+
+# planus gera os tipos de wire a partir de swagger/flatbuffers/schemas/*.fbs
+# durante o build, em Rust puro.
+[build-dependencies]
+planus-translation = "1"
+planus-codegen = "1"
+anyhow = { workspace = true }
+
+[dev-dependencies]
+mockall = { workspace = true }
+tokio-test = { workspace = true }
+pretty_assertions = { workspace = true }
+
+[features]
+default = ["id-snowflake", "cache-moka", "pool-default"]
+id-snowflake = ["portmaster-app/id-snowflake"]
+cache-moka = ["portmaster-app/cache-moka"]
+cache-redis = ["portmaster-app/cache-redis"]
+pool-default = ["portmaster-app/pool-default"]
+pool-large = ["portmaster-app/pool-large"]
+
+[lints]
+workspace = true

@@ -1,0 +1,96 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/domain",
+    "crates/infra",
+    "crates/app",
+    "crates/api-http",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.83"          # RPITIT + async fn nativo em trait + precise capturing
+license = "MIT"
+
+# Dependências centralizadas. Cada crate herda com `workspace = true`, de modo que
+# a versão de uma lib apareça uma vez só no repositório.
+#
+# A tabela de referência é tmp/architecture/setup.md. Cinco entradas estão à
+# frente do que ela pinou (sqlx, tower-http, jsonwebtoken, config, mockall): a doc
+# foi escrita quando aquelas eram as correntes, e o que ela especifica é a
+# arquitetura, não a versão.
+[workspace.dependencies]
+# --- runtime / transporte ---------------------------------------------------
+tokio = { version = "1", features = ["full"] }
+axum = { version = "0.8", features = ["macros"] }
+tower = "0.5"
+tower-http = { version = "0.7", features = ["trace", "cors"] }
+futures = "0.3"
+# Gera a variante `Send` das traits com `async fn`. Necessário porque um port
+# alcançado por generic (P: AppProvider) tem retorno opaco: o compilador não
+# consegue inferir `Send`, e o axum exige. Ver tmp/architecture/lifetimes-auto-traits.md.
+trait-variant = "0.1"
+
+# --- wire -------------------------------------------------------------------
+# planus compila os .fbs em Rust puro: nada de flatc, no build ou em produção.
+planus = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# --- persistência / cache ---------------------------------------------------
+sqlx = { version = "0.9", features = ["runtime-tokio", "tls-rustls", "mysql", "chrono"] }
+moka = { version = "0.12", features = ["future"] }
+
+# --- domínio ----------------------------------------------------------------
+# nutype SEM a feature serde: o domain valida, não serializa.
+nutype = "0.5"
+argon2 = "0.5"
+base62 = "2"
+base64 = "0.22"            # token de cursor keyset (base64url, sem padding)
+rs-snowflake = "0.6"           # dep OPCIONAL da feature `id-snowflake` (default)
+nanoid = "0.5"                 # refresh token opaco
+xxhash-rust = { version = "0.8", features = ["xxh64"] }   # chave de marker
+xid = "1"                      # id ordenável fora do banco (request_id)
+
+# --- borda / apresentação ---------------------------------------------------
+# `rust_crypto` e não `aws_lc_rs`: a versão 11 exige escolher um provider
+# explicitamente, e o puro-Rust dispensa toolchain C — o que mantém o build
+# multi-stage do Dockerfile enxuto. Sem `use_pem`: só assinamos com HS256, e o
+# PEM só serve para chave assimétrica.
+jsonwebtoken = { version = "11", default-features = false, features = ["rust_crypto"] }
+config = "0.15"
+secrecy = { version = "0.10", features = ["serde"] }
+
+# --- transversais -----------------------------------------------------------
+anyhow = "1"
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# --- teste ------------------------------------------------------------------
+mockall = "0.15"
+pretty_assertions = "1"
+fake = { version = "3", features = ["derive", "chrono"] }
+tokio-test = "0.4"
+
+# Lints comuns aos quatro crates. Cada um herda com `[lints] workspace = true`.
+#
+# `async_fn_in_trait` avisa que a trait não consegue *especificar* o bound de
+# `Send` do futuro. Isso importa aqui, e a inferência automática **não** resolve:
+# ela funciona sobre um tipo concreto, mas o `api-http` alcança os casos de uso
+# por um genérico (`router<P: AppProvider>`), onde o retorno é opaco e `Send` não
+# tem como ser provado. Um `async fn` cru numa trait de port faz todo handler do
+# axum deixar de compilar — a três camadas de distância da causa.
+#
+# A saída é a que tmp/architecture/lifetimes-auto-traits.md prescreve:
+# `#[trait_variant::make(Send)]` nos ports assíncronos, e `+ Send + Sync` no
+# retorno dos factories. `deny` é o que impede alguém de reintroduzir o problema.
+[workspace.lints.rust]
+async_fn_in_trait = "deny"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"

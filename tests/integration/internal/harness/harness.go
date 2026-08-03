@@ -1,0 +1,189 @@
+// Package harness stands up the system under test with testcontainers-go: one
+// shared tmpfs MariaDB and a pool of API containers, each bound to its own
+// database. Tests lease an isolated environment, reset it (migrate drop + up +
+// seed), and drive it over HTTP — the harness never touches PHP internals.
+package harness
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strconv"
+	"testing"
+
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/testcontainers/testcontainers-go"
+	"golang.org/x/sync/errgroup"
+)
+
+// Environment is one isolated {API container + database} slot from the pool.
+type Environment struct {
+	BaseURL string  // externally reachable API URL, e.g. http://127.0.0.1:49xxx
+	DB      *sql.DB // direct connection to this environment's database
+
+	sourceURL  string
+	migrateDSN string
+	container  testcontainers.Container
+}
+
+// Reset returns the environment to a clean, migrated, freshly booted state.
+// Each environment resets independently, so parallel tests never contend.
+//
+// The restart is not optional. Dropping the schema also drops the ENGINE=MEMORY
+// registries, and the application fills those exactly once, at WorkerStart —
+// permissions and the `refresh-token` marker group among them. Without a restart
+// every test after the first would run against a server whose catalogue no
+// longer exists in the database it is talking to.
+//
+// Seeding then goes through POST /setup rather than SQL, which is the endpoint's
+// own reason for existing: a fresh deployment has no user, and no user can be
+// created through the guarded routes until one exists.
+func (e *Environment) Reset(ctx context.Context, t *testing.T) {
+	t.Helper()
+	if err := migrateDrop(e.sourceURL, e.migrateDSN); err != nil {
+		t.Fatalf("reset drop: %v", err)
+	}
+	if err := migrateUp(e.sourceURL, e.migrateDSN); err != nil {
+		t.Fatalf("reset up: %v", err)
+	}
+	// The restart moves the API to a new host port, so the environment's URL is
+	// re-read here. Tests build their client after Lease() returns, which is
+	// what makes handing them a stale URL impossible.
+	baseURL, err := restartAPI(ctx, e.container)
+	if err != nil {
+		t.Fatalf("reset restart: %v", err)
+	}
+	e.BaseURL = baseURL
+}
+
+// Pool hands out environments to parallel tests through a buffered channel.
+type Pool struct {
+	ch chan *Environment
+}
+
+// Lease blocks until an environment is free and returns it after resetting it;
+// the environment is returned to the pool automatically when the test ends.
+func (p *Pool) Lease(t *testing.T) *Environment {
+	t.Helper()
+	e := <-p.ch
+	t.Cleanup(func() { p.ch <- e })
+	e.Reset(context.Background(), t)
+	return e
+}
+
+// SetupPool builds the API image, starts the shared MariaDB, and provisions the
+// environment pool concurrently. The returned func tears everything down.
+func SetupPool(ctx context.Context) (*Pool, func(), error) {
+	repoRoot, err := repoRoot()
+	if err != nil {
+		return nil, nil, err
+	}
+	sourceURL := "file://" + filepath.Join(repoRoot, "db", "migrations")
+
+	if err := buildAPIImage(ctx, repoRoot); err != nil {
+		return nil, nil, err
+	}
+
+	net, err := newNetwork(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	mariadb, mappedPort, err := startMariaDB(ctx, net.Name)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	rootDB, err := sql.Open("mysql", fmt.Sprintf("root:%s@tcp(127.0.0.1:%s)/", dbRootPass, mappedPort))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	size := poolSize()
+	envs := make([]*Environment, size)
+
+	g, gctx := errgroup.WithContext(ctx)
+	for i := 0; i < size; i++ {
+		i := i
+		g.Go(func() error {
+			dbName := fmt.Sprintf("portmaster_%d", i)
+			if _, err := rootDB.ExecContext(gctx, "CREATE DATABASE IF NOT EXISTS "+dbName); err != nil {
+				return fmt.Errorf("create %s: %w", dbName, err)
+			}
+
+			dsn := migrateURL(mappedPort, dbName)
+			if err := migrateUp(sourceURL, dsn); err != nil {
+				return err
+			}
+
+			container, baseURL, err := startAPI(gctx, net.Name, dbName)
+			if err != nil {
+				return err
+			}
+
+			envDB, err := sql.Open("mysql", fmt.Sprintf("root:%s@tcp(127.0.0.1:%s)/%s?parseTime=true&multiStatements=true", dbRootPass, mappedPort, dbName))
+			if err != nil {
+				return err
+			}
+
+			envs[i] = &Environment{
+				BaseURL:    baseURL,
+				DB:         envDB,
+				sourceURL:  sourceURL,
+				migrateDSN: dsn,
+				container:  container,
+			}
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return nil, nil, err
+	}
+
+	ch := make(chan *Environment, size)
+	for _, e := range envs {
+		ch <- e
+	}
+
+	teardown := func() {
+		bg := context.Background()
+		for _, e := range envs {
+			if e == nil {
+				continue
+			}
+			_ = e.DB.Close()
+			_ = e.container.Terminate(bg)
+		}
+		_ = rootDB.Close()
+		_ = mariadb.Terminate(bg)
+		_ = net.Remove(bg)
+	}
+
+	return &Pool{ch: ch}, teardown, nil
+}
+
+// poolSize is the number of {API + database} environments, overridable via
+// INTEGRATION_POOL_SIZE; it defaults to GOMAXPROCS (bounded to a sane minimum).
+func poolSize() int {
+	if v := os.Getenv("INTEGRATION_POOL_SIZE"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
+	}
+	if n := runtime.GOMAXPROCS(0); n >= 2 {
+		return n
+	}
+	return 2
+}
+
+func repoRoot() (string, error) {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		return "", fmt.Errorf("cannot locate harness source")
+	}
+	// this file: <repo>/tests/integration/internal/harness/harness.go
+	return filepath.Abs(filepath.Join(filepath.Dir(file), "..", "..", "..", ".."))
+}

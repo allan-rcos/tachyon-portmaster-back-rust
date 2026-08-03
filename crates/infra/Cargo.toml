@@ -1,0 +1,45 @@
+[package]
+name = "portmaster-infra"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Adaptadores de I/O do PortMaster: MariaDB, UnitOfWork, cache, logging."
+
+# Depende só do domain, e só para mapear os traits de objeto nos seus entities.
+# Não conhece jsonwebtoken: JWT é assunto exclusivo do api-http.
+[dependencies]
+portmaster-domain = { path = "../domain" }
+
+sqlx = { workspace = true }
+moka = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+chrono = { workspace = true }
+base62 = { workspace = true }
+base64 = { workspace = true }
+xid = { workspace = true }
+nanoid = { workspace = true }
+tokio = { workspace = true }
+trait-variant = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+secrecy = { workspace = true }
+
+[dev-dependencies]
+tokio-test = { workspace = true }
+pretty_assertions = { workspace = true }
+
+# Knobs de arquitetura como feature; os valores concretos são const sob cfg.
+# cache-redis fica declarada para o dia em que houver N réplicas do binário — com
+# um processo só, o Arc<Cache> do Moka já é compartilhado por todas as threads.
+[features]
+default = ["cache-moka", "pool-default"]
+cache-moka = []
+cache-redis = []
+pool-default = []
+pool-large = []
+
+[lints]
+workspace = true

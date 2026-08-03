@@ -1,0 +1,81 @@
+# Development stack: MariaDB persisted on disk, auto-migrated and auto-seeded,
+# with the API in front. (The integration tests do NOT use this file —
+# testcontainers-go stands up its own tmpfs MariaDB + API pool, from the same
+# Dockerfile.)
+services:
+  db:
+    image: mariadb:11
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: portmaster
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      # Initialising a fresh on-disk volume takes minutes on a slow disk, and
+      # without this the retry budget is spent before MariaDB ever finishes —
+      # the stack then fails with "db is unhealthy" on a database that was
+      # simply still starting. start_period keeps those attempts from counting.
+      #
+      # 300s and not 180s: measured at 280s on an external drive, which is under
+      # the old budget by less than the margin of a slower one. The number only
+      # delays when failures start counting — a database that answers early is
+      # marked healthy immediately — so being generous here costs nothing and
+      # being tight costs a stack that will not come up.
+      start_period: 300s
+
+  migrate:
+    image: migrate/migrate:v4.17.1
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./db/migrations:/migrations:ro
+    command:
+      - "-path=/migrations"
+      - "-database=mysql://root:root@tcp(db:3306)/portmaster?multiStatements=true"
+      - "up"
+    restart: "no"
+
+  seed:
+    image: mariadb:11
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    volumes:
+      - ./db/seeds:/seeds:ro
+    entrypoint:
+      - "sh"
+      - "-c"
+      - "mariadb -h db -u root -proot portmaster < /seeds/dev.sql"
+    restart: "no"
+
+  app:
+    build: .
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    environment:
+      APP_HOST: "0.0.0.0"
+      APP_PORT: "8000"
+      # No worker count: the API is a single process and tokio sizes its own
+      # thread pool from the machine. The PHP stack forked four workers, which is
+      # also why the runtime registries used to need a database to share.
+      APP_DB_HOST: db
+      APP_DB_PORT: "3306"
+      APP_DB_NAME: portmaster
+      APP_DB_USER: root
+      APP_DB_PASSWORD: root
+      # At least 32 bytes: HS256 refuses a secret shorter than its digest.
+      APP_JWT_SECRET: dev-only-change-me-32-bytes-minimum
+      APP_JWT_COOKIE_SECURE: "false"
+    ports:
+      - "8000:8000"
+
+volumes:
+  db_data:
