@@ -4,6 +4,7 @@ use crate::models::MarkerGroup;
 
 /// A implementação do domínio de [`MarkerGroup`].
 pub(crate) struct MarkerGroupModel {
+    /// O slug do grupo, que nomeia para que os marcadores dele servem.
     slug: String,
 }
 

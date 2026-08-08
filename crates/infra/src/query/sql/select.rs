@@ -15,15 +15,25 @@ use std::fmt::Write as _;
 /// conhecidas e finitas.
 #[derive(Debug, Default)]
 pub(crate) struct Select {
+    /// As colunas projetadas, na ordem em que saem.
     columns: Vec<String>,
+    /// Os binds das colunas — uma expressão projetada pode ter parâmetro.
     column_binds: Vec<Bind>,
+    /// A tabela e o seu alias.
     from: String,
+    /// As cláusulas de junção, já escritas.
     joins: Vec<String>,
+    /// Os binds das junções, que vêm antes dos do `WHERE`.
     join_binds: Vec<Bind>,
+    /// As condições do `WHERE`, unidas por `AND`.
     conditions: Vec<String>,
+    /// Os binds das condições.
     condition_binds: Vec<Bind>,
+    /// A ordenação, na ordem de precedência.
     order_by: Vec<String>,
+    /// Teto de linhas, se houver.
     limit: Option<u32>,
+    /// Quantas linhas pular — a paginação por página, não a por cursor.
     offset: Option<u32>,
 }
 
@@ -195,12 +205,14 @@ mod tests {
         );
     }
 
+    /// A garantia que sustenta o placeholder posicional: o `?` do `_total`
+    /// aparece antes do `?` do `WHERE` no texto, então o valor dele tem que
+    /// ser ligado antes.
+    ///
+    /// Trocar a ordem faria a contagem filtrar por id e a página filtrar por
+    /// texto — as duas com o valor da outra.
     #[test]
     fn os_binds_da_projecao_vem_antes_dos_do_where() {
-        // A garantia que sustenta o placeholder posicional: o `?` do `_total`
-        // aparece antes do `?` do `WHERE` no texto, então o valor dele tem que
-        // ser ligado antes. Trocar a ordem faria a contagem filtrar por id e a
-        // página filtrar por texto — as duas com o valor da outra.
         let query = Select::from("products p")
             .column("p.*")
             .column_bound(
@@ -216,10 +228,10 @@ mod tests {
         );
     }
 
+    /// O mesmo teste pelo avesso: declarar o filtro antes da projeção não pode
+    /// mudar nada, porque quem define a ordem é a renderização.
     #[test]
     fn a_ordem_de_chamada_nao_altera_a_ordem_dos_binds() {
-        // O mesmo teste pelo avesso: declarar o filtro antes da projeção não
-        // pode mudar nada, porque quem define a ordem é a renderização.
         let query = Select::from("products p")
             .filter("p.id > ?", [Bind::Int(42)])
             .column("p.*")

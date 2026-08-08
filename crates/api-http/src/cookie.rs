@@ -15,11 +15,17 @@ use crate::config::jwt_config::JwtConfig;
 /// Emite e lê os cookies de sessão.
 #[derive(Clone)]
 pub struct AuthCookie {
+    /// Nome do cookie do access token.
     access_name: String,
+    /// Nome do cookie do refresh token.
     refresh_name: String,
+    /// Validade do cookie de access, em segundos.
     access_max_age: u64,
+    /// Validade do cookie de refresh, em segundos.
     refresh_max_age: u64,
+    /// Se os cookies exigem HTTPS.
     secure: bool,
+    /// A política `SameSite` dos cookies.
     same_site: String,
 }
 
@@ -125,18 +131,18 @@ mod tests {
         headers
     }
 
+    /// Sem `HttpOnly`, um XSS deixa de ser incômodo e passa a ser roubo de
+    /// sessão.
     #[test]
     fn o_token_nunca_e_legivel_por_javascript() {
-        // Sem HttpOnly, um XSS deixa de ser incômodo e passa a ser roubo de
-        // sessão.
         assert!(cookies(false).issue_access("abc").contains("HttpOnly"));
         assert!(cookies(false).issue_refresh("abc").contains("HttpOnly"));
     }
 
+    /// Em desenvolvimento o cookie Secure não seria enviado sobre HTTP, e a
+    /// sessão nunca funcionaria localmente.
     #[test]
     fn o_secure_acompanha_a_configuracao() {
-        // Em desenvolvimento o cookie Secure não seria enviado sobre HTTP, e a
-        // sessão nunca funcionaria localmente.
         assert!(!cookies(false).issue_access("abc").contains("Secure"));
         assert!(cookies(true).issue_access("abc").contains("Secure"));
     }
@@ -179,10 +185,10 @@ mod tests {
         );
     }
 
+    /// É o que o próprio `clear` deixa para trás; lê-lo como presente faria o
+    /// refresh tentar rodar com uma string vazia.
     #[test]
     fn cookie_vazio_conta_como_ausente() {
-        // É o que o próprio `clear` deixa para trás; lê-lo como presente faria
-        // o refresh tentar rodar com uma string vazia.
         let headers = header_with("auth_token=; refresh_token=");
 
         assert_eq!(cookies(false).read_access(&headers), None);

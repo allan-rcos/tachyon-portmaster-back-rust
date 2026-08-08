@@ -17,7 +17,9 @@ pub(super) const CHANNEL: &str = "http";
 /// O serviço que registra a requisição.
 #[derive(Clone)]
 pub struct Logging<S> {
+    /// O serviço interno, que este envolve.
     pub(super) inner: S,
+    /// O logger desta requisição, já com o id carimbado.
     pub(super) logger: Logger,
 }
 
@@ -34,6 +36,11 @@ where
         self.inner.poll_ready(cx)
     }
 
+    /// Mede a latência e emite a linha com o status final.
+    ///
+    /// O ban de `Instant::now` mira relógio em regra de negócio. Aqui é medição
+    /// num middleware: `Instant` é monotônico, não é observável pelo domínio, e
+    /// não há o que injetar — o número existe para ir ao log e a nada mais.
     fn call(&mut self, request: Request) -> Self::Future {
         let clone = self.inner.clone();
         let mut inner = std::mem::replace(&mut self.inner, clone);
@@ -54,10 +61,6 @@ where
             .with_field("path", path);
 
         Box::pin(async move {
-            // O ban de `Instant::now` mira relógio em regra de negócio. Aqui é
-            // medição de latência num middleware: `Instant` é monotônico, não
-            // observável pelo domínio, e não há o que injetar — o número existe
-            // para ir ao log e a nada mais.
             #[allow(
                 clippy::disallowed_methods,
                 reason = "cronômetro monotônico de latência, não relógio de domínio"

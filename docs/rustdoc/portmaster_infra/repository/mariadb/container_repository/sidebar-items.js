@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["FIND_BY_ID","INSERT","SOFT_DELETE","UPDATE"],"struct":["ContainerMariadbRepository"]};

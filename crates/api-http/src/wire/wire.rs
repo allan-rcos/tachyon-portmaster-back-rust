@@ -53,11 +53,12 @@ impl Wire {
 impl<S: Send + Sync> FromRequestParts<S> for Wire {
     type Rejection = ApiError;
 
+    /// Ausência aqui é layer fora de ordem, não requisição malformada: é
+    /// defeito nosso, e precisa explodir na primeira requisição em vez de
+    /// responder no formato errado em silêncio.
+    ///
+    /// Mesma decisão do `Session::gate()`.
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        // Ausência aqui é layer fora de ordem, não requisição malformada: é
-        // defeito nosso, e precisa explodir na primeira requisição em vez de
-        // responder no formato errado em silêncio. Mesma decisão do
-        // `Session::gate()`.
         parts.extensions.get::<Self>().cloned().ok_or_else(|| {
             ApiError::new(
                 StatusCode::INTERNAL_SERVER_ERROR,

@@ -13,6 +13,10 @@ use sqlx::Transaction;
 /// Enquanto vive, nenhuma outra parte da mesma requisição consegue a transação —
 /// que é o correto, já que uma transação SQL é sequencial por natureza.
 pub(crate) struct TransactionGuard {
+    /// A transação em curso, presa pelo lock enquanto o escopo vive.
+    ///
+    /// `Option` porque o commit a retira: depois dele o guard existe e não
+    /// tem mais transação, que é o que impede um segundo commit.
     guard: tokio::sync::OwnedMutexGuard<Option<Transaction<'static, MySql>>>,
 }
 

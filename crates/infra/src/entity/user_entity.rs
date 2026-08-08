@@ -11,14 +11,26 @@ use portmaster_domain::models::User;
 /// Os papéis chegam separados: vêm de `user_roles` e são carregados pelo
 /// repositório, não pela linha de `users`.
 pub struct UserEntity {
+    /// Identidade em base62, que é a forma que sai desta camada.
     id: String,
+    /// O mesmo id como `BIGINT`, para os `WHERE` e as FKs.
+    ///
+    /// Guardado junto do base62 para que a escrita não precise decodificar de
+    /// volta a cada consulta.
     raw_id: i64,
+    /// Nome de exibição.
     name: String,
+    /// E-mail, que também é a credencial de login.
     email: String,
+    /// O hash Argon2, como está gravado.
     password_hash: String,
+    /// Os papéis já hidratados, vindos da mesma consulta.
     roles: Vec<Box<dyn Role>>,
+    /// Quando a linha nasceu, em UTC.
     created_at: DateTime<Utc>,
+    /// Quando a linha mudou pela última vez, em UTC.
     updated_at: DateTime<Utc>,
+    /// Quando foi removida, ou `None` se ativa — o soft-delete.
     deleted_at: Option<DateTime<Utc>>,
 }
 

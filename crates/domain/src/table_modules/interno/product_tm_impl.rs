@@ -9,6 +9,7 @@ use crate::table_modules::ProductTM;
 
 /// A implementação, genérica sobre o gerador de id.
 pub(crate) struct ProductTMImpl<G> {
+    /// De onde sai a identidade de um produto novo.
     id_generator: G,
 }
 
@@ -19,6 +20,10 @@ impl<G: IntIdGenerator> ProductTMImpl<G> {
     }
 
     /// Examina nome e densidade, acumulando o que estiver errado.
+    ///
+    /// A densidade é conferida com `is_finite` antes da comparação, e não só
+    /// por `<= 0.0`: `f64::NAN <= 0.0` é **falso**, então um NaN passaria — e
+    /// contaminaria todo cálculo de peso do contêiner adiante.
     fn validate(name: &str, density: f64) -> Validation {
         let mut errors = Validation::new();
 
@@ -31,9 +36,6 @@ impl<G: IntIdGenerator> ProductTMImpl<G> {
             );
         }
 
-        // `is_finite` cobre NaN e infinito, que uma comparação sozinha deixaria
-        // passar: `f64::NAN <= 0.0` é falso, e um NaN aqui contaminaria todo
-        // cálculo de peso do contêiner adiante.
         errors.add_if(
             !density.is_finite() || density <= 0.0,
             "density",

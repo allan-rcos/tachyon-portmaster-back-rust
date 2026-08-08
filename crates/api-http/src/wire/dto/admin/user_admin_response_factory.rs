@@ -8,6 +8,7 @@ use portmaster_app::views::AccountView;
 
 /// Monta a tabela de um usuário.
 pub(crate) struct UserAdminResponseFactory {
+    /// A View de origem, que a `table()` traduz.
     source: AccountView,
 }
 

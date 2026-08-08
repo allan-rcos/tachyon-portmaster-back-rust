@@ -27,18 +27,31 @@ use portmaster_infra::repository::ContainerRepository;
 
 /// A implementação, genérica sobre os ports que consome.
 pub(crate) struct ContainerUseCaseImpl<R, T, Q, F, C, U> {
+    /// Persistência de contêineres.
     containers: R,
+    /// As regras de contêiner.
     container_tm: T,
+    /// Quem executa um DQL contra o banco.
     queries: Q,
+    /// De onde os DQLs saem, já com os parâmetros.
     dqls: F,
+    /// O cache de leitura, para o read-through e a invalidação.
     cache: C,
+    /// Quem abre e fecha a transação.
     unit_of_work: U,
+    /// A permissão exigida para create.
     create_permission: RequiresPermission,
+    /// A permissão exigida para update.
     update_permission: RequiresPermission,
+    /// A permissão exigida para delete.
     delete_permission: RequiresPermission,
+    /// A permissão exigida para seal.
     seal_permission: RequiresPermission,
+    /// A permissão exigida para dispatch.
     dispatch_permission: RequiresPermission,
+    /// A permissão exigida para read.
     read_permission: RequiresPermission,
+    /// A permissão exigida para summary.
     summary_permission: RequiresPermission,
 }
 

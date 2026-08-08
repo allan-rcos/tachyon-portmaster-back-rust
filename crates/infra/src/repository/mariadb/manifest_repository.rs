@@ -10,6 +10,7 @@ use crate::entity::manifest_cargo_entity::ManifestCargoEntity;
 use crate::entity::manifest_cargo_row::ManifestCargoRow;
 use crate::repository::ManifestRepository;
 
+/// A linha de manifesto de um produto num contêiner.
 const FIND_CARGO: &str = "SELECT container_id, product_id, quantity, weight, created_at \
                           FROM `container_items` WHERE container_id = ? AND product_id = ?";
 
@@ -26,13 +27,17 @@ const UPSERT_CARGO: &str =
 const DELETE_CARGO: &str =
     "DELETE FROM `container_items` WHERE container_id = ? AND product_id = ?";
 
+/// Esvazia o manifesto inteiro de um contêiner.
 const CLEAR_MANIFEST: &str = "DELETE FROM `container_items` WHERE container_id = ?";
 
-// `UTC_TIMESTAMP()` e não `NOW()`: o `NOW()` devolve o fuso da **sessão**, e um
-// horário de telemetria que depende de como a conexão foi aberta não é um
-// horário. A sessão do pool já é fixada em `+00:00` (ver database/pool.rs), o
-// que faria os dois coincidirem — mas escrever o que se quer dizer é o que
-// mantém a linha correta se alguém um dia rodar este SQL por outro caminho.
+/// Registra o evento de embarque ou desembarque.
+///
+/// Usa `UTC_TIMESTAMP()` e não `NOW()`: o `NOW()` devolve o fuso da **sessão**,
+/// e um horário de telemetria que depende de como a conexão foi aberta não é um
+/// horário. A sessão do pool já é fixada em `+00:00` (ver
+/// [`pool`](crate::database::pool)), o que faria os dois coincidirem — mas
+/// escrever o que se quer dizer é o que mantém a linha correta se alguém um dia
+/// rodar este SQL por outro caminho.
 const INSERT_TELEMETRY: &str =
     "INSERT INTO `telemetry_logs` (container_id, event, description, timestamp) \
      VALUES (?, ?, ?, UTC_TIMESTAMP())";

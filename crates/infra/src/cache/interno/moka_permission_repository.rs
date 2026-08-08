@@ -7,6 +7,7 @@ use crate::repository::PermissionRepository;
 
 /// Registro de permissões.
 pub struct MokaPermissionRepository {
+    /// O catálogo, preenchido no boot e só lido depois.
     cache: PermissionCache,
 }
 
@@ -18,13 +19,17 @@ impl MokaPermissionRepository {
 }
 
 impl PermissionRepository for MokaPermissionRepository {
+    /// Idempotente por slug: cada caso de uso declara a sua permissão ao ser
+    /// construído, e nada garante que isso aconteça uma vez só.
     async fn register(&self, permission: &dyn Permission) -> anyhow::Result<()> {
-        // Idempotente por slug: cada caso de uso declara a sua permissão ao ser
-        // construído, e nada garante que isso aconteça uma vez só.
         self.cache.0.insert(permission.slug().to_owned(), ()).await;
         Ok(())
     }
 
+    /// Todos os slugs registrados, em ordem.
+    ///
+    /// Ordenado porque a iteração do Moka não tem ordem definida, e uma
+    /// listagem que muda de ordem a cada chamada é ruim de ler e pior de testar.
     async fn all(&self) -> anyhow::Result<Vec<String>> {
         let mut slugs: Vec<String> = self
             .cache
@@ -33,9 +38,6 @@ impl PermissionRepository for MokaPermissionRepository {
             .map(|(slug, ())| slug.as_ref().clone())
             .collect();
 
-        // Ordenado porque a iteração do Moka não tem ordem definida, e uma
-        // listagem que muda de ordem a cada chamada é ruim de ler e pior de
-        // testar.
         slugs.sort_unstable();
         Ok(slugs)
     }
@@ -66,10 +68,10 @@ mod tests {
         }
     }
 
+    /// Cada caso de uso declara a sua permissão ao ser construído, e o
+    /// provider pode construí-lo mais de uma vez.
     #[tokio::test]
     async fn registrar_a_mesma_permissao_duas_vezes_nao_duplica() {
-        // Cada caso de uso declara a sua permissão ao ser construído, e o
-        // provider pode construí-lo mais de uma vez.
         let repository = MokaPermissionRepository::new(cache());
 
         repository
@@ -118,11 +120,11 @@ mod tests {
         }
     }
 
+    /// Os dois registros dividiam um mapa só, e o grupo `refresh-token`
+    /// aparecia na listagem de permissões — e era concedido ao papel que o
+    /// `POST /setup` cria, que recebe tudo que estiver registrado.
     #[tokio::test]
     async fn um_grupo_de_marcador_nao_entra_no_catalogo_de_permissoes() {
-        // Os dois registros dividiam um mapa só, e o grupo `refresh-token`
-        // aparecia na listagem de permissões — e era concedido ao papel que o
-        // `POST /setup` cria, que recebe tudo que estiver registrado.
         let permissions = MokaPermissionRepository::new(PermissionCache::new(100));
         let groups = MokaMarkerGroupRepository::new(MarkerGroupCache::new(100));
 
@@ -133,10 +135,10 @@ mod tests {
         assert!(groups.has("refresh-token").await.unwrap());
     }
 
+    /// A garantia que substituiu a tabela MEMORY: um processo, muitas threads,
+    /// um mapa só.
     #[tokio::test]
     async fn o_cache_e_compartilhado_entre_threads() {
-        // A garantia que substituiu a tabela MEMORY: um processo, muitas
-        // threads, um mapa só.
         let shared = cache();
         let writer = MokaPermissionRepository::new(shared.clone());
         let reader = MokaPermissionRepository::new(shared);

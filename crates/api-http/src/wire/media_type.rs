@@ -73,6 +73,9 @@ mod tests {
     }
 
     #[test]
+    /// `application/octet-stream` conta como binário: é o que um cliente
+    /// genérico manda quando só sabe que o corpo não é texto.
+    #[allow(clippy::missing_const_for_fn, reason = "asserção de teste")]
     fn sem_accept_a_resposta_e_legivel() {
         assert_eq!(MediaType::of_response(None), MediaType::Json);
         assert_eq!(MediaType::of_response(Some("*/*")), MediaType::Json);
@@ -80,8 +83,6 @@ mod tests {
             MediaType::of_response(Some(FLATBUFFERS)),
             MediaType::FlatBuffers
         );
-        // `application/octet-stream` também: é o que um cliente genérico manda
-        // quando só sabe que o corpo é binário.
         assert_eq!(
             MediaType::of_response(Some("application/octet-stream")),
             MediaType::FlatBuffers

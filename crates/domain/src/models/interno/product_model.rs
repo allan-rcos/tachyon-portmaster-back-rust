@@ -7,12 +7,19 @@ use crate::models::Product;
 
 /// A implementação do domínio de [`Product`].
 pub struct ProductModel {
+    /// Identidade, em base62.
     id: String,
+    /// Nome comercial.
     name: String,
+    /// Quilos por litro; é o que converte quantidade em peso no embarque.
     density: f64,
+    /// A classe de risco do transporte.
     risk_class: RiskClass,
+    /// Quando foi criado, em UTC.
     created_at: DateTime<Utc>,
+    /// Quando mudou pela última vez; o `set_*` o move.
     updated_at: DateTime<Utc>,
+    /// Quando foi removido, ou `None` se ativo — o soft-delete.
     deleted_at: Option<DateTime<Utc>>,
 }
 

@@ -7,6 +7,7 @@ use crate::cache::ReadCache;
 
 /// A implementação sobre Moka.
 pub(crate) struct MokaReadCache {
+    /// As entradas de leitura, chaveadas por prefixo e argumento.
     store: ReadCacheStore,
 }
 
@@ -22,9 +23,9 @@ impl ReadCache for MokaReadCache {
         Ok(self.store.get(key).await)
     }
 
+    /// O TTL é uniforme aqui, então vem da política do cache (montada no
+    /// `register`) em vez de viajar com cada entrada.
     async fn put(&self, key: &str, value: Vec<u8>) -> anyhow::Result<()> {
-        // O TTL é uniforme aqui, então vem da política do cache (montada no
-        // `register`) em vez de viajar com cada entrada.
         self.store.insert(key.to_owned(), Arc::new(value)).await;
         Ok(())
     }
@@ -34,10 +35,11 @@ impl ReadCache for MokaReadCache {
         Ok(())
     }
 
+    /// O Moka não indexa por prefixo, então isto varre as chaves vivas.
+    ///
+    /// É aceitável porque roda depois de uma escrita — que é rara comparada à
+    /// leitura — e o cache é limitado por capacidade.
     async fn invalidate_prefix(&self, prefix: &str) -> anyhow::Result<()> {
-        // O Moka não indexa por prefixo, então isto varre as chaves vivas. É
-        // aceitável porque roda depois de uma escrita — que é rara comparada à
-        // leitura — e o cache é limitado por capacidade.
         let prefix = prefix.to_owned();
         self.store
             .invalidate_entries_if(move |key, _| key.starts_with(&prefix))
@@ -97,10 +99,10 @@ mod tests {
         assert!(cache.get("products:page=1").await.unwrap().is_none());
     }
 
+    /// O caso real: alterar um produto precisa derrubar toda listagem de
+    /// produto, sem que o caso de uso saiba quais filtros foram usados.
     #[tokio::test]
     async fn invalidar_por_prefixo_pega_todas_as_variacoes_de_filtro() {
-        // O caso real: alterar um produto precisa derrubar toda listagem de
-        // produto, sem que o caso de uso saiba quais filtros foram usados.
         let cache = cache();
         cache.put("products:page=1", b"a".to_vec()).await.unwrap();
         cache.put("products:page=2", b"b".to_vec()).await.unwrap();

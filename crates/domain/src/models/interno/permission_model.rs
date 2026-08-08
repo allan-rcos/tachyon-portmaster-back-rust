@@ -4,6 +4,7 @@ use crate::models::Permission;
 
 /// A implementação do domínio de [`Permission`].
 pub(crate) struct PermissionModel {
+    /// O slug da permissão, no formato `recurso:ação`.
     slug: String,
 }
 

@@ -7,12 +7,19 @@ use portmaster_domain::models::ManifestCargo;
 
 /// A entity, com os ids já traduzidos para base62.
 pub struct ManifestCargoEntity {
+    /// O contêiner, em base62.
     container_id: String,
+    /// O produto, em base62.
     product_id: String,
+    /// O contêiner como `BIGINT`, para a FK.
     raw_container_id: i64,
+    /// O produto como `BIGINT`, para a FK.
     raw_product_id: i64,
+    /// Quantas unidades.
     quantity: f64,
+    /// O peso correspondente, já pela densidade.
     weight: f64,
+    /// Quando a linha entrou no manifesto, em UTC.
     created_at: DateTime<Utc>,
 }
 

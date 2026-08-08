@@ -13,6 +13,7 @@ use axum::response::{IntoResponse, Response};
 /// declarar um extractor que ela não usa.
 #[derive(Debug, Default)]
 pub struct NoContent {
+    /// Os `Set-Cookie` a acrescentar na resposta, um cabeçalho por entrada.
     cookies: Vec<String>,
 }
 

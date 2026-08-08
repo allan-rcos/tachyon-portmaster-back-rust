@@ -14,8 +14,11 @@ use crate::token::token_service::TokenService;
 /// O serviço que resolve a sessão.
 #[derive(Clone)]
 pub struct Token<S> {
+    /// O serviço interno, que este envolve.
     pub(super) inner: S,
+    /// Quem emite e confere o access token.
     pub(super) tokens: TokenService,
+    /// Como os cookies de sessão são escritos e lidos.
     pub(super) cookies: AuthCookie,
 }
 

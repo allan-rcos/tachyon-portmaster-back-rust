@@ -8,6 +8,7 @@ use portmaster_app::views::TelemetryLogView;
 
 /// Monta a tabela de um registro de telemetria.
 pub(crate) struct TelemetryLogItemFactory {
+    /// A View de origem, que a `table()` traduz.
     source: TelemetryLogView,
 }
 

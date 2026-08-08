@@ -28,14 +28,7 @@
 
 #![deny(unsafe_code)]
 #![warn(missing_docs)]
-// A blindagem de pânico do grupo C (tmp/clippy.md) vale para código de
-// produção. Numa asserção de teste, `panic!`, `v[0]` e `assert_eq!` sobre float
-// são a forma normal de escrever o teste, e não um risco: se o índice estourar
-// ou o float divergir, o teste falha — que é exatamente o que se quer.
-//
-// O relaxamento é só do passe `cfg(test)`. O passe de biblioteca continua
-// cobrindo o código de produção com os lints em `deny`, e `--all-targets` roda
-// os dois.
+// O relaxamento vale só no passe `cfg(test)` — ver o `reason` abaixo.
 #![cfg_attr(
     test,
     allow(
@@ -46,7 +39,7 @@
         clippy::disallowed_types,
         clippy::cast_possible_truncation,
         clippy::cast_sign_loss,
-        reason = "asserção de teste: falhar alto é o comportamento desejado, e um fake pode usar std::sync::Mutex"
+        reason = "asserção de teste: `panic!`, `v[0]` e float_cmp são a forma normal de escrever o teste, e falhar alto é o comportamento desejado, e um fake pode usar std::sync::Mutex"
     )
 )]
 

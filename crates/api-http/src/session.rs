@@ -66,12 +66,14 @@ impl Session {
     }
 
     /// Confere que houve validação de token nesta requisição.
+    /// Confirma que o escopo de sessão está instalado.
+    ///
+    /// Não há caminho que marque `false` hoje: o middleware sempre entra no
+    /// escopo com `true`, com ou sem sessão. O braço existe para o dia em que
+    /// alguém acrescentar um estado intermediário.
     fn gate() -> Result<(), ApiError> {
         match VALIDATED.try_with(|validated| *validated) {
             Ok(true) => Ok(()),
-            // Não há caminho que marque `false`: o middleware sempre entra no
-            // escopo com `true`, com ou sem sessão. Este braço existe para o dia
-            // em que alguém acrescentar um estado intermediário.
             Ok(false) => Err(ApiError::unauthenticated()),
             Err(_) => {
                 tracing::error!(
@@ -116,10 +118,10 @@ mod tests {
         .await;
     }
 
+    /// O middleware rodou e não achou token — que é diferente de não ter
+    /// rodado.
     #[tokio::test]
     async fn rota_publica_tem_escopo_mas_nao_usuario() {
-        // O middleware rodou e não achou token — que é diferente de não ter
-        // rodado.
         Session::scope(None, async {
             assert_eq!(Session::current_user().unwrap(), None);
             assert_eq!(
@@ -130,11 +132,11 @@ mod tests {
         .await;
     }
 
+    /// 500 e não 401: o cliente não fez nada errado — a stack do router está
+    /// montada fora de ordem, e responder 401 esconderia isso atrás de um
+    /// "faça login" que nunca vai funcionar.
     #[tokio::test]
     async fn sem_o_middleware_o_erro_e_nosso_e_nao_do_cliente() {
-        // 500 e não 401: o cliente não fez nada errado — a stack do router está
-        // montada fora de ordem, e responder 401 esconderia isso atrás de um
-        // "faça login" que nunca vai funcionar.
         assert_eq!(
             Session::current_user().err().map(|e| e.status()),
             Some(StatusCode::INTERNAL_SERVER_ERROR)

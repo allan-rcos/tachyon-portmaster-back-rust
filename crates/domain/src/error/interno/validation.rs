@@ -9,6 +9,7 @@ use crate::error::FieldError;
 /// precisar e devolve `errors.into_result(valor)` no fim.
 #[derive(Debug, Default, Clone)]
 pub(crate) struct Validation {
+    /// Os campos recusados até agora, na ordem em que foram conferidos.
     errors: Vec<FieldError>,
 }
 

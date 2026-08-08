@@ -7,21 +7,32 @@ use portmaster_domain::models::Role;
 
 /// A entity, com o id já traduzido para base62.
 pub struct RoleEntity {
+    /// Identidade em base62.
     id: String,
+    /// O mesmo id como `BIGINT`, para os `WHERE` e as FKs.
+    ///
+    /// Guardado junto do base62 para que a escrita não precise decodificar de
+    /// volta a cada consulta.
     raw_id: i64,
+    /// Nome do papel.
     name: String,
+    /// Os slugs concedidos, já decodificados da coluna `JSON`.
     permissions: Vec<String>,
+    /// Quando a linha nasceu, em UTC.
     created_at: DateTime<Utc>,
+    /// Quando a linha mudou pela última vez, em UTC.
     updated_at: DateTime<Utc>,
+    /// Quando foi removida, ou `None` se ativa — o soft-delete.
     deleted_at: Option<DateTime<Utc>>,
 }
 
 impl RoleEntity {
+    ///
+    /// Uma coluna JSON ilegível é linha corrompida. Assumir lista vazia
+    /// silenciosamente transformaria isso numa revogação de todas as
+    /// permissões do papel, que é o pior desfecho possível.
     /// Reconstrói a entity a partir de uma linha lida.
     pub(crate) fn from_row(row: RoleRow) -> anyhow::Result<Self> {
-        // Uma coluna JSON ilegível é linha corrompida. Assumir lista vazia
-        // silenciosamente transformaria isso numa revogação de todas as
-        // permissões do papel, que é o pior desfecho possível.
         let permissions: Vec<String> = serde_json::from_str(&row.permissions)
             .map_err(|e| anyhow::anyhow!("permissões do papel {} ilegíveis: {e}", row.id))?;
 

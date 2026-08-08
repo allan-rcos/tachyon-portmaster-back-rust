@@ -22,13 +22,15 @@ impl RequestFactory for LoginRequestFactory {
         })
     }
 
+    /// Lê a mensagem do buffer, tolerando campo ausente.
+    ///
+    /// Campo declarado `required` no `.fbs` que não veio é buffer truncado —
+    /// ilegível, não incompleto no sentido de negócio. O `ok()` deixa o `None`
+    /// seguir para o `TableModule`, que dirá qual campo falta.
     fn from_flatbuffer(bytes: &[u8]) -> Result<Self::Message, ApiError> {
         let table = fbs::auth::LoginRequestRef::read_as_root(bytes)
             .map_err(|e| ApiError::unreadable_body(format!("corpo FlatBuffers inválido: {e}")))?;
 
-        // Campo declarado `required` no `.fbs` que não veio é buffer truncado —
-        // ilegível, não incompleto no sentido de negócio. O `ok()` deixa o
-        // `None` seguir para o `TableModule`, que dirá qual campo falta.
         Ok(LoginRequest {
             email: table.email().ok().map(str::to_owned),
             password: table.password().ok().map(str::to_owned),

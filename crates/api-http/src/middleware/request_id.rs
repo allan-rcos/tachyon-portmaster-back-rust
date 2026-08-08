@@ -14,7 +14,9 @@ use super::request_id_header::REQUEST_ID_HEADER;
 /// O serviço que carimba a requisição.
 #[derive(Clone)]
 pub struct RequestId<S, G> {
+    /// O serviço interno, que este envolve.
     pub(super) inner: S,
+    /// De onde sai o id desta requisição.
     pub(super) generator: G,
 }
 

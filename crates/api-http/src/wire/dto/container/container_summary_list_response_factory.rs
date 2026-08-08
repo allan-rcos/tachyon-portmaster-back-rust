@@ -9,6 +9,7 @@ use portmaster_app::views::ContainerSummaryListView;
 
 /// Monta a tabela da listagem.
 pub(crate) struct ContainerSummaryListResponseFactory {
+    /// A View de origem, que a `table()` traduz.
     source: ContainerSummaryListView,
 }
 

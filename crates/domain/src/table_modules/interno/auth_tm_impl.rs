@@ -7,6 +7,7 @@ use crate::table_modules::AuthTM;
 
 /// A implementação, genérica sobre o hasher.
 pub(crate) struct AuthTMImpl<H> {
+    /// Quem confere a senha apresentada contra o hash gravado.
     password_hasher: H,
 }
 
@@ -18,14 +19,16 @@ impl<H: PasswordHasher> AuthTMImpl<H> {
 }
 
 impl<H: PasswordHasher> AuthTM for AuthTMImpl<H> {
+    /// Confere a credencial apresentada.
+    ///
+    /// Há um erro só, e ele não diz se o problema foi o e-mail ou a senha:
+    /// distinguir os dois confirmaria a existência da conta para quem está
+    /// sondando.
     fn login(&self, user: &dyn User, password: &str) -> Result<(), AuthError> {
         if self.password_hasher.verify(password, user.password_hash()) {
             return Ok(());
         }
 
-        // Um erro só, sem dizer se o problema foi o e-mail ou a senha:
-        // distinguir os dois confirmaria a existência da conta para quem está
-        // sondando.
         Err(AuthError::InvalidCredentials)
     }
 }

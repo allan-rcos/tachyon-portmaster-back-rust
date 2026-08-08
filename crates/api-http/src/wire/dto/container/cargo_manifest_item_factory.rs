@@ -7,6 +7,7 @@ use portmaster_app::views::CargoItemView;
 
 /// Monta a tabela de uma linha de carga.
 pub(crate) struct CargoManifestItemFactory {
+    /// A View de origem, que a `table()` traduz.
     source: CargoItemView,
 }
 

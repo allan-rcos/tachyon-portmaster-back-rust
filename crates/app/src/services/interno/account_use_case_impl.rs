@@ -20,12 +20,19 @@ use portmaster_infra::repository::UserRepository;
 
 /// A implementação, genérica sobre os ports que consome.
 pub(crate) struct AccountUseCaseImpl<R, T, A, Q, F, C, U> {
+    /// Persistência de usuários.
     users: R,
+    /// As regras de usuário — quem constrói e valida.
     user_tm: T,
+    /// As regras de credencial.
     auth_tm: A,
+    /// Quem executa um DQL contra o banco.
     queries: Q,
+    /// De onde os DQLs saem, já com os parâmetros.
     dqls: F,
+    /// O cache de leitura, para o read-through e a invalidação.
     cache: C,
+    /// Quem abre e fecha a transação.
     unit_of_work: U,
 }
 
@@ -62,6 +69,11 @@ where
     C: ReadCache + Send + Sync,
     U: UnitOfWork + Send + Sync,
 {
+    /// O perfil de quem está na sessão.
+    ///
+    /// Responde `Unauthenticated` se a conta não existe mais: ela some entre a
+    /// emissão do token e o pedido quando o usuário foi removido — o token
+    /// continua assinado e válido, mas já não descreve ninguém.
     async fn get(&self, query: GetAccountQuery) -> Result<AccountView, AppError> {
         let key = CacheKey::of(CacheKey::ACCOUNT, "get", &[&query.context.id]);
 
@@ -69,9 +81,6 @@ where
             let dql = self.dqls.get_account(&query.context.id)?;
 
             Transaction::run(&self.unit_of_work, async {
-                // A conta some entre a emissão do token e o pedido quando o
-                // usuário foi removido — o token continua assinado e válido, mas
-                // já não descreve ninguém.
                 self.queries
                     .run(dql)
                     .await?
@@ -105,6 +114,10 @@ where
         Ok(user)
     }
 
+    /// Troca a senha do próprio usuário.
+    ///
+    /// A senha **atual** é exigida mesmo com a sessão válida: um token roubado
+    /// não deve bastar para trocar a senha e expulsar o dono.
     async fn change_password(&self, command: ChangePasswordCommand) -> Result<(), AppError> {
         Transaction::run(&self.unit_of_work, async {
             let existing = self
@@ -113,8 +126,6 @@ where
                 .await?
                 .ok_or(AppError::Unauthenticated)?;
 
-            // A senha atual é exigida mesmo com a sessão válida: um token
-            // roubado não deve bastar para trocar a senha e expulsar o dono.
             self.auth_tm
                 .login(existing.as_ref(), &command.current_password)?;
 

@@ -23,14 +23,14 @@ impl Dql for MetricsDql {
 }
 
 impl SqlDql for MetricsDql {
+    /// Oito sub-consultas escalares num `SELECT` sem `FROM`: uma ida ao banco
+    /// devolve a linha inteira do painel.
+    ///
+    /// Oito consultas separadas dariam o mesmo número por oito vezes o custo
+    /// de rede. Os índices de status são bindados, e não interpolados, mesmo
+    /// sendo constantes nossas. Interpolar número em SQL é o hábito que um dia
+    /// encontra um valor que não é constante.
     fn build(&self) -> SqlQuery {
-        // Oito sub-consultas escalares num `SELECT` sem `FROM`: uma ida ao banco
-        // devolve a linha inteira do painel. Oito consultas separadas dariam o
-        // mesmo número por oito vezes o custo de rede.
-        //
-        // Os índices de status são bindados, e não interpolados, mesmo sendo
-        // constantes nossas. Interpolar número em SQL é o hábito que um dia
-        // encontra um valor que não é constante.
         let occupancy = |status: ContainerStatus, alias: &str| {
             (
                 format!("(SELECT COUNT(*) FROM containers WHERE deleted_at IS NULL AND status = ?) AS {alias}"),
@@ -60,9 +60,11 @@ impl SqlDql for MetricsDql {
             .build()
     }
 
+    /// Um `SELECT` de agregações sempre devolve exatamente uma linha.
+    ///
+    /// Sem nenhuma, o painel zerado é a leitura honesta — não há o que
+    /// reportar.
     fn read(&self, rows: Vec<MySqlRow>) -> anyhow::Result<Self::View> {
-        // Um `SELECT` de agregações sempre devolve exatamente uma linha. Sem
-        // nenhuma, o painel zerado é a leitura honesta — não há o que reportar.
         let Some(row) = rows.first() else {
             return Ok(MetricsView::default());
         };

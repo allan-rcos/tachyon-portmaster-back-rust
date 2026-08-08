@@ -45,6 +45,7 @@ use crate::wire::wire::Wire;
 
 /// Os handlers de usuário.
 pub struct UserHandlers<U> {
+    /// O caso de uso de usuário.
     users: U,
 }
 
@@ -137,6 +138,8 @@ impl<U: UserUseCase> UserHandlers<U> {
     }
 
     /// `PUT /users/{id}/roles`
+    /// Um id vazio na lista é descartado: ele não nomeia papel nenhum, e
+    /// deixá-lo passar transformaria um corpo desleixado num 404 confuso.
     pub(crate) async fn update_roles(
         &self,
         wire: Wire,
@@ -150,8 +153,6 @@ impl<U: UserUseCase> UserHandlers<U> {
             .update_roles(UpdateUserRolesCommand {
                 context: context.clone(),
                 id,
-                // Um id vazio na lista não nomeia papel nenhum, e deixá-lo
-                // passar transformaria um corpo desleixado num 404 confuso.
                 role_ids: request
                     .role_ids
                     .into_iter()

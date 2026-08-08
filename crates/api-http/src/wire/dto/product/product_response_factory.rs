@@ -8,6 +8,7 @@ use portmaster_app::views::ProductViewItem;
 
 /// Monta a tabela de um produto.
 pub(crate) struct ProductResponseFactory {
+    /// A View de origem, que a `table()` traduz.
     source: ProductViewItem,
 }
 

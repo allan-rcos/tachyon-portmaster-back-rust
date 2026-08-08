@@ -10,9 +10,9 @@ use crate::wire::strategy::encode_strategy::EncodeStrategy;
 pub(crate) struct FlatBuffersEncodeStrategy;
 
 impl EncodeStrategy for FlatBuffersEncodeStrategy {
+    /// O builder é descartado com o buffer: reaproveitá-lo entre requisições
+    /// exigiria sincronizá-lo, e ele existe para durar uma serialização.
     fn encode(&self, response: &dyn Renderable) -> Result<Vec<u8>, ApiError> {
-        // O builder é descartado com o buffer: reaproveitá-lo entre requisições
-        // exigiria sincronizá-lo, e ele existe para durar uma serialização.
         let mut builder = planus::Builder::new();
         let root = response.write_flatbuffer(&mut builder)?;
 

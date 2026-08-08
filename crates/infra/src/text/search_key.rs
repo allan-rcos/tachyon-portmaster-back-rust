@@ -20,6 +20,10 @@ impl SearchKey {
     /// Tira acento, baixa a caixa e colapsa espaço. É deliberadamente ingênuo sobre
     /// alfabetos não-latinos: o que não tem decomposição conhecida passa intacto, o
     /// que é melhor do que descartar o caractere e tornar o registro inencontrável.
+    /// Normaliza o texto para a coluna de busca.
+    ///
+    /// Um caractere **sem decomposição conhecida é preservado**, não descartado:
+    /// descartar tornaria inencontrável qualquer nome fora do alfabeto latino.
     pub(crate) fn of(value: &str) -> String {
         let mut normalized = String::with_capacity(value.len());
         let mut last_was_space = true; // começa `true` para comer espaço à esquerda
@@ -37,9 +41,6 @@ impl SearchKey {
             last_was_space = false;
             match Self::deaccent(character) {
                 Some(base) => normalized.push_str(base),
-                // Sem decomposição conhecida: preserva o caractere em vez de
-                // descartá-lo. Descartar tornaria inencontrável qualquer nome fora
-                // do alfabeto latino.
                 None => normalized.extend(character.to_lowercase()),
             }
         }
@@ -95,10 +96,10 @@ mod tests {
         assert_eq!(key("soja\ttipo\n2"), "soja tipo 2");
     }
 
+    /// É o ponto da coluna auxiliar: quem busca "acucar" precisa achar
+    /// "Açúcar".
     #[test]
     fn tira_acento() {
-        // É o ponto da coluna auxiliar: quem busca "acucar" precisa achar
-        // "Açúcar".
         assert_eq!(key("Açúcar"), "acucar");
         assert_eq!(key("Óleo de Soja"), "oleo de soja");
         assert_eq!(key("PIÑA"), "pina");
@@ -110,10 +111,10 @@ mod tests {
         assert_eq!(key("   "), "");
     }
 
+    /// Descartar o que não tem decomposição conhecida tornaria o registro
+    /// inencontrável — pior do que deixá-lo passar sem normalizar.
     #[test]
     fn preserva_alfabeto_que_nao_sabe_decompor() {
-        // Descartar o que não tem decomposição conhecida tornaria o registro
-        // inencontrável — pior do que deixá-lo passar sem normalizar.
         assert_eq!(key("Ячмень"), "ячмень");
         assert_eq!(key("大豆 A"), "大豆 a");
     }

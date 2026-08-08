@@ -124,6 +124,17 @@ module_name_repetitions = "allow"
 must_use_candidate = "allow"
 type_complexity = "allow"
 
+# O `missing_docs` do rustc só enxerga item **público**, e a maior parte do que
+# se escreve aqui não é: são 69 arquivos em `interno/` e o `api-http` inteiro,
+# que é `pub(crate)`. Sem este lint, nada no compilador cobre a camada de
+# apresentação nem uma única implementação — foram 352 itens sem doc quando a
+# passada começou, e o compilador não tinha uma palavra a dizer sobre nenhum.
+#
+# Vale para campo, const e função privados. O par dele é a regra de que
+# comentário `//` não passa de uma linha: o racional que sobraria no corpo sobe
+# para o `///`, e é este lint que garante que exista um `///` para onde subir.
+missing_docs_in_private_items = "deny"
+
 # A prosa é em pt-BR e a seção `# Errors` é convenção de rustdoc em inglês, que
 # este projeto não segue: o que cada erro significa já está escrito no doc da
 # função, em português. Eram 28 achados, todos com a falha já documentada.

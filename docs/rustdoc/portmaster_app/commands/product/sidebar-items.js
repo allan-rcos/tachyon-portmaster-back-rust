@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["create_product_command","delete_product_command","update_product_command"]};

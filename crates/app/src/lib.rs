@@ -21,14 +21,7 @@
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
-// A blindagem de pânico do grupo C (tmp/clippy.md) vale para código de
-// produção. Numa asserção de teste, `panic!`, `v[0]` e `assert_eq!` sobre float
-// são a forma normal de escrever o teste, e não um risco: se o índice estourar
-// ou o float divergir, o teste falha — que é exatamente o que se quer.
-//
-// O relaxamento é só do passe `cfg(test)`. O passe de biblioteca continua
-// cobrindo o código de produção com os lints em `deny`, e `--all-targets` roda
-// os dois.
+// O relaxamento vale só no passe `cfg(test)` — ver o `reason` abaixo.
 #![cfg_attr(
     test,
     allow(
@@ -39,7 +32,7 @@
         clippy::disallowed_types,
         clippy::cast_possible_truncation,
         clippy::cast_sign_loss,
-        reason = "asserção de teste: falhar alto é o comportamento desejado, e um fake pode usar std::sync::Mutex"
+        reason = "asserção de teste: `panic!`, `v[0]` e float_cmp são a forma normal de escrever o teste, e falhar alto é o comportamento desejado, e um fake pode usar std::sync::Mutex"
     )
 )]
 
@@ -125,6 +118,9 @@ mod tests {
     /// Ver tmp/architecture/lifetimes-auto-traits.md: o bound de `Send` mora no
     /// ponto de uso, que é exatamente isto.
     #[allow(dead_code, reason = "o teste é a compilação: nunca é chamado")]
+    /// O `tokio::spawn` no corpo é o que prova o ponto: ele exige
+    /// `Send + 'static`, ou seja, que o futuro do caso de uso atravesse uma
+    /// fronteira de execução como atravessaria num handler.
     async fn o_provider_serve_um_handler_do_axum<P>(provider: Arc<P>) -> Result<(), AppError>
     where
         P: AppProvider + Send + Sync + 'static,
@@ -136,8 +132,6 @@ mod tests {
             roles: Vec::new(),
         };
 
-        // `tokio::spawn` exige `Send + 'static`: é a prova de que o futuro do
-        // caso de uso atravessa uma fronteira de execução, como num handler.
         let handle = tokio::spawn(async move {
             provider
                 .product_use_case()

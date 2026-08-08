@@ -9,6 +9,7 @@ use portmaster_app::views::ProductListView;
 
 /// Monta a tabela da listagem.
 pub(crate) struct ProductListResponseFactory {
+    /// A View de origem, que a `table()` traduz.
     source: ProductListView,
 }
 
@@ -43,10 +44,10 @@ mod tests {
     use portmaster_app::views::ProductViewItem;
     use pretty_assertions::assert_eq;
 
+    /// O cursor e o total são o que faz a próxima página ser pedível;
+    /// perdê-los no mapeamento deixaria o cliente preso na primeira.
     #[test]
     fn a_listagem_leva_cursor_e_total() {
-        // O cursor e o total são o que faz a próxima página ser pedível; perdê-los
-        // no mapeamento deixaria o cliente preso na primeira.
         let table = ProductListResponseFactory::of(ProductListView {
             items: vec![ProductViewItem {
                 id: "aZ3".into(),

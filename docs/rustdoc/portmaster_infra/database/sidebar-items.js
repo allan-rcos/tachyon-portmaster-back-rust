@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["interno","pool","scope","unit_of_work"]};

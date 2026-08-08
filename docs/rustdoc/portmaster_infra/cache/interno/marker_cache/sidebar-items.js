@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["MarkerCache","MarkerExpiry"],"type":["MarkerKey","MarkerValue"]};

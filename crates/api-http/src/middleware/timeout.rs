@@ -12,7 +12,9 @@ use tower::Service;
 /// O serviço que desiste depois do prazo.
 #[derive(Clone)]
 pub struct Timeout<S> {
+    /// O serviço interno, que este envolve.
     pub(super) inner: S,
+    /// Teto de tempo ou de tamanho, conforme o tipo.
     pub(super) limit: Duration,
 }
 

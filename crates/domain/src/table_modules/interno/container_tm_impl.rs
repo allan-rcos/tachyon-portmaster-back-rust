@@ -9,6 +9,7 @@ use crate::table_modules::ContainerTM;
 
 /// A implementação, genérica sobre o gerador de id.
 pub(crate) struct ContainerTMImpl<G> {
+    /// De onde sai a identidade de um contêiner novo.
     id_generator: G,
 }
 
@@ -67,14 +68,16 @@ impl<G: IntIdGenerator> ContainerTM for ContainerTMImpl<G> {
         )))
     }
 
+    /// Produz o contêiner com outra capacidade.
+    ///
+    /// O código **existente** é revalidado junto da capacidade nova. É barato,
+    /// e impede que uma linha anterior a uma regra mais rígida seja gravada de
+    /// volta sem passar por ela.
     fn update(
         &self,
         container: &dyn Container,
         max_capacity: f64,
     ) -> Result<Box<dyn Container>, ContainerError> {
-        // O código existente é revalidado junto da capacidade nova. É barato, e
-        // impede que uma linha anterior a uma regra mais rígida seja gravada de
-        // volta sem passar por ela.
         Self::validate(container.code(), max_capacity)
             .into_result(())
             .map_err(ContainerError::Validation)?;
@@ -84,10 +87,12 @@ impl<G: IntIdGenerator> ContainerTM for ContainerTMImpl<G> {
         Ok(Box::new(model))
     }
 
+    /// Sela o contêiner, se ele estiver carregando e suficientemente cheio.
+    ///
+    /// As duas condições são **independentes**: `Loading` descarta o que está
+    /// vazio ou já selado, e a razão de enchimento descarta o que tem carga de
+    /// menos para valer a viagem.
     fn seal(&self, container: &dyn Container) -> Result<Box<dyn Container>, ContainerError> {
-        // As duas condições são independentes: `Loading` descarta o que está
-        // vazio ou já selado, e a razão de enchimento descarta o que tem carga
-        // de menos para valer a viagem.
         if container.status() != ContainerStatus::Loading {
             return Err(ContainerError::SealRequiresLoading);
         }
@@ -99,10 +104,12 @@ impl<G: IntIdGenerator> ContainerTM for ContainerTMImpl<G> {
         Ok(Self::with_status(container, ContainerStatus::Sealed))
     }
 
+    /// Despacha um contêiner selado.
+    ///
+    /// Exigir `Sealed` é também o que torna a operação idempotente no sentido
+    /// útil: o primeiro despacho deixa o contêiner `InTransit`, então o segundo
+    /// é recusado em vez de despachar duas vezes.
     fn dispatch(&self, container: &dyn Container) -> Result<Box<dyn Container>, ContainerError> {
-        // Exigir `Sealed` é também o que torna a operação idempotente no sentido
-        // útil: o primeiro despacho deixa o contêiner `InTransit`, então o
-        // segundo é recusado em vez de despachar duas vezes.
         if container.status() != ContainerStatus::Sealed {
             return Err(ContainerError::DispatchRequiresSealed);
         }
@@ -225,10 +232,11 @@ mod tests {
         assert_eq!(dispatched.status(), ContainerStatus::InTransit);
     }
 
+    /// Depois do primeiro despacho o contêiner não está mais `Sealed`.
+    ///
+    /// É o que impede despachar duas vezes.
     #[test]
     fn o_segundo_despacho_e_recusado() {
-        // É o que impede despachar duas vezes: depois do primeiro, o contêiner
-        // não está mais `Sealed`.
         let dispatched = container_at(500.0, 1000.0, ContainerStatus::InTransit);
         let error = table_module()
             .dispatch(dispatched.as_ref())

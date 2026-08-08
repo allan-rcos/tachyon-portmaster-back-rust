@@ -55,11 +55,17 @@ const TOKEN_TYPE: &str = "cookie";
 
 /// Os handlers de sessão.
 pub struct AuthHandlers<S, M, R> {
+    /// O caso de uso de sessão.
     sessions: S,
+    /// O caso de uso de marcador, que guarda o refresh.
     marks: M,
+    /// De onde sai a metade aleatória do refresh token.
     random: R,
+    /// Quem emite e confere o access token.
     tokens: TokenService,
+    /// Como os cookies de sessão são escritos e lidos.
     cookies: AuthCookie,
+    /// Por quanto tempo o refresh vale, em segundos.
     refresh_ttl_seconds: u64,
 }
 
@@ -93,6 +99,11 @@ where
     /// Pública, e fechada para sempre depois do primeiro usuário — quem pergunta
     /// depois recebe 409. Responde `201` **já logado**: obrigar quem acabou de
     /// digitar a senha a chamar `/auth/login` em seguida seria cerimônia.
+    /// Os campos entram com `unwrap_or_default` e não com erro: campo ausente
+    /// vira string vazia, e é o `TableModule` que a recusa — nomeando **todos**
+    /// os campos que faltaram, de uma vez. Levantar erro nesta camada devolveria
+    /// um problema por requisição e duplicaria, no `api-http`, uma regra que já
+    /// mora no `domain`.
     pub(crate) async fn setup(
         &self,
         wire: Wire,
@@ -100,11 +111,6 @@ where
     ) -> Result<ApiResponse, ApiError> {
         let user = self
             .sessions
-            // `unwrap_or_default` e não um erro aqui: campo ausente vira string
-            // vazia, e é o `TableModule` que a recusa — nomeando **todos** os
-            // campos que faltaram, de uma vez. Levantar erro nesta camada
-            // devolveria um problema por requisição e duplicaria, no `api-http`,
-            // uma regra que já mora no `domain`.
             .setup(SetupCommand {
                 name: request.name.unwrap_or_default(),
                 email: request.email.unwrap_or_default(),
@@ -121,6 +127,10 @@ where
     /// Pública. E-mail desconhecido e senha errada respondem igual — é o `app`
     /// que garante isso, e repetir a decisão aqui daria ao sistema duas opiniões
     /// sobre a mesma coisa.
+    /// Credencial ausente vira string vazia e falha como credencial **errada**:
+    /// o `app` responde igual para e-mail desconhecido e senha errada, e
+    /// distinguir "não mandou o campo" aqui entregaria ao atacante metade da
+    /// resposta.
     pub(crate) async fn login(
         &self,
         wire: Wire,
@@ -128,10 +138,6 @@ where
     ) -> Result<ApiResponse, ApiError> {
         let user = self
             .sessions
-            // Credencial ausente vira string vazia e falha como credencial
-            // errada: o `app` responde igual para e-mail desconhecido e senha
-            // errada, e distinguir "não mandou o campo" aqui entregaria ao
-            // atacante metade da resposta.
             .login(LoginCommand {
                 email: request.email.unwrap_or_default(),
                 password: request.password.unwrap_or_default(),
@@ -147,16 +153,16 @@ where
     /// Pública no sentido de não exigir access token: quem chega aqui está
     /// justamente com um que expirou. O que ela exige é o refresh, e ele vale
     /// uma vez só.
+    /// Sem cookie não há o que limpar, e limpar assim mesmo mandaria um
+    /// `Set-Cookie` para quem nunca teve sessão. Já um token apresentado e morto
+    /// **é** tirado do navegador — é o que impede o cliente de reapresentá-lo
+    /// para sempre.
     pub(crate) async fn refresh(&self, headers: HeaderMap) -> Result<NoContent, ApiError> {
         let Some(presented) = self.cookies.read_refresh(&headers) else {
-            // Sem cookie não há o que limpar, e limpar assim mesmo mandaria um
-            // `Set-Cookie` para quem nunca teve sessão.
             return Err(refused());
         };
 
         let user = self.rotate(&presented).await.map_err(|error| {
-            // O token apresentado está morto. Tirá-lo do navegador é o que
-            // impede o cliente de reapresentá-lo para sempre.
             error
                 .with_cookie(self.cookies.clear_access())
                 .with_cookie(self.cookies.clear_refresh())
@@ -175,10 +181,10 @@ where
     /// Revoga o refresh e limpa os dois cookies. O access token continua
     /// tecnicamente válido até expirar — é o preço de ele ser auto-contido — mas
     /// sai do navegador aqui, e sem refresh a sessão não se renova.
+    /// Revogar é **esforço, não condição**: falhar em revogar não pode impedir
+    /// o cliente de sair. O que fica é o registro para quem investiga.
     pub(crate) async fn logout(&self, headers: HeaderMap) -> Result<NoContent, ApiError> {
         if let Some(presented) = self.cookies.read_refresh(&headers) {
-            // Esforço, não condição: falhar em revogar não pode impedir o
-            // cliente de sair. O que fica é o registro para quem investiga.
             if let Err(error) = self.revoke(&presented).await {
                 tracing::warn!(error = %error, "não foi possível revogar o refresh token no logout");
             }
@@ -218,6 +224,9 @@ where
     /// A ordem importa: o token só é invalidado **depois** de o usuário ser
     /// reencontrado. Invalidar antes queimaria a sessão de quem apresentou um
     /// token bom num momento em que o banco estava fora.
+    /// O contexto montado aqui carrega **só o id**: o que ele faz é dizer quem
+    /// reler. Os papéis vêm do banco logo em seguida, e é essa releitura que faz
+    /// uma permissão revogada não sobreviver à renovação.
     async fn rotate(&self, presented: &str) -> Result<Box<dyn User>, ApiError> {
         let Some(owner) = RefreshToken::owner_of(presented) else {
             return Err(refused());
@@ -236,9 +245,6 @@ where
             return Err(refused());
         }
 
-        // Só o id importa: o que este contexto faz é dizer **quem** reler. Os
-        // papéis vêm do banco logo em seguida, e é essa releitura que faz uma
-        // permissão revogada não sobreviver à renovação.
         let user = self
             .sessions
             .validate(&UserContext {

@@ -23,10 +23,11 @@ impl AccountReader {
         Ok(roles)
     }
 
+    ///
+    /// `role_id` nulo é a marca de "este usuário não tem papel": o join não
+    /// achou par, e as demais colunas de papel vêm nulas junto.
     /// O papel de uma linha, ou `None` no lado vazio do `LEFT JOIN`.
     pub(crate) fn role_of(row: &MySqlRow) -> anyhow::Result<Option<RoleViewItem>> {
-        // `role_id` nulo é a marca de "este usuário não tem papel": o join não achou
-        // par, e as demais colunas de papel vêm nulas junto.
         if Row::opt_id(row, "role_id")?.is_none() {
             return Ok(None);
         }

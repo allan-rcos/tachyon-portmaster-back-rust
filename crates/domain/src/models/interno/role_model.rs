@@ -6,11 +6,17 @@ use crate::models::Role;
 
 /// A implementação do domínio de [`Role`].
 pub struct RoleModel {
+    /// Identidade, em base62.
     id: String,
+    /// Nome do papel, como a administração o exibe.
     name: String,
+    /// Os slugs que este papel concede.
     permissions: Vec<String>,
+    /// Quando foi criado, em UTC.
     created_at: DateTime<Utc>,
+    /// Quando mudou pela última vez; o `set_*` o move.
     updated_at: DateTime<Utc>,
+    /// Quando foi removido, ou `None` se ativo — o soft-delete.
     deleted_at: Option<DateTime<Utc>>,
 }
 

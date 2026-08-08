@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["api_response","body","convert","dto","factory","json","json_body","media_type","no_content","strategy","wire"]};

@@ -23,14 +23,23 @@ use portmaster_infra::repository::RoleRepository;
 
 /// A implementação, genérica sobre os ports que consome.
 pub(crate) struct RoleUseCaseImpl<R, T, Q, F, C, U> {
+    /// Persistência de papéis.
     roles: R,
+    /// As regras de papel.
     role_tm: T,
+    /// Quem executa um DQL contra o banco.
     queries: Q,
+    /// De onde os DQLs saem, já com os parâmetros.
     dqls: F,
+    /// O cache de leitura, para o read-through e a invalidação.
     cache: C,
+    /// Quem abre e fecha a transação.
     unit_of_work: U,
+    /// A permissão exigida para create.
     create_permission: RequiresPermission,
+    /// A permissão exigida para update.
     update_permission: RequiresPermission,
+    /// A permissão exigida para read.
     read_permission: RequiresPermission,
 }
 
@@ -84,6 +93,10 @@ where
         Ok(role)
     }
 
+    /// Substitui as permissões de um papel.
+    ///
+    /// A invalidação alcança `user:` e `account:` também: trocar as permissões
+    /// de um papel muda o que toda conta que o carrega pode fazer.
     async fn update_permissions(
         &self,
         command: UpdateRolePermissionsCommand,
@@ -107,8 +120,6 @@ where
         })
         .await?;
 
-        // Trocar as permissões de um papel muda o que toda conta que o carrega
-        // pode fazer — daí a invalidação alcançar `user:` e `account:` também.
         ReadThrough::invalidate(&self.cache, Invalidation::ROLE_WRITE).await?;
 
         Ok(role)

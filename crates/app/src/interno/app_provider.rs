@@ -23,7 +23,9 @@ use crate::services::{
 
 /// A implementação do provider. Privada: nenhum crate exporta impl.
 pub(crate) struct AppProviderImpl<D, I> {
+    /// O provider do `domain`, de onde saem os `TableModules`.
     domain: D,
+    /// O provider da `infra`, de onde saem repositories, cache e leitura.
     infra: I,
 }
 

@@ -15,6 +15,19 @@ impl ReadThrough {
     /// O valor é guardado como JSON. Não é o formato do fio — quem serializa a
     /// resposta é o `api-http`, com os próprios tipos — é só o jeito de um cache de
     /// bytes guardar um tipo qualquer sem virar um cache por tipo.
+    /// Serve do cache, ou calcula e guarda.
+    ///
+    /// ## Um valor que não desserializa é tratado como ausência
+    ///
+    /// Ele é de um formato anterior — a View mudou de forma desde que ele foi
+    /// guardado. Recalcular em silêncio é o comportamento certo: derrubar a
+    /// requisição por causa de um cache velho transformaria um deploy em
+    /// incidente.
+    ///
+    /// ## Falha ao guardar não invalida a resposta
+    ///
+    /// O cliente já tem o dado correto, e o único prejuízo é o próximo pedido
+    /// recalcular.
     pub(crate) async fn cached<C, V, F>(cache: &C, key: &str, load: F) -> Result<V, AppError>
     where
         C: ReadCache,
@@ -22,10 +35,6 @@ impl ReadThrough {
         F: Future<Output = Result<V, AppError>>,
     {
         if let Some(bytes) = cache.get(key).await? {
-            // Um valor que não desserializa é de um formato anterior — a View mudou
-            // de forma desde que ele foi guardado. Tratar como ausência recalcula em
-            // silêncio, que é o comportamento certo: derrubar a requisição por causa
-            // de um cache velho transformaria um deploy em incidente.
             if let Ok(hit) = serde_json::from_slice(&bytes) {
                 return Ok(hit);
             }
@@ -33,8 +42,6 @@ impl ReadThrough {
 
         let value = load.await?;
 
-        // Falha ao serializar não invalida a resposta: o cliente já tem o dado
-        // correto, e o único prejuízo é o próximo pedido recalcular.
         if let Ok(bytes) = serde_json::to_vec(&value) {
             cache.put(key, bytes).await?;
         }
@@ -131,10 +138,10 @@ mod tests {
         assert_eq!(execucoes.load(Ordering::SeqCst), 1);
     }
 
+    /// Guardar um erro faria uma indisponibilidade de um segundo durar o TTL
+    /// inteiro.
     #[tokio::test]
     async fn a_falha_nao_e_cacheada() {
-        // Guardar um erro faria uma indisponibilidade de um segundo durar o TTL
-        // inteiro.
         let cache = FakeCache::default();
 
         let result: Result<i64, _> = ReadThrough::cached(&cache, "product:list", async {
@@ -146,11 +153,12 @@ mod tests {
         assert!(cache.get("product:list").await.unwrap().is_none());
     }
 
+    /// A View mudou de forma desde que isto foi guardado.
+    ///
+    /// Recalcular é o caminho certo; derrubar a requisição transformaria
+    /// deploy em incidente.
     #[tokio::test]
     async fn um_valor_de_formato_antigo_e_recalculado() {
-        // A View mudou de forma desde que isto foi guardado. Recalcular é o
-        // caminho certo; derrubar a requisição transformaria deploy em
-        // incidente.
         let cache = FakeCache::default();
         cache
             .put("product:list", b"isto nao e um numero".to_vec())

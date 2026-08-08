@@ -44,6 +44,13 @@ impl ContainerReader {
     }
 
     /// A telemetria recente agregada pelo banco.
+    /// Hidrata a telemetria recente, descartando evento que não reconhece.
+    ///
+    /// Um evento gravado que não corresponde a variante nenhuma é **descartado,
+    /// não aproximado**. O campo do fio é um enum: não existe valor que
+    /// signifique "aconteceu algo, mas nenhum destes", então escolher uma
+    /// variante reportaria um evento que nunca ocorreu. A linha continua em
+    /// `telemetry_logs` de qualquer forma.
     pub(crate) fn logs_of(json: Option<&str>) -> anyhow::Result<Vec<TelemetryLogView>> {
         let entries = Self::entries_of(json, "logs_json")?;
         let mut logs = Vec::with_capacity(entries.len());
@@ -51,11 +58,6 @@ impl ContainerReader {
         for entry in &entries {
             let event = i32::try_from(Self::int_of(entry, "event")?).unwrap_or(-1);
 
-            // Um evento gravado que não corresponde a variante nenhuma é descartado,
-            // não aproximado. O campo do fio é um enum: não existe valor que
-            // signifique "aconteceu algo, mas nenhum destes", então escolher uma
-            // variante reportaria um evento que nunca ocorreu. A linha continua em
-            // `telemetry_logs` de qualquer forma.
             if TelemetryEvent::from_i32(event).is_none() {
                 continue;
             }

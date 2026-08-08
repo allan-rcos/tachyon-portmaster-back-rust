@@ -125,10 +125,10 @@ mod tests {
         );
     }
 
+    /// O caso que mais importa: o cliente precisa receber o motivo que ele
+    /// pode resolver, não o que aconteceu ao desfazer.
     #[tokio::test]
     async fn o_erro_do_corpo_sobrevive_ao_rollback() {
-        // O caso que mais importa: o cliente precisa receber o motivo que ele
-        // pode resolver, não o que aconteceu ao desfazer.
         let uow = SpyUnitOfWork::default();
 
         let error = Transaction::run(&uow, async {
@@ -140,10 +140,10 @@ mod tests {
         assert!(matches!(error, AppError::NotFound { id, .. } if id == "abc"));
     }
 
+    /// Sem o escopo aberto, os repositórios não encontrariam a transação
+    /// corrente — e falhariam em execução, não em compilação.
     #[tokio::test]
     async fn o_corpo_roda_dentro_do_escopo_de_transacao() {
-        // Sem o escopo aberto, os repositórios não encontrariam a transação
-        // corrente — e falhariam em execução, não em compilação.
         let uow = SpyUnitOfWork::default();
 
         let dentro = Transaction::run(&uow, async {

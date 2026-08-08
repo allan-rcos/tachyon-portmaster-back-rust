@@ -14,16 +14,8 @@
 use serde_json::{Map, Value};
 
 /// Lê campos de um objeto JSON.
-// Os leitores que ainda não têm chamador são os das mensagens que as fatias
-// 4.2–4.4 vão migrar. Sai quando a última rota estiver no wire novo.
 pub(crate) struct Json;
 
-// Os leitores sem chamador são os das mensagens que as fatias 4.2–4.4 vão
-// migrar. O `allow` sai quando a última rota estiver no wire novo.
-#[allow(
-    dead_code,
-    reason = "leitores usados pelas mensagens ainda não migradas (fatias 4.2-4.4)"
-)]
 impl Json {
     /// Um texto.
     pub(crate) fn text(source: &Map<String, Value>, field: &str) -> Option<String> {
@@ -53,11 +45,6 @@ impl Json {
         source.get(field).and_then(Value::as_f64)
     }
 
-    /// Um booleano.
-    pub(crate) fn flag(source: &Map<String, Value>, field: &str) -> Option<bool> {
-        source.get(field).and_then(Value::as_bool)
-    }
-
     /// Uma lista de textos.
     ///
     /// Entradas que não são texto são descartadas — a lista existe para ser
@@ -84,7 +71,6 @@ mod tests {
             "name": "Cimento",
             "density": 1.44,
             "count": 7,
-            "active": true,
             "roles": ["a", 2, "b"],
         }) {
             Value::Object(map) => map,
@@ -99,15 +85,13 @@ mod tests {
         assert_eq!(Json::text(&s, "name"), Some("Cimento".to_owned()));
         assert_eq!(Json::real(&s, "density"), Some(1.44));
         assert_eq!(Json::number(&s, "count"), Some(7));
-        assert_eq!(Json::flag(&s, "active"), Some(true));
     }
 
     #[test]
     fn campo_ausente_ou_do_tipo_errado_e_none() {
+        // Quem decide se isso é problema é o `TableModule`.
         let s = source();
 
-        // Ausente e presente-com-tipo-errado são o mesmo `None`: quem decide se
-        // isso é um problema é o TableModule, que sabe o que é obrigatório.
         assert_eq!(Json::text(&s, "inexistente"), None);
         assert_eq!(Json::text(&s, "density"), None);
         assert_eq!(Json::number(&s, "name"), None);

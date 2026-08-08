@@ -10,6 +10,7 @@ use crate::database::UnitOfWork;
 
 /// A implementação sobre `MariaDB`.
 pub(crate) struct MariadbUnitOfWork {
+    /// De onde a transação sai quando um escopo abre.
     pool: MySqlPool,
 }
 
@@ -76,13 +77,15 @@ impl UnitOfWork for MariadbUnitOfWork {
             .context("falha ao confirmar transação no MariaDB")
     }
 
+    /// Desfaz a transação corrente, se houver.
+    ///
+    /// Sem transação é no-op **de propósito**: o caminho de erro chama rollback
+    /// sem saber se chegou a abrir alguma, e transformar isso em falha
+    /// esconderia o erro original atrás de um segundo.
     async fn rollback(&self) -> anyhow::Result<()> {
         let slot = Self::slot()?;
         let mut current = slot.lock().await;
 
-        // Sem transação é no-op de propósito: o caminho de erro chama rollback
-        // sem saber se chegou a abrir alguma, e transformar isso em falha
-        // esconderia o erro original atrás de um segundo.
         let Some(transaction) = current.take() else {
             return Ok(());
         };
@@ -100,10 +103,10 @@ mod tests {
     use crate::database::scope::TransactionScope;
     use std::sync::Arc;
 
+    /// Sem o escopo aberto, pedir a transação corrente falha em vez de
+    /// devolver algo inútil ou entrar em pânico.
     #[tokio::test]
     async fn fora_do_escopo_nao_ha_transacao() {
-        // Sem o escopo aberto, pedir a transação corrente falha em vez de
-        // devolver algo inútil ou entrar em pânico.
         let result = MariadbUnitOfWork::current().await;
         assert!(result.is_err());
     }
@@ -117,16 +120,16 @@ mod tests {
         .await;
     }
 
+    /// A garantia que sustenta o modelo: duas requisições simultâneas têm
+    /// transações independentes, sem lock global entre elas.
+    ///
+    /// O slot sai de cada tarefa por clone, e não como endereço: se as duas
+    /// tarefas apenas devolvessem um ponteiro, a primeira alocação já estaria
+    /// liberada quando a segunda acontecesse, e o alocador poderia devolver o
+    /// mesmo endereço — o teste acusaria uma mistura que não houve. Segurando
+    /// os dois `Arc` vivos ao mesmo tempo, identidade distinta é garantida.
     #[tokio::test]
     async fn escopos_de_tarefas_diferentes_nao_se_misturam() {
-        // A garantia que sustenta o modelo: duas requisições simultâneas têm
-        // transações independentes, sem lock global entre elas.
-        //
-        // O slot sai de cada tarefa por clone, e não como endereço: se as duas
-        // tarefas apenas devolvessem um ponteiro, a primeira alocação já estaria
-        // liberada quando a segunda acontecesse, e o alocador poderia devolver o
-        // mesmo endereço — o teste acusaria uma mistura que não houve. Segurando
-        // os dois `Arc` vivos ao mesmo tempo, identidade distinta é garantida.
         let first = tokio::spawn(TransactionScope::run(async { CURRENT.with(Clone::clone) }));
         let second = tokio::spawn(TransactionScope::run(async { CURRENT.with(Clone::clone) }));
 

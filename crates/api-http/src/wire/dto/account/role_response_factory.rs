@@ -8,6 +8,7 @@ use portmaster_app::views::RoleViewItem;
 
 /// Monta a tabela de um papel.
 pub(crate) struct RoleResponseFactory {
+    /// A View de origem, que a `table()` traduz.
     source: RoleViewItem,
 }
 

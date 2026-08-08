@@ -24,6 +24,7 @@ use crate::id::interno::snowflake_id_generator::SnowflakeIdGenerator;
 
 /// A implementação do provider. Privada: nenhum crate exporta impl.
 pub(crate) struct DomainProviderImpl {
+    /// Quem é este servidor na composição do Snowflake.
     secrets: DomainSecrets,
 }
 

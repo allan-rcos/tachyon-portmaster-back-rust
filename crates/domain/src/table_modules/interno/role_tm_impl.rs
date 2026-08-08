@@ -8,6 +8,7 @@ use crate::table_modules::RoleTM;
 
 /// A implementação, genérica sobre o gerador de id.
 pub(crate) struct RoleTMImpl<G> {
+    /// De onde sai a identidade de um papel novo.
     id_generator: G,
 }
 
@@ -47,14 +48,16 @@ impl<G: IntIdGenerator> RoleTM for RoleTMImpl<G> {
         )))
     }
 
+    /// Substitui o conjunto de permissões do papel.
+    ///
+    /// Os slugs **não** são validados aqui: quem os produz é o registro de
+    /// permissões do próprio sistema, não o cliente. Conferir se um slug existe
+    /// é trabalho do `app`, que tem o catálogo à mão.
     fn update_permissions(
         &self,
         role: &dyn Role,
         permissions: Vec<String>,
     ) -> Result<Box<dyn Role>, RoleError> {
-        // Os slugs não são validados aqui: quem os produz é o registro de
-        // permissões do próprio sistema, não o cliente. Conferir se um slug
-        // existe é trabalho do `app`, que tem o catálogo à mão.
         let mut model = RoleModel::from_domain(role);
         model.set_permissions(permissions);
         Ok(Box::new(model))
@@ -105,10 +108,11 @@ mod tests {
         }
     }
 
+    /// Um slug omitido é uma permissão **revogada**.
+    ///
+    /// Se isto virasse merge, não haveria como tirar uma permissão de um papel.
     #[test]
     fn atualizar_permissoes_substitui_em_vez_de_somar() {
-        // Um slug omitido é uma permissão revogada. Se isto virasse merge, não
-        // haveria como tirar uma permissão de um papel.
         let role = table_module()
             .create("Operador".into(), vec!["a:read".into(), "a:write".into()])
             .expect("os dados são válidos");

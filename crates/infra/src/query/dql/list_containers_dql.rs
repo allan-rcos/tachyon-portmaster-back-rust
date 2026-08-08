@@ -15,6 +15,7 @@ const COLUMNS: &str = "c.id, c.code, c.current_weight, c.max_capacity, c.status"
 
 /// A listagem de contêineres.
 pub struct ListContainersDql {
+    /// Cursor, limite, busca e os filtros de status.
     params: ContainerListParams,
 }
 
@@ -180,10 +181,10 @@ mod tests {
         );
     }
 
+    /// Se divergirem, o cliente recebe uma página de três itens dizendo que há
+    /// quatrocentos.
     #[test]
     fn a_contagem_repete_exatamente_os_filtros_da_pagina() {
-        // Se divergirem, o cliente recebe uma página de três itens dizendo que
-        // há quatrocentos.
         let dql = ListContainersDql::new(ContainerListParams {
             search: Some("BR-99".into()),
             status: Some(ContainerStatus::InTransit),

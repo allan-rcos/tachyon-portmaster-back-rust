@@ -10,6 +10,7 @@ use portmaster_app::views::ContainerSummaryViewItem;
 
 /// Monta a tabela do resumo de um contêiner.
 pub(crate) struct ContainerSummaryResponseFactory {
+    /// A View de origem, que a `table()` traduz.
     source: ContainerSummaryViewItem,
 }
 

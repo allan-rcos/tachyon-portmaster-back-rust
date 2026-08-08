@@ -126,12 +126,14 @@ impl From<ContainerError> for AppError {
 }
 
 impl From<ManifestError> for AppError {
+    /// Traduz o erro de manifesto, separando validação de conflito.
+    ///
+    /// "Quantidade tem que ser maior que zero" descreve o **campo** que chegou,
+    /// não o estado do contêiner: é o mesmo tipo de recusa que um nome vazio, e
+    /// sai como 422 junto com os outros. As demais variantes falam do pátio, e
+    /// continuam sendo conflito.
     fn from(error: ManifestError) -> Self {
         match error {
-            // "quantidade tem que ser maior que zero" descreve o **campo** que
-            // chegou, não o estado do contêiner: é o mesmo tipo de recusa que
-            // um nome vazio, e sai como 422 junto com os outros. As demais
-            // variantes falam do pátio, e continuam sendo conflito.
             ManifestError::InvalidQuantity => Self::Validation(vec![FieldError::new(
                 "quantity",
                 ManifestError::InvalidQuantity.to_string(),
@@ -146,10 +148,11 @@ mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
 
+    /// A mensagem é a mesma para e-mail desconhecido e senha errada.
+    ///
+    /// Se divergissem, bastaria comparar as duas para enumerar quem tem conta.
     #[test]
     fn credencial_ruim_nao_diz_qual_metade_falhou() {
-        // A mensagem é a mesma para e-mail desconhecido e senha errada. Se
-        // divergissem, bastaria comparar as duas para enumerar quem tem conta.
         assert_eq!(
             AppError::Unauthenticated.to_string(),
             "Invalid e-mail or password."
@@ -170,11 +173,13 @@ mod tests {
         assert_eq!(fields.len(), 2, "o lote não pode perder campos no caminho");
     }
 
+    /// "maior que zero" descreve o corpo que chegou, e o cliente corrige o
+    /// corpo.
+    ///
+    /// As outras variantes descrevem o pátio, e ele não tem como corrigir
+    /// aquilo reenviando a mesma coisa.
     #[test]
     fn quantidade_invalida_e_validacao_e_nao_conflito() {
-        // "maior que zero" descreve o corpo que chegou, e o cliente corrige o
-        // corpo. As outras variantes descrevem o pátio, e ele não tem como
-        // corrigir aquilo reenviando a mesma coisa.
         let error: AppError = ManifestError::InvalidQuantity.into();
 
         let AppError::Validation(fields) = error else {
@@ -196,10 +201,10 @@ mod tests {
         ));
     }
 
+    /// `ContainerError` carrega os dois tipos de recusa; sem separá-las, um
+    /// código de contêiner malformado sairia como 409.
     #[test]
     fn campo_recusado_de_conteiner_nao_vira_conflito() {
-        // `ContainerError` carrega os dois tipos de recusa; sem separá-las, um
-        // código de contêiner malformado sairia como 409.
         let error: AppError =
             ContainerError::Validation(vec![FieldError::new("code", "vazio")]).into();
 

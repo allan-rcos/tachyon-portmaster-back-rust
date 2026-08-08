@@ -33,6 +33,11 @@ where
 {
     type Rejection = ApiError;
 
+    /// Lê o corpo no formato que a requisição anunciou.
+    ///
+    /// O `match` de formato fica aqui, e não num `dyn`: `DecodeStrategy::decode`
+    /// é genérico sobre a factory e por isso a trait não é object-safe — o que é
+    /// conveniente, porque mantém o caminho de requisição estático.
     async fn from_request(request: Request, state: &S) -> Result<Self, Self::Rejection> {
         let (mut parts, body) = request.into_parts();
         let wire = Wire::from_request_parts(&mut parts, state).await?;
@@ -49,9 +54,6 @@ where
             ));
         }
 
-        // O `match` fica aqui, e não num `dyn`: `DecodeStrategy::decode` é
-        // genérico sobre a factory e por isso a trait não é object-safe — o que
-        // é conveniente, porque mantém o caminho de requisição estático.
         let message = match wire.request() {
             MediaType::Json => JsonDecodeStrategy.decode::<F>(&bytes),
             MediaType::FlatBuffers => FlatBuffersDecodeStrategy.decode::<F>(&bytes),

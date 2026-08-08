@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["container_command","create_container_command","update_container_command"]};

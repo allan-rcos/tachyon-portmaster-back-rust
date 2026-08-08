@@ -1,4 +1,19 @@
 //! A listagem de contêineres com carga e telemetria recente.
+//!
+//! ## As coleções aninhadas viram JSON no próprio banco
+//!
+//! A alternativa — uma consulta por contêiner para a carga e outra para os logs
+//! — custaria 2n idas ao banco por página.
+//!
+//! O timestamp sai como **epoch em ms**, na forma que a View guarda. Sair como
+//! texto de data obrigaria a hidratação a interpretar formato de data vindo de
+//! dentro de um JSON: duas conversões para chegar no mesmo número.
+//!
+//! ## Por que a janela de recentes é sub-consulta escalar
+//!
+//! O `MariaDB` não tem `LATERAL`, então uma tabela derivada não pode enxergar o
+//! `c.id` de fora. Limitar pelo id do n-ésimo mais novo traz as mesmas linhas
+//! com uma correlação que o motor aceita.
 
 use crate::query::cursor::{Cursor, CursorFilters};
 use crate::query::dql::container_reader::ContainerReader;
@@ -18,7 +33,9 @@ const RECENT_LOGS: u32 = 10;
 
 /// A listagem de contêineres com carga e telemetria recente.
 pub struct ListContainerSummariesDql {
+    /// Cursor e limite da página pedida.
     params: SummaryListParams,
+    /// Restringe a um contêiner, quando a rota pediu um só.
     id: Option<i64>,
 }
 
@@ -52,9 +69,6 @@ impl SqlDql for ListContainerSummariesDql {
         let last_id =
             Cursor::last_id_or_start(self.params.cursor.as_deref(), &self.cursor_filters());
 
-        // As duas coleções aninhadas viram JSON no próprio banco. A alternativa
-        // — uma consulta por contêiner para a carga e outra para os logs —
-        // custaria 2n idas ao banco por página.
         let manifest = "(SELECT JSON_ARRAYAGG(JSON_OBJECT( \
                         'product_id', ci.product_id, 'product_name', p.name, \
                         'quantity', ci.quantity, 'weight', ci.weight)) \
@@ -62,15 +76,6 @@ impl SqlDql for ListContainerSummariesDql {
                         INNER JOIN products p ON p.id = ci.product_id \
                         WHERE ci.container_id = c.id) AS manifest_json";
 
-        // O timestamp já sai como epoch em ms, na forma que a View guarda. Sair
-        // como texto de data obrigaria a hidratação a interpretar formato de
-        // data vindo de dentro de um JSON — duas conversões para chegar no mesmo
-        // número.
-        //
-        // A janela dos recentes é uma sub-consulta escalar correlacionada e não
-        // uma tabela derivada: o MariaDB não tem LATERAL, então uma derivada não
-        // pode enxergar o `c.id` de fora. Limitar pelo id do n-ésimo mais novo
-        // traz as mesmas linhas com uma correlação que o motor aceita.
         let logs = format!(
             "(SELECT JSON_ARRAYAGG(JSON_OBJECT( \
              'id', t.id, 'event', t.event, 'description', t.description, \
@@ -156,10 +161,10 @@ mod tests {
         );
     }
 
+    /// `JSON_ARRAYAGG` devolve `NULL` num contêiner sem carga, que é estado
+    /// normal.
     #[test]
     fn manifesto_vazio_nao_e_erro() {
-        // JSON_ARRAYAGG devolve NULL num contêiner sem carga, que é estado
-        // normal.
         assert_eq!(ContainerReader::manifest_of(None).unwrap(), Vec::new());
     }
 
@@ -178,10 +183,10 @@ mod tests {
         );
     }
 
+    /// O campo do fio é um enum: não há valor que signifique "aconteceu algo,
+    /// mas nenhum destes".
     #[test]
     fn evento_desconhecido_e_descartado_e_nao_aproximado() {
-        // O campo do fio é um enum: não há valor que signifique "aconteceu algo,
-        // mas nenhum destes".
         let json = r#"[{"id":1,"event":0,"description":null,"timestamp":1000},
                        {"id":2,"event":98,"description":null,"timestamp":2000}]"#;
 

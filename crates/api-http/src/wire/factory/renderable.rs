@@ -43,12 +43,14 @@ where
         Ok(self.table()?.prepare(builder).downcast())
     }
 
+    /// Serializa a **tabela do planus**, e não um `serde_json::Value` montado
+    /// à mão.
+    ///
+    /// Não é preferência: o `serde_json` deste lock não tem `preserve_order`,
+    /// então o `Map` dele é um `BTreeMap` e os campos sairiam em ordem
+    /// alfabética. A tabela sai na ordem de declaração do `.fbs`, que é o que
+    /// `swagger/swagger.json` documenta.
     fn write_json(&self, out: &mut Vec<u8>) -> Result<(), ApiError> {
-        // Serializa a **tabela do planus**, e não um `serde_json::Value` montado
-        // à mão. Não é preferência: o `serde_json` deste lock não tem
-        // `preserve_order`, então o `Map` dele é um `BTreeMap` e os campos
-        // sairiam em ordem alfabética. A tabela sai na ordem de declaração do
-        // `.fbs`, que é o que `swagger/swagger.json` documenta.
         serde_json::to_writer(out, &self.table()?)
             .map_err(|e| ApiError::unrenderable(format!("falha ao escrever JSON: {e}")))
     }

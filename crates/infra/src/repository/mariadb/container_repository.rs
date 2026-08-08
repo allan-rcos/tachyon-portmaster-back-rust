@@ -10,10 +10,12 @@ use crate::entity::container_row::ContainerRow;
 use crate::repository::ContainerRepository;
 use crate::text::search_key::SearchKey;
 
+/// Busca por id, já filtrando o soft-delete.
 const FIND_BY_ID: &str =
     "SELECT id, code, current_weight, max_capacity, status, created_at, updated_at, deleted_at \
      FROM `containers` WHERE id = ? AND deleted_at IS NULL";
 
+/// Grava a linha nova.
 const INSERT: &str = "INSERT INTO `containers` \
                       (id, code, current_weight, max_capacity, status, search_code) \
                       VALUES (?, ?, ?, ?, ?, ?)";
@@ -25,6 +27,7 @@ const UPDATE: &str = "UPDATE `containers` \
                       SET code = ?, current_weight = ?, max_capacity = ?, status = ?, search_code = ? \
                       WHERE id = ? AND deleted_at IS NULL";
 
+/// Marca como removida em vez de apagar — o histórico continua auditável.
 const SOFT_DELETE: &str =
     "UPDATE `containers` SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL";
 

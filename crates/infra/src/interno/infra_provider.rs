@@ -39,24 +39,37 @@ use crate::repository::{
 
 /// A implementação do provider. Privada: nenhum crate exporta impl.
 pub(crate) struct InfraProviderImpl {
+    /// O pool de conexões, compartilhado por clone — é um `Arc` por dentro.
     pool: MySqlPool,
+    /// O catálogo de permissões em memória, preenchido no boot.
     permission_cache: PermissionCache,
+    /// Os grupos de marcador declarados.
     marker_group_cache: MarkerGroupCache,
+    /// Os marcadores em si, com TTL — é onde o refresh token vive.
     marker_cache: MarkerCache,
+    /// O cache de leitura, por prefixo de chave.
     read_cache: ReadCacheStore,
 }
 
 impl InfraProviderImpl {
     /// Cria os recursos base: o pool já veio pronto, os quatro caches nascem
     /// aqui e são compartilhados por clone pelo resto da vida do processo.
+    ///
+    /// ## Por que permissão e grupo de marcador têm mapas separados
+    ///
+    /// São vocabulários diferentes. Compartilhar um mapa só faria o grupo
+    /// `refresh-token` aparecer na listagem de permissões — e, pior, ser
+    /// concedido ao papel que o `POST /setup` cria, que recebe tudo que
+    /// estiver registrado. O schema anterior os separava em duas tabelas pelo
+    /// mesmo motivo.
+    ///
+    /// ## Por que o cache de leitura liga os closures de invalidação
+    ///
+    /// A invalidação por prefixo depende deles: sem os closures, uma escrita
+    /// não teria como derrubar todas as listagens afetadas.
     pub(crate) fn new(pool: MySqlPool) -> Self {
         Self {
             pool,
-            // Dois registros e dois mapas. Compartilhar um só faria o grupo de
-            // marcador `refresh-token` aparecer na listagem de permissões — e,
-            // pior, ser concedido ao papel que o `POST /setup` cria, que recebe
-            // tudo que estiver registrado. São vocabulários diferentes; o schema
-            // anterior os separava em duas tabelas pelo mesmo motivo.
             permission_cache: PermissionCache::new(CacheLimits::METADATA_CACHE_CAPACITY),
             marker_group_cache: MarkerGroupCache::new(CacheLimits::METADATA_CACHE_CAPACITY),
             marker_cache: MarkerCache::new(CacheLimits::MARKER_CACHE_CAPACITY),
@@ -64,9 +77,6 @@ impl InfraProviderImpl {
                 Cache::builder()
                     .max_capacity(CacheLimits::READ_CACHE_CAPACITY)
                     .time_to_live(Duration::from_secs(CacheLimits::READ_CACHE_TTL_SECONDS))
-                    // A invalidação por prefixo depende disto: sem os closures,
-                    // uma escrita não teria como derrubar todas as listagens
-                    // afetadas.
                     .support_invalidation_closures()
                     .build(),
             ),

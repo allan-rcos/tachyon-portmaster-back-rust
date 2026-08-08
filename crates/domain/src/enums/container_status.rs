@@ -52,11 +52,13 @@ mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
 
+    /// Os índices das variantes são dado gravado, não detalhe do enum.
+    ///
+    /// Estes números estão em cada linha do banco. Se este teste quebrar depois
+    /// de mexer no enum, o problema não é o teste: as linhas já existentes
+    /// passaram a significar outra coisa.
     #[test]
     fn indices_das_variantes_sao_estaveis() {
-        // Estes números estão gravados em cada linha do banco. Se este teste
-        // quebrar depois de mexer no enum, o problema não é o teste: as linhas
-        // já existentes passaram a significar outra coisa.
         assert_eq!(ContainerStatus::Empty.as_i32(), 0);
         assert_eq!(ContainerStatus::Loading.as_i32(), 1);
         assert_eq!(ContainerStatus::Sealed.as_i32(), 2);

@@ -8,6 +8,7 @@ use portmaster_app::views::ContainerViewItem;
 
 /// Monta a tabela de um contêiner.
 pub(crate) struct ContainerResponseFactory {
+    /// A View de origem, que a `table()` traduz.
     source: ContainerViewItem,
 }
 

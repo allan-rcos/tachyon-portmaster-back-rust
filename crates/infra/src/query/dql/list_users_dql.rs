@@ -28,6 +28,7 @@ const JOIN_ROLES: &str = "LEFT JOIN user_roles ur ON ur.user_id = u.id \
 
 /// A listagem de usuários.
 pub struct ListUsersDql {
+    /// Página e limite — esta listagem pagina por página, não por cursor.
     params: UserListParams,
 }
 
@@ -61,11 +62,12 @@ impl Dql for ListUsersDql {
 }
 
 impl SqlDql for ListUsersDql {
+    /// A página sai numa tabela derivada, e não de um LIMIT no SELECT de fora.
+    ///
+    /// O `LEFT JOIN` com papéis multiplica as linhas por usuário, então um
+    /// LIMIT externo cortaria no meio de um usuário: o vigésimo apareceria com
+    /// parte dos papéis e nenhum indício de que faltou.
     fn build(&self) -> SqlQuery {
-        // A página sai numa tabela derivada, e não de um LIMIT no SELECT de
-        // fora. O `LEFT JOIN` com papéis multiplica as linhas por usuário, então
-        // um LIMIT externo cortaria no meio de um usuário: o vigésimo apareceria
-        // com parte dos papéis e nenhum indício de que faltou.
         let page = Select::from("users")
             .column("id, name, email")
             .filter("deleted_at IS NULL", [])
@@ -81,15 +83,17 @@ impl SqlDql for ListUsersDql {
             .build()
     }
 
+    /// Agrupa o fan-out de papéis de volta em um usuário por item.
+    ///
+    /// As linhas chegam agrupadas por usuário (`ORDER BY u.id`), então comparar
+    /// com a última basta para saber se começou outro — sem mapa auxiliar e sem
+    /// perder a ordem da consulta.
     fn read(&self, rows: Vec<MySqlRow>) -> anyhow::Result<Self::View> {
         let mut items: Vec<AccountView> = Vec::with_capacity(self.limit() as usize);
 
         for row in &rows {
             let id = Row::id(row, "user_id")?;
 
-            // As linhas chegam agrupadas por usuário (ORDER BY u.id), então
-            // comparar com a última basta para saber se começou outro — sem
-            // mapa auxiliar e sem perder a ordem da consulta.
             if items.last().map(|last| last.id.as_str()) != Some(id.as_str()) {
                 items.push(AccountView {
                     id,
@@ -132,10 +136,10 @@ mod tests {
         assert_eq!(query.binds, vec![Bind::Int(123)]);
     }
 
+    /// É o que impede o fan-out de papéis de cortar a página no meio de um
+    /// usuário.
     #[test]
     fn a_pagina_de_usuarios_sai_de_uma_tabela_derivada() {
-        // É o que impede o fan-out de papéis de cortar a página no meio de um
-        // usuário.
         let query = ListUsersDql::new(UserListParams {
             page: Some(3),
             limit: Some(10),

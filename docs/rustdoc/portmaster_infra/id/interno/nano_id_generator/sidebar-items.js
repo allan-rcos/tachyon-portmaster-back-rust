@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["RANDOM_ID_SIZE"],"struct":["NanoIdGenerator"]};

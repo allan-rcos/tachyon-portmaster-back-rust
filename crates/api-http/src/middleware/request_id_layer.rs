@@ -7,6 +7,7 @@ use super::request_id::RequestId;
 /// Aplica o [`RequestId`].
 #[derive(Clone)]
 pub struct RequestIdLayer<G> {
+    /// De onde sai o id desta requisição.
     generator: G,
 }
 

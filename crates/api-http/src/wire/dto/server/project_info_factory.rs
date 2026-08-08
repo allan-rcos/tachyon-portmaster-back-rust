@@ -6,10 +6,15 @@ use crate::wire::tables as fbs;
 
 /// Monta a tabela de identificação do processo.
 pub(crate) struct ProjectInfoFactory {
+    /// Nome de exibição.
     name: &'static str,
+    /// A versão do binário, do `CARGO_PKG_VERSION`.
     version: &'static str,
+    /// O nome do ambiente, como o `/info` o publica.
     environment: String,
+    /// O que está executando, com a versão do compilador.
     runtime: String,
+    /// A memória residente do processo, em MiB.
     memory_usage_mb: f64,
 }
 

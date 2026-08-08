@@ -9,6 +9,7 @@ use portmaster_app::views::RoleListView;
 
 /// Monta a tabela da listagem.
 pub(crate) struct RoleListResponseFactory {
+    /// A View de origem, que a `table()` traduz.
     source: RoleListView,
 }
 

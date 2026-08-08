@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["account_use_case","container_use_case","interno","manifest_use_case","mark_use_case","metadata_use_case","metrics_use_case","product_use_case","role_use_case","session_use_case","user_use_case"]};

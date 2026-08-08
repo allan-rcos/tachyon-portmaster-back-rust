@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["permission_catalog","permission_slug","refresh_token_group","requires_permission"]};

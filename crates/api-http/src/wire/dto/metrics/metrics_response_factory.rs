@@ -9,6 +9,7 @@ use portmaster_app::views::MetricsView;
 
 /// Monta a tabela do painel.
 pub(crate) struct MetricsResponseFactory {
+    /// A View de origem, que a `table()` traduz.
     source: MetricsView,
 }
 

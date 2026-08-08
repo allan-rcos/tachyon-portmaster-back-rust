@@ -42,6 +42,7 @@ use crate::wire::wire::Wire;
 
 /// Os handlers de contêiner.
 pub struct ContainerHandlers<C> {
+    /// O caso de uso de contêiner.
     containers: C,
 }
 
@@ -258,10 +259,10 @@ mod tests {
         );
     }
 
+    /// Vazia e não "filtre por nada": o `app` trata a lista vazia como
+    /// ausência de filtro, que é o comportamento que a API já tinha.
     #[test]
     fn uma_lista_sem_nada_reconhecivel_nao_filtra_nada() {
-        // Vazia e não "filtre por nada": o `app` trata a lista vazia como
-        // ausência de filtro, que é o comportamento que a API já tinha.
         assert!(status_list("nada,disso,existe").is_empty());
     }
 }

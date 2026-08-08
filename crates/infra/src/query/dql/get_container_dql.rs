@@ -11,6 +11,7 @@ const COLUMNS: &str = "c.id, c.code, c.current_weight, c.max_capacity, c.status"
 
 /// Um contêiner pelo id.
 pub struct GetContainerDql {
+    /// O alvo, como `BIGINT` — o base62 já foi decodificado pelo caso de uso.
     id: i64,
 }
 

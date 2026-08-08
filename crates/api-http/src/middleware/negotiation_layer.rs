@@ -20,7 +20,9 @@ use crate::wire::strategy::json_encode_strategy::JsonEncodeStrategy;
 /// É deliberado — ver o `FromRequestParts` do `Wire`.
 #[derive(Clone)]
 pub struct NegotiationLayer {
+    /// A strategy de JSON, criada uma vez no boot.
     json: Arc<dyn EncodeStrategy>,
+    /// A strategy de `FlatBuffers`, criada uma vez no boot.
     flatbuffers: Arc<dyn EncodeStrategy>,
 }
 

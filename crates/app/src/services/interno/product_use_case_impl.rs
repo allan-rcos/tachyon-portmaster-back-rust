@@ -28,15 +28,25 @@ use portmaster_infra::repository::ProductRepository;
 /// monomorfiza o grafo inteiro. Um caso de uso que não pudesse ser montado seria
 /// erro de compilação, não surpresa no primeiro request.
 pub(crate) struct ProductUseCaseImpl<R, T, Q, F, C, U> {
+    /// Persistência de produtos.
     products: R,
+    /// As regras de produto.
     product_tm: T,
+    /// Quem executa um DQL contra o banco.
     queries: Q,
+    /// De onde os DQLs saem, já com os parâmetros.
     dqls: F,
+    /// O cache de leitura, para o read-through e a invalidação.
     cache: C,
+    /// Quem abre e fecha a transação.
     unit_of_work: U,
+    /// A permissão exigida para create.
     create_permission: RequiresPermission,
+    /// A permissão exigida para update.
     update_permission: RequiresPermission,
+    /// A permissão exigida para delete.
     delete_permission: RequiresPermission,
+    /// A permissão exigida para read.
     read_permission: RequiresPermission,
 }
 
@@ -74,12 +84,14 @@ where
     C: ReadCache + Send + Sync,
     U: UnitOfWork + Send + Sync,
 {
+    /// Cria um produto.
+    ///
+    /// O `TableModule` valida e instancia — o caso de uso **nunca** constrói um
+    /// objeto de domínio, senão a regra de validação teria dois donos.
     async fn create(&self, command: CreateProductCommand) -> Result<Box<dyn Product>, AppError> {
         self.create_permission.authorize(&command.context)?;
 
         let product = Transaction::run(&self.unit_of_work, async {
-            // O TableModule valida e instancia — o caso de uso nunca constrói um
-            // objeto de domínio, senão a regra de validação teria dois donos.
             let product =
                 self.product_tm
                     .create(command.name, command.density, command.risk_class)?;
@@ -123,13 +135,15 @@ where
         Ok(product)
     }
 
+    /// Remove um produto — soft-delete.
+    ///
+    /// Confere a existência antes de apagar: sem isso, remover duas vezes
+    /// responderia sucesso na segunda, e o cliente não teria como saber que o id
+    /// que ele mandou nunca existiu.
     async fn delete(&self, command: DeleteProductCommand) -> Result<(), AppError> {
         self.delete_permission.authorize(&command.context)?;
 
         Transaction::run(&self.unit_of_work, async {
-            // Confere a existência antes de apagar: sem isso, remover duas vezes
-            // responderia sucesso na segunda, e o cliente não teria como saber
-            // que o id que ele mandou nunca existiu.
             self.products
                 .find_by_id(&command.id)
                 .await?

@@ -46,10 +46,10 @@ mod tests {
         assert_eq!(generator.next().chars().count(), RANDOM_ID_SIZE);
     }
 
+    /// É a propriedade que faz os logs se sequenciarem sozinhos quando
+    /// ordenados por esse campo.
     #[test]
     fn o_request_id_ordena_pela_emissao() {
-        // É a propriedade que faz os logs se sequenciarem sozinhos quando
-        // ordenados por esse campo.
         let generator = XidGenerator::new();
         let mut previous = generator.next();
 

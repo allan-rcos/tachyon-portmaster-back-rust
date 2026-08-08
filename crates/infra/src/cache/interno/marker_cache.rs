@@ -34,6 +34,11 @@ impl Expiry<MarkerKey, MarkerValue> for MarkerExpiry {
         Some(value.1)
     }
 
+    /// Renova o prazo a cada escrita, em vez de herdar o restante do anterior.
+    ///
+    /// A marca desligada precisa sobreviver ao menos tanto quanto o token que
+    /// ela recusa: se ela expirasse antes, o token voltaria a ser aceito — e
+    /// expirar equivaleria a esquecer o logout.
     fn expire_after_update(
         &self,
         _key: &MarkerKey,
@@ -41,9 +46,6 @@ impl Expiry<MarkerKey, MarkerValue> for MarkerExpiry {
         _updated_at: Instant,
         _duration_until_expiry: Option<Duration>,
     ) -> Option<Duration> {
-        // Invalidar renova o prazo em vez de herdar o que restava do anterior:
-        // a marca desligada precisa sobreviver ao menos tanto quanto o token que
-        // ela recusa, senão expirar equivaleria a esquecer o logout.
         Some(value.1)
     }
 }

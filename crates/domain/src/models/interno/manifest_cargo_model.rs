@@ -6,10 +6,15 @@ use crate::models::ManifestCargo;
 
 /// A implementação do domínio de [`ManifestCargo`].
 pub struct ManifestCargoModel {
+    /// O contêiner que carrega, em base62.
     container_id: String,
+    /// O produto carregado, em base62.
     product_id: String,
+    /// Quantas unidades.
     quantity: f64,
+    /// O peso que essa quantidade representa, já pela densidade do produto.
     weight: f64,
+    /// Quando a linha entrou no manifesto, em UTC.
     created_at: DateTime<Utc>,
 }
 

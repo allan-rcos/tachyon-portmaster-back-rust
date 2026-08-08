@@ -15,10 +15,15 @@ use portmaster_infra::query::{QueryFactory, QueryRepository};
 
 /// A implementação, genérica sobre os ports que consome.
 pub(crate) struct MetricsUseCaseImpl<Q, F, C, U> {
+    /// Quem executa um DQL contra o banco.
     queries: Q,
+    /// De onde os DQLs saem, já com os parâmetros.
     dqls: F,
+    /// O cache de leitura, para o read-through e a invalidação.
     cache: C,
+    /// Quem abre e fecha a transação.
     unit_of_work: U,
+    /// A permissão exigida para read.
     read_permission: RequiresPermission,
 }
 
@@ -42,12 +47,14 @@ where
     C: ReadCache + Send + Sync,
     U: UnitOfWork + Send + Sync,
 {
+    /// O painel do pátio, atrás do cache de leitura.
+    ///
+    /// Não tem parâmetro: uma chave só, e é justamente a leitura que mais se
+    /// beneficia do cache — oito agregações varrendo as tabelas inteiras,
+    /// pedidas a cada carregamento de tela.
     async fn get(&self, query: GetMetricsQuery) -> Result<MetricsView, AppError> {
         self.read_permission.authorize(&query.context)?;
 
-        // O painel não tem parâmetro: uma chave só, e é justamente a leitura que
-        // mais se beneficia do cache — oito agregações varrendo as tabelas
-        // inteiras, pedidas a cada carregamento de tela.
         let key = CacheKey::of(CacheKey::METRICS, "get", &[]);
 
         ReadThrough::cached(&self.cache, &key, async {

@@ -21,6 +21,7 @@ const BYTES_PER_MIB: f64 = 1024.0 * 1024.0;
 /// Diferente dos demais: não tem caso de uso nenhum atrás, porque o que ele
 /// responde é sobre o próprio processo. Nada disto passa pelo `app`.
 pub struct ServerHandlers {
+    /// O nome do ambiente, como o `/info` o publica.
     environment: String,
 }
 
@@ -101,10 +102,10 @@ mod tests {
         assert_eq!(resident_mib_of(status), 2.0);
     }
 
+    /// `/info` existe para dizer que o servidor está de pé; falhar nele por
+    /// não saber a memória seria trocar a resposta pela pergunta.
     #[test]
     fn um_status_sem_o_campo_nao_derruba_a_rota() {
-        // `/info` existe para dizer que o servidor está de pé; falhar nele por
-        // não saber a memória seria trocar a resposta pela pergunta.
         assert_eq!(resident_mib_of("Name:\tportmaster\n"), 0.0);
         assert_eq!(resident_mib_of(""), 0.0);
     }

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["account_reader","container_reader","get_account_dql","get_container_dql","get_product_dql","get_role_dql","list_container_summaries_dql","list_containers_dql","list_products_dql","list_roles_dql","list_users_dql","metrics_dql","paging","product_reader","role_reader"]};

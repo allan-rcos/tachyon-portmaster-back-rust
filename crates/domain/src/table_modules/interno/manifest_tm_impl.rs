@@ -75,6 +75,12 @@ impl ManifestTM for ManifestTMImpl {
         )))
     }
 
+    /// Desembarca uma quantidade, e devolve o efeito no contêiner.
+    ///
+    /// Sem linha de manifesto, ou com menos do que se pediu, não há o que
+    /// tirar: os dois casos saem como `InsufficientCargo`. A tolerância de
+    /// `EPSILON` na comparação deixa passar o caso de descarregar exatamente
+    /// tudo que está lá, que em ponto flutuante pode não bater na igualdade.
     fn unload(
         &self,
         container: &dyn Container,
@@ -90,9 +96,6 @@ impl ManifestTM for ManifestTMImpl {
             return Err(ManifestError::UnloadRequiresLoading);
         }
 
-        // Sem linha de manifesto, ou com menos do que se pediu: não há o que
-        // tirar. A tolerância deixa passar o caso de descarregar exatamente
-        // tudo que está lá.
         let Some(current) = current else {
             return Err(ManifestError::InsufficientCargo);
         };
@@ -116,8 +119,7 @@ impl ManifestTM for ManifestTMImpl {
             )));
         }
 
-        // Este produto saiu por completo, mas o contêiner segue com carga: só a
-        // linha dele desaparece.
+        // Produto zerado com o contêiner ainda carregado: só a linha dele cai.
         let cargo: Option<Box<dyn ManifestCargo>> = if new_cargo_quantity <= EPSILON {
             None
         } else {
@@ -194,10 +196,9 @@ mod tests {
         assert_eq!(cargo.weight(), 20.0);
     }
 
+    /// Embarcar duas vezes o mesmo produto acumula, não duplica a linha.
     #[test]
     fn embarcar_soma_ao_que_ja_estava_no_manifesto() {
-        // Sem isto, embarcar duas vezes o mesmo produto duplicaria a linha em vez
-        // de acumular.
         let container = container_at(20.0, 1000.0, ContainerStatus::Loading);
         let product = product();
         let existing = cargo_of(10.0, 20.0);
@@ -212,10 +213,12 @@ mod tests {
         assert_eq!(change.container().current_weight(), 30.0);
     }
 
+    /// O caso que a tolerância existe para proteger.
+    ///
+    /// A soma em ponto flutuante pode passar da capacidade por uma fração
+    /// invisível, e recusar por isso seria incompreensível para quem embarcou.
     #[test]
     fn a_carga_que_cabe_exatamente_e_aceita() {
-        // O caso que a tolerância existe para proteger: a soma em ponto
-        // flutuante pode passar da capacidade por uma fração invisível.
         let container = container_at(0.0, 20.0, ContainerStatus::Empty);
         let product = product();
 
@@ -272,10 +275,12 @@ mod tests {
         }
     }
 
+    /// Esvaziar o contêiner limpa o manifesto de uma vez.
+    ///
+    /// Em vez de remover linha a linha, o manifesto inteiro vai junto e o
+    /// contêiner volta a `Empty`.
     #[test]
     fn desembarcar_tudo_esvazia_o_conteiner_e_limpa_o_manifesto() {
-        // Esvaziou: em vez de remover linha a linha, o manifesto inteiro vai
-        // junto e o contêiner volta a `Empty`.
         let container = container_at(20.0, 1000.0, ContainerStatus::Loading);
         let product = product();
         let existing = cargo_of(10.0, 20.0);
@@ -291,10 +296,11 @@ mod tests {
         assert_eq!(change.event(), TelemetryEvent::Unload);
     }
 
+    /// O contêiner segue com carga de outro produto: o manifesto **não** é limpo.
+    ///
+    /// Só a linha do produto zerado desaparece.
     #[test]
     fn desembarcar_um_produto_por_completo_derruba_so_a_linha_dele() {
-        // O contêiner segue com carga de outro produto, então só a linha deste
-        // desaparece — e o manifesto NÃO é limpo.
         let container = container_at(50.0, 1000.0, ContainerStatus::Loading);
         let product = product();
         let existing = cargo_of(10.0, 20.0);

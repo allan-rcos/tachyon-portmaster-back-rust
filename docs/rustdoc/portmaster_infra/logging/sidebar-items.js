@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["interno","logger","logger_factory"]};

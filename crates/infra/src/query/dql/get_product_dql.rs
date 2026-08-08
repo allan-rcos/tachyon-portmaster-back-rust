@@ -13,7 +13,11 @@ use sqlx::mysql::MySqlRow;
 const COLUMNS: &str = "p.id, p.name, p.density, p.risk_class";
 
 /// Um produto pelo id.
+///
+/// Repete o filtro de soft-delete da escrita: sem ele, um produto removido
+/// reapareceria na leitura.
 pub struct GetProductDql {
+    /// O alvo, como `BIGINT` — o base62 já foi decodificado pelo caso de uso.
     id: i64,
 }
 
@@ -33,8 +37,6 @@ impl SqlDql for GetProductDql {
         Select::from("products p")
             .column(COLUMNS)
             .filter("p.id = ?", [Bind::Int(self.id)])
-            // O mesmo filtro de soft-delete da escrita: sem ele, um produto
-            // removido reapareceria na leitura.
             .filter("p.deleted_at IS NULL", [])
             .limit(1)
             .build()

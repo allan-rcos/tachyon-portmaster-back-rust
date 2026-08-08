@@ -33,6 +33,19 @@
 //! 5. **CORS** — responde ao preflight sem incomodar a sessão.
 //! 6. **Token** — o mais interno, porque o escopo de sessão precisa cobrir o
 //!    handler e nada mais.
+//!
+//! A **negociação** entra imediatamente acima do token: ela precisa estar
+//! instalada antes de qualquer handler extrair um `Wire`, e não depende de nada
+//! que as camadas de fora façam. Reordená-la para depois faria toda rota com
+//! `Wire` responder 500 — deliberado, e documentado no `FromRequestParts` do
+//! `Wire`.
+//!
+//! ## A ordem das rotas
+//!
+//! Um literal e um parâmetro no mesmo segmento são ambíguos, e o axum resolve
+//! pelo literal. `/containers/summary` ainda assim é declarada **antes** de
+//! `/containers/{id}`, para que a intenção fique legível para quem vier
+//! acrescentar rota.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -117,8 +130,11 @@ macro_rules! auth_route {
 /// O que os handlers de sessão precisam além do provider.
 #[derive(Clone)]
 struct AuthParts {
+    /// Quem emite e confere o access token.
     tokens: TokenService,
+    /// Como os cookies de sessão são escritos e lidos.
     cookies: AuthCookie,
+    /// Por quanto tempo o refresh vale, em segundos.
     refresh_ttl_seconds: u64,
 }
 
@@ -313,9 +329,7 @@ pub fn router<P: AppProvider + Send + Sync + 'static>(
                 body: Body<ContainerCreateRequestFactory>,
             )),
         )
-        // Antes de `/containers/{id}`: um literal e um parâmetro no mesmo
-        // segmento são ambíguos, e o axum resolve pelo literal — mas a ordem
-        // aqui deixa a intenção legível para quem vier acrescentar rota.
+        // Antes de `/containers/{id}` — ver a seção sobre ordem no doc do módulo.
         .route(
             "/containers/summary",
             get(route!(
@@ -455,13 +469,7 @@ pub fn router<P: AppProvider + Send + Sync + 'static>(
                 wire: Wire,
             )),
         )
-        // --- A pilha, de dentro para fora --------------------------------------
-        //
-        // A negociação vem **imediatamente acima** do token: ela precisa estar
-        // instalada antes de qualquer handler extrair um `Wire`, e não depende
-        // de nada que as camadas de fora façam. Reordená-la para depois faria
-        // toda rota com `Wire` responder 500 — deliberado, e documentado no
-        // `FromRequestParts` do `Wire`.
+        // --- A pilha, de dentro para fora -----------------------------------
         .layer(TokenLayer::new(tokens, cookies))
         .layer(NegotiationLayer::new())
         .layer(cors_layer(&config.cors_origins))

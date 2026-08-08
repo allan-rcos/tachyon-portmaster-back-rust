@@ -11,8 +11,11 @@ use crate::wire::tables as fbs;
 /// espera um `User` — não bytes, não um offset apagado. Se a única trait de
 /// resposta fosse a `Renderable`, o pai não teria como aninhar o filho.
 pub(crate) struct UserResponseFactory {
+    /// Identidade, em base62.
     id: String,
+    /// Nome de exibição.
     name: String,
+    /// E-mail do dono da sessão.
     email: String,
 }
 

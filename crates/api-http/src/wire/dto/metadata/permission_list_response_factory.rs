@@ -12,6 +12,7 @@ use crate::wire::tables as fbs;
 /// boot: não há id de banco para publicar, e inventar um sugeriria uma
 /// estabilidade que ele não tem.
 pub(crate) struct PermissionListResponseFactory {
+    /// Os slugs registrados, na ordem do catálogo.
     slugs: Vec<String>,
 }
 

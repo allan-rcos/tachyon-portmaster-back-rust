@@ -10,6 +10,7 @@ use crate::entity::role_row::RoleRow;
 use crate::repository::RoleRepository;
 use crate::text::search_key::SearchKey;
 
+/// Busca por id, já filtrando o soft-delete.
 const FIND_BY_ID: &str = "SELECT id, name, permissions, created_at, updated_at, deleted_at \
      FROM `roles` WHERE id = ? AND deleted_at IS NULL";
 
@@ -23,11 +24,14 @@ const FIND_BY_USER: &str =
      WHERE ur.user_id = ? AND r.deleted_at IS NULL \
      ORDER BY r.id";
 
+/// Grava a linha nova.
 const INSERT: &str = "INSERT INTO `roles` (id, name, permissions, search_name) VALUES (?, ?, ?, ?)";
 
+/// Atualiza a linha existente.
 const UPDATE: &str = "UPDATE `roles` SET name = ?, permissions = ?, search_name = ? \
                       WHERE id = ? AND deleted_at IS NULL";
 
+/// Marca como removida em vez de apagar — o histórico continua auditável.
 const SOFT_DELETE: &str =
     "UPDATE `roles` SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL";
 

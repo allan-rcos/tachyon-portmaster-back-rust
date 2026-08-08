@@ -45,10 +45,12 @@ mod tests {
         }
     }
 
+    /// Papéis somam.
+    ///
+    /// Exigir que todos concedam faria acrescentar um papel **reduzir** o que
+    /// o usuário pode fazer.
     #[test]
     fn qualquer_papel_basta_para_conceder() {
-        // Papéis somam. Exigir que todos concedam faria acrescentar um papel
-        // **reduzir** o que o usuário pode fazer.
         let context = user(vec![
             role("Leitor", &["product:read"]),
             role("Operador", &["container:seal"]),
@@ -63,10 +65,10 @@ mod tests {
         assert!(!user(Vec::new()).has_permission("product:read"));
     }
 
+    /// `product:read` não pode ser satisfeita por `product:read-all` nem por
+    /// um prefixo — permissão não tem hierarquia neste sistema.
     #[test]
     fn a_comparacao_de_slug_e_exata() {
-        // `product:read` não pode ser satisfeita por `product:read-all` nem por
-        // um prefixo — permissão não tem hierarquia neste sistema.
         let context = user(vec![role("Quase", &["product:read-all"])]);
 
         assert!(!context.has_permission("product:read"));

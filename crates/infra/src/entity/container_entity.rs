@@ -8,14 +8,26 @@ use portmaster_domain::models::Container;
 
 /// A entity, com o id já traduzido para base62.
 pub struct ContainerEntity {
+    /// Identidade em base62.
     id: String,
+    /// O mesmo id como `BIGINT`, para os `WHERE` e as FKs.
+    ///
+    /// Guardado junto do base62 para que a escrita não precise decodificar de
+    /// volta a cada consulta.
     raw_id: i64,
+    /// O código do contêiner.
     code: String,
+    /// Peso embarcado, em quilos.
     current_weight: f64,
+    /// Teto de peso.
     max_capacity: f64,
+    /// O status, já como enum de domínio — a coluna guarda o índice.
     status: ContainerStatus,
+    /// Quando a linha nasceu, em UTC.
     created_at: DateTime<Utc>,
+    /// Quando a linha mudou pela última vez, em UTC.
     updated_at: DateTime<Utc>,
+    /// Quando foi removida, ou `None` se ativa — o soft-delete.
     deleted_at: Option<DateTime<Utc>>,
 }
 

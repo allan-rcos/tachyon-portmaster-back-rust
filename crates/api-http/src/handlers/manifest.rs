@@ -32,6 +32,7 @@ const UNLOADED: &str = "Item unloaded successfully.";
 
 /// Os handlers de manifesto.
 pub struct ManifestHandlers<M> {
+    /// O caso de uso de manifesto.
     manifest: M,
 }
 

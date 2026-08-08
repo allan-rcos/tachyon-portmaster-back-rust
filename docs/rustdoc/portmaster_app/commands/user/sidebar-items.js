@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["create_user_command","delete_user_command","reset_user_password_command","update_user_command","update_user_roles_command"]};

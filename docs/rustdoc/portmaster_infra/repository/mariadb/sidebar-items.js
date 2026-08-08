@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["container_repository","manifest_repository","product_repository","role_repository","user_repository"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["create_role_command","update_role_permissions_command"]};

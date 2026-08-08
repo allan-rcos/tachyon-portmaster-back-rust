@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["CLEAR_MANIFEST","DELETE_CARGO","FIND_CARGO","INSERT_TELEMETRY","UPSERT_CARGO"],"struct":["ManifestMariadbRepository"]};

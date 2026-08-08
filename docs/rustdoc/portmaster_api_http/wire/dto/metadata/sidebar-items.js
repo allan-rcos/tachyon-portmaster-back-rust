@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["permission_list_response_factory"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["container_model","manifest_cargo_model","manifest_change_model","marker_group_model","marker_model","permission_model","product_model","role_model","user_model"]};

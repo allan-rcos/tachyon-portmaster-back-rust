@@ -38,6 +38,7 @@ use crate::wire::wire::Wire;
 
 /// Os handlers de papel.
 pub struct RoleHandlers<R> {
+    /// O caso de uso de papel.
     roles: R,
 }
 

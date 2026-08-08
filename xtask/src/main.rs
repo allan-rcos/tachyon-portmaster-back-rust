@@ -13,13 +13,26 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use syn::spanned::Spanned;
 
+/// Uma exceção declarada em `exports-allow.toml`.
+///
+/// Só encolhe: o `max` é teto, não meta. E vence — uma entrada com `expires`
+/// no passado derruba o build, que é o que impede a allowlist de ser eterna.
 #[derive(Debug, Deserialize)]
 struct AllowEntry {
+    /// Teto de exports que este arquivo pode ter.
     max: usize,
+    /// Por que a exceção existe — obrigatório.
     reason: String,
+    /// Até quando a exceção vale, no formato `AAAA-MM-DD`.
     expires: String,
 }
 
+/// Percorre os crates, conta os exports e falha acima do teto.
+///
+/// A data usada contra o `expires` da allowlist é a **real**, e não uma
+/// constante: uma data fixa faria toda entrada ser eterna, que é justamente o
+/// que o campo existe para impedir. O formato ISO ordena lexicograficamente,
+/// então a comparação de strings mais abaixo é a comparação de datas.
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().collect();
     if args.len() < 2 || args[1] != "lint-exports" {
@@ -43,10 +56,6 @@ fn main() -> ExitCode {
     find_rs_files(Path::new("crates"), &mut files);
     files.sort();
 
-    // A data real, e não uma constante: uma data fixa aqui faria toda entrada da
-    // allowlist ser eterna — que é justamente o que o campo `expires` existe
-    // para impedir. O formato ISO ordena lexicograficamente, então a comparação
-    // de strings mais abaixo é a comparação de datas.
     let today = chrono::Utc::now().format("%Y-%m-%d").to_string();
     let today = today.as_str();
     let mut failures = 0;
@@ -126,6 +135,7 @@ fn main() -> ExitCode {
     }
 }
 
+/// Acumula todo `.rs` sob um diretório, recursivamente.
 fn find_rs_files(dir: &Path, acc: &mut Vec<PathBuf>) {
     if let Ok(entries) = fs::read_dir(dir) {
         for entry in entries.flatten() {
@@ -139,6 +149,10 @@ fn find_rs_files(dir: &Path, acc: &mut Vec<PathBuf>) {
     }
 }
 
+/// Reporta um achado, no formato de anotação do GitHub ou em texto.
+///
+/// O `::error file=…,line=…::` é o que faz o achado aparecer ancorado na linha
+/// do diff, e não só no log do job.
 fn print_error(file: &str, line: usize, msg: &str, github: bool) {
     if github {
         println!("::error file={file},line={line}::{msg}");
@@ -171,6 +185,10 @@ fn count_exports(file: &syn::File) -> Vec<(String, usize)> {
     result
 }
 
+/// O item existe só sob `cfg(test)`?
+///
+/// Um `mod tests` não é export de ninguém, e contá-lo faria todo arquivo com
+/// teste parecer violar a regra.
 fn is_cfg_test(item: &syn::Item) -> bool {
     let attrs = match item {
         syn::Item::Const(i) => &i.attrs,
@@ -199,6 +217,10 @@ fn is_cfg_test(item: &syn::Item) -> bool {
     false
 }
 
+/// A visibilidade exporta o item para fora do módulo?
+///
+/// `pub` e `pub(crate)` sim; `pub(super)`, `pub(in ...)` e o privado não — o
+/// `pub(super)` é justamente a válvula de escape para um auxiliar local.
 fn is_public_or_crate(vis: &syn::Visibility) -> bool {
     match vis {
         syn::Visibility::Public(_) => true,
@@ -207,6 +229,9 @@ fn is_public_or_crate(vis: &syn::Visibility) -> bool {
     }
 }
 
+/// O nome e a visibilidade de um item, quando ele tem os dois.
+///
+/// `None` para o que não conta como export: `use`, `impl`, `mod foo;`.
 fn get_item_name_and_vis(item: &syn::Item) -> Option<(String, syn::Visibility)> {
     match item {
         syn::Item::Struct(i) => Some((i.ident.to_string(), i.vis.clone())),
@@ -235,6 +260,7 @@ fn get_item_name_and_vis(item: &syn::Item) -> Option<(String, syn::Visibility)> 
     }
 }
 
+/// A linha onde o item começa, para ancorar a anotação.
 fn get_item_line(item: &syn::Item) -> usize {
     let span = match item {
         syn::Item::Struct(i) => i.span(),

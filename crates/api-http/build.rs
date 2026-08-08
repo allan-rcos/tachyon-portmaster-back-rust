@@ -18,6 +18,10 @@ use std::path::{Path, PathBuf};
 /// Onde vivem os schemas, relativo à raiz do workspace.
 const SCHEMA_DIR: &str = "../../swagger/flatbuffers/schemas";
 
+/// Gera o módulo de wire a partir dos `.fbs`, em ordem estável.
+///
+/// O planus resolve os `include` sozinho, mas gerar na ordem do sistema de
+/// arquivos faria a saída variar entre máquinas e sujar os diffs.
 fn main() -> anyhow::Result<()> {
     let schema_dir = Path::new(SCHEMA_DIR);
     println!("cargo:rerun-if-changed={SCHEMA_DIR}");
@@ -29,8 +33,6 @@ fn main() -> anyhow::Result<()> {
         .filter(|path| path.extension().is_some_and(|ext| ext == "fbs"))
         .collect();
 
-    // Ordem estável: o planus resolve os `include` sozinho, mas gerar na ordem do
-    // sistema de arquivos faria a saída variar entre máquinas e sujar os diffs.
     schemas.sort();
 
     if schemas.is_empty() {

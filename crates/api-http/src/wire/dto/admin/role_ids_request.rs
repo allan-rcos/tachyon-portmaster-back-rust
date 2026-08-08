@@ -11,5 +11,6 @@ use serde::Deserialize;
 pub struct RoleIdsRequest {
     /// O conjunto **final** de papéis; o que ficar de fora é retirado.
     #[serde(default)]
+    /// O conjunto **final** de papéis; o que ficar de fora é retirado.
     pub(crate) role_ids: Vec<String>,
 }

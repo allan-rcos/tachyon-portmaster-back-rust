@@ -53,6 +53,10 @@ impl Base62 {
     }
 
     /// Recupera o inteiro por trás de uma string base62.
+    ///
+    /// A acumulação é checada a cada dígito, e não conferida no fim: depois de
+    /// um overflow não há como saber que ele ocorreu. Uma string longa demais
+    /// sai como [`Base62Error::OutOfRange`] em vez de virar um id qualquer.
     pub fn decode(value: &str) -> Result<i64, Base62Error> {
         if value.is_empty() {
             return Err(Base62Error::Empty);
@@ -69,8 +73,6 @@ impl Base62 {
                 .position(|&c| c as char == character)
                 .ok_or(Base62Error::InvalidCharacter(character))? as i64;
 
-            // Checa antes de multiplicar: depois do overflow não há como saber que
-            // ele ocorreu.
             number = number
                 .checked_mul(62)
                 .and_then(|n| n.checked_add(position))
@@ -118,10 +120,12 @@ mod tests {
         );
     }
 
+    /// Doze dígitos `z` passam de `i64::MAX`.
+    ///
+    /// Isto não é um id nosso: é uma URL inventada, e precisa falhar como tal
+    /// em vez de estourar.
     #[test]
     fn recusa_valor_alem_do_i64() {
-        // Doze dígitos 'z' passam de i64::MAX. Isto não é um id nosso: é uma URL
-        // inventada, e precisa falhar como tal em vez de estourar.
         let overflow = "z".repeat(12);
         assert_eq!(
             Base62::decode(&overflow),

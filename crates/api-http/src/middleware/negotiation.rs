@@ -16,8 +16,11 @@ use crate::wire::wire::Wire;
 /// Lê `Content-Type` e `Accept` e guarda a decisão nas extensions.
 #[derive(Clone)]
 pub struct Negotiation<S> {
+    /// O serviço interno, que este envolve.
     inner: S,
+    /// A strategy de JSON, criada uma vez no boot.
     json: Arc<dyn EncodeStrategy>,
+    /// A strategy de `FlatBuffers`, criada uma vez no boot.
     flatbuffers: Arc<dyn EncodeStrategy>,
 }
 
@@ -49,6 +52,10 @@ where
         self.inner.poll_ready(cx)
     }
 
+    /// Insere o [`Wire`] nas extensions da requisição.
+    ///
+    /// O `clone` vem antes do `call` porque o `poll_ready` foi feito sobre
+    /// `self.inner`, e é esse serviço — não o clone — que está pronto.
     fn call(&mut self, mut request: Request) -> Self::Future {
         let (request_media, response_media) = {
             let headers = request.headers();
@@ -70,8 +77,6 @@ where
             .extensions_mut()
             .insert(Wire::new(request_media, encode));
 
-        // `clone` antes do `call`: o `poll_ready` foi feito sobre `self.inner`,
-        // e é esse serviço — não o clone — que está pronto.
         let clone = self.inner.clone();
         let mut inner = std::mem::replace(&mut self.inner, clone);
 

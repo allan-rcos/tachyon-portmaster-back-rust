@@ -36,10 +36,12 @@ mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
 
+    /// O oposto do hasher de senha: aqui a estabilidade **é** o requisito.
+    ///
+    /// É assim que se reencontra a marca gravada — um digest que variasse por
+    /// chamada faria toda consulta de marcador falhar.
     #[test]
     fn o_mesmo_valor_da_sempre_o_mesmo_digest() {
-        // O oposto do hasher de senha: aqui a estabilidade é o requisito, porque
-        // é assim que se reencontra a marca gravada.
         let hasher = XxIndexHasher::new();
         assert_eq!(hasher.hash("refresh-abc"), hasher.hash("refresh-abc"));
     }

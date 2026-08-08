@@ -9,7 +9,9 @@ use crate::token::token_service::TokenService;
 /// Aplica o [`Token`].
 #[derive(Clone)]
 pub struct TokenLayer {
+    /// Quem emite e confere o access token.
     tokens: TokenService,
+    /// Como os cookies de sessão são escritos e lidos.
     cookies: AuthCookie,
 }
 

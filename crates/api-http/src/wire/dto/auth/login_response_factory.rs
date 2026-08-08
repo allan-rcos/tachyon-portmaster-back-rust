@@ -12,8 +12,11 @@ use crate::wire::tables as fbs;
 /// filho antes do pai — que é, linha por linha, o `createUser` + `createLoginResponse`
 /// que o PHP escrevia à mão.
 pub(crate) struct LoginResponseFactory {
+    /// O access token emitido.
     token: String,
+    /// Como o token viaja — `cookie`, e não `Bearer`.
     token_type: &'static str,
+    /// O dono da sessão, na forma enxuta que o login publica.
     user: UserResponseFactory,
 }
 
@@ -35,12 +38,14 @@ impl LoginResponseFactory {
 impl ResponseFactory for LoginResponseFactory {
     type Table = fbs::auth::LoginResponse;
 
+    /// Monta a tabela, com a do `User` aninhada dentro.
+    ///
+    /// A factory filha produz a **tabela**, e o planus a escreve no lugar certo
+    /// — é ele quem faz a coreografia de builder que o PHP escrevia à mão.
     fn table(&self) -> Result<Self::Table, ApiError> {
         Ok(fbs::auth::LoginResponse {
             token: Some(self.token.clone()),
             token_type: Some(self.token_type.to_owned()),
-            // Aqui está o aninhamento: a factory filha produz a **tabela**, e o
-            // planus a escreve no lugar certo.
             user: Some(Box::new(self.user.table()?)),
         })
     }
@@ -55,11 +60,12 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     /// Um `User` de domínio de mentira, sem passar pelo `TableModule`.
+    ///
+    /// As assinaturas são as do trait de domínio, e não escolha deste stub: o
+    /// `&str` devolvido é emprestado do `&self` na trait, e mudá-lo aqui não
+    /// compilaria.
     struct StubUser;
 
-    // As assinaturas são as do trait de domínio, não escolha deste stub: o
-    // `&str` devolvido é emprestado do `&self` na trait, e mudá-lo aqui não
-    // compilaria.
     #[allow(
         clippy::unnecessary_literal_bound,
         reason = "a assinatura é a do trait de domínio: devolver &'static str não a satisfaz"
@@ -99,12 +105,14 @@ mod tests {
         )
     }
 
+    /// A suíte Go manda `Accept: application/x-flatbuffers` em toda requisição
+    /// — ela não cobre JSON em ponto nenhum.
+    ///
+    /// Este `assert_eq!` da string exata é o **único** contrato verificável do
+    /// caminho JSON, e a ordem dos campos faz parte dele: é a ordem de
+    /// declaração do `.fbs`.
     #[test]
     fn o_json_bate_com_o_que_o_swagger_documenta() {
-        // A suíte Go manda `Accept: application/x-flatbuffers` em toda
-        // requisição — ela não cobre JSON em ponto nenhum. Este `assert_eq!` da
-        // string exata é o **único** contrato verificável do caminho JSON, e a
-        // ordem dos campos faz parte dele: é a ordem de declaração do `.fbs`.
         let json = JsonEncodeStrategy
             .encode(&factory())
             .expect("a resposta precisa serializar");
@@ -115,11 +123,13 @@ mod tests {
         );
     }
 
+    /// A tabela do wire não tem onde pôr `password_hash`, e é isso que garante
+    /// que ele não vaze.
+    ///
+    /// O teste existe para que a garantia continue sendo verdade se alguém
+    /// acrescentar um campo ao `.fbs`.
     #[test]
     fn o_hash_da_senha_nao_atravessa() {
-        // A tabela do wire não tem onde pôr `password_hash`, e é isso que
-        // garante que ele não vaze. O teste existe para que a garantia continue
-        // sendo verdade se alguém acrescentar um campo ao `.fbs`.
         let json = JsonEncodeStrategy
             .encode(&factory())
             .expect("a resposta precisa serializar");
@@ -127,10 +137,10 @@ mod tests {
         assert!(!String::from_utf8_lossy(&json).contains("argon2id"));
     }
 
+    /// É o ponto do desenho: uma factory, duas strategies, nenhuma das duas
+    /// sabendo o que a outra faz.
     #[test]
     fn a_mesma_factory_sai_nos_dois_formatos() {
-        // É o ponto do desenho: uma factory, duas strategies, nenhuma das duas
-        // sabendo o que a outra faz.
         let binary = FlatBuffersEncodeStrategy
             .encode(&factory())
             .expect("a resposta precisa serializar");
@@ -138,11 +148,12 @@ mod tests {
         assert!(!binary.is_empty());
     }
 
+    /// O `Renderable` devolve `Offset<()>`, e o `finish` escreve por ele.
+    ///
+    /// `Offset<T>::ALIGNMENT` é 4 para todo `T`, então apagar o tipo não muda
+    /// um byte — este teste é o que sustenta essa afirmação.
     #[test]
     fn o_aninhamento_produz_os_mesmos_bytes_pelo_caminho_apagado() {
-        // O `Renderable` devolve `Offset<()>`, e o `finish` escreve por ele.
-        // `Offset<T>::ALIGNMENT` é 4 para todo `T`, então apagar o tipo não muda
-        // um byte — este teste é o que sustenta essa afirmação.
         let erased = FlatBuffersEncodeStrategy
             .encode(&factory())
             .expect("a resposta precisa serializar");

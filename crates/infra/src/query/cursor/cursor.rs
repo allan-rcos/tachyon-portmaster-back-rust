@@ -23,15 +23,17 @@ pub struct Cursor {
 
 impl Cursor {
     /// Emite o token da próxima página.
+    /// Emite o token da próxima página.
+    ///
+    /// A serialização de um `BTreeMap<String, String>` com um `i64` não tem
+    /// caminho de falha; se um dia tivesse, um token vazio faria a paginação
+    /// recomeçar, que é degradação aceitável para uma consulta de leitura.
     pub(crate) fn encode(last_id: i64, filters: &CursorFilters) -> String {
         let payload = Payload {
             id: last_id,
             f: filters.clone(),
         };
 
-        // A serialização de um `BTreeMap<String, String>` com um `i64` não tem
-        // caminho de falha; se um dia tivesse, um token vazio faria a paginação
-        // recomeçar, que é degradação aceitável para uma consulta de leitura.
         let json = serde_json::to_vec(&payload).unwrap_or_default();
 
         URL_SAFE_NO_PAD.encode(json)
@@ -43,14 +45,17 @@ impl Cursor {
     /// base64url, JSON que não tem a forma esperada, e token emitido sob outros
     /// filtros. Quem chama trata todos como "primeira página", e é por isso que
     /// não existe erro de cursor.
+    /// Lê o token, se ele ainda descreve esta consulta.
+    ///
+    /// Filtros diferentes dos da emissão devolvem `None`: o token descreve uma
+    /// varredura que não é mais a desta requisição, e continuar dali entregaria
+    /// uma página do conjunto anterior.
     pub(crate) fn decode(token: Option<&str>, current_filters: &CursorFilters) -> Option<Self> {
         let token = token.filter(|t| !t.is_empty())?;
 
         let json = URL_SAFE_NO_PAD.decode(token).ok()?;
         let payload: Payload = serde_json::from_slice(&json).ok()?;
 
-        // Filtros mudaram desde a emissão: o token descreve uma varredura que
-        // não é mais a desta requisição.
         if &payload.f != current_filters {
             return None;
         }
@@ -104,10 +109,10 @@ mod tests {
         );
     }
 
+    /// Base64url sem padding: nada de `+`, `/` ou `=`, que precisariam de
+    /// escape e voltariam corrompidos.
     #[test]
     fn o_token_atravessa_uma_querystring_intacto() {
-        // Base64url sem padding: nada de `+`, `/` ou `=`, que precisariam de
-        // escape e voltariam corrompidos.
         let token = Cursor::encode(i64::MAX, &busca("álcool etílico 70%"));
 
         assert!(
@@ -118,11 +123,12 @@ mod tests {
         );
     }
 
+    /// O caso que motiva guardar os filtros: o cliente trocou a busca e
+    /// reenviou o cursor antigo.
+    ///
+    /// Continuar dali entregaria uma página do conjunto anterior.
     #[test]
     fn cursor_de_outro_filtro_e_ignorado() {
-        // O caso que motiva guardar os filtros: o cliente trocou a busca e
-        // reenviou o cursor antigo. Continuar dali entregaria uma página do
-        // conjunto anterior.
         let token = Cursor::encode(100, &busca("cimento"));
 
         assert_eq!(Cursor::decode(Some(&token), &busca("areia")), None);
@@ -151,10 +157,12 @@ mod tests {
         assert_eq!(Cursor::last_id_or_start(None, &busca("cimento")), 0);
     }
 
+    /// Veio menos que o limite, então acabou.
+    ///
+    /// Emitir cursor aqui custaria ao cliente uma requisição a mais para
+    /// descobrir que não há nada.
     #[test]
     fn pagina_incompleta_nao_emite_proximo_cursor() {
-        // Veio menos que o limite, então acabou. Emitir cursor aqui custaria ao
-        // cliente uma requisição a mais para descobrir que não há nada.
         assert_eq!(Cursor::next(7, 20, 500, &busca("cimento")), None);
     }
 
@@ -169,10 +177,10 @@ mod tests {
         );
     }
 
+    /// Dois mapas com os mesmos pares têm que gerar o mesmo token, senão um
+    /// cursor válido seria recusado por acidente de iteração.
     #[test]
     fn a_ordem_dos_filtros_nao_muda_o_token() {
-        // Dois mapas com os mesmos pares têm que gerar o mesmo token, senão um
-        // cursor válido seria recusado por acidente de iteração.
         let a = CursorFilters::of([("limit", "20".to_owned()), ("search", "cal".to_owned())]);
         let b = CursorFilters::of([("search", "cal".to_owned()), ("limit", "20".to_owned())]);
 

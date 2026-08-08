@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["ContainerStatus","RiskClass","TelemetryEvent"],"struct":["FieldError"],"trait":["Container","ManifestCargo","ManifestChange","Product","Role","User"]};

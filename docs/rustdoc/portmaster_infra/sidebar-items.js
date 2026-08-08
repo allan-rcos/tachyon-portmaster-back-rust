@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["cache","config","database","entity","id","interno","logging","provider","query","register","repository","text"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["PROBLEM_JSON"],"fn":["describe_fields","title_of"],"struct":["ApiError","ProblemDetails"]};

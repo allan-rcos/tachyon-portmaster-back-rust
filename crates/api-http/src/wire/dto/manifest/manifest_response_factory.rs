@@ -15,7 +15,9 @@ use crate::wire::tables as fbs;
 /// objeto de domínio, e é a `ContainerResponseFactory` que sabe montar a tabela
 /// a partir de qualquer uma das duas origens.
 pub(crate) struct ManifestResponseFactory {
+    /// A mensagem que acompanha o movimento.
     message: &'static str,
+    /// O contêiner resultante, como factory aninhada.
     container: ContainerResponseFactory,
 }
 

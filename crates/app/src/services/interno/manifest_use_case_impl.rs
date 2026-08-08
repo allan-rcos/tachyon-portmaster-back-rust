@@ -17,13 +17,21 @@ use portmaster_infra::repository::{ContainerRepository, ManifestRepository, Prod
 
 /// A implementação, genérica sobre os ports que consome.
 pub(crate) struct ManifestUseCaseImpl<CR, PR, MR, T, C, U> {
+    /// Persistência de contêineres.
     containers: CR,
+    /// Persistência de produtos.
     products: PR,
+    /// Persistência do manifesto e da telemetria.
     manifest: MR,
+    /// As regras de embarque e desembarque.
     manifest_tm: T,
+    /// O cache de leitura, para o read-through e a invalidação.
     cache: C,
+    /// Quem abre e fecha a transação.
     unit_of_work: U,
+    /// A permissão exigida para load.
     load_permission: RequiresPermission,
+    /// A permissão exigida para unload.
     unload_permission: RequiresPermission,
 }
 
@@ -63,6 +71,13 @@ where
     ///
     /// Carrega os três envolvidos, pede a mudança ao `TableModule` e a persiste.
     /// O `apply` é o único ponto de diferença entre os dois casos.
+    /// Embarca ou desembarca, conforme a operação que `apply` conduz.
+    ///
+    /// A carga atual pode não existir — é o primeiro embarque daquele produto.
+    /// Ausência aqui é **dado, não falha**.
+    ///
+    /// A mudança é consumida depois de gravada: o contêiner que sai daqui é o
+    /// mesmo que foi persistido, sem uma segunda leitura que poderia divergir.
     async fn r#move(
         &self,
         command: MoveItemCommand,
@@ -87,8 +102,6 @@ where
                 .await?
                 .ok_or_else(|| AppError::not_found("produto", &command.product_id))?;
 
-            // A carga atual pode não existir — é o primeiro embarque daquele
-            // produto. Ausência aqui é dado, não falha.
             let current = self
                 .manifest
                 .find_cargo(&command.container_id, &command.product_id)
@@ -104,9 +117,6 @@ where
 
             self.persist(change.as_ref()).await?;
 
-            // Consumir a mudança depois de gravá-la: o contêiner que sai daqui é
-            // o mesmo que foi persistido, sem uma segunda leitura que poderia
-            // divergir.
             Ok(change.into_container())
         })
         .await?;

@@ -16,9 +16,11 @@ const FIND_BY_ID: &str =
     "SELECT id, name, density, risk_class, created_at, updated_at, deleted_at \
                           FROM `products` WHERE id = ? AND deleted_at IS NULL";
 
+/// Grava a linha nova.
 const INSERT: &str =
     "INSERT INTO `products` (id, name, density, risk_class, search_name) VALUES (?, ?, ?, ?, ?)";
 
+/// Atualiza a linha existente.
 const UPDATE: &str =
     "UPDATE `products` SET name = ?, density = ?, risk_class = ?, search_name = ? \
                       WHERE id = ? AND deleted_at IS NULL";

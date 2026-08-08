@@ -8,6 +8,7 @@ use portmaster_app::views::UserListView;
 
 /// Monta a tabela da listagem.
 pub(crate) struct UserListResponseFactory {
+    /// A View de origem, que a `table()` traduz.
     source: UserListView,
 }
 

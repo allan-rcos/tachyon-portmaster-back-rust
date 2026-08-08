@@ -26,6 +26,7 @@ use crate::wire::wire::Wire;
 
 /// Os handlers de produto, sobre o caso de uso que o provider entregou.
 pub struct ProductHandlers<U> {
+    /// O caso de uso de produto.
     products: U,
 }
 
@@ -71,10 +72,6 @@ impl<U: ProductUseCase> ProductHandlers<U> {
                 context,
                 name: request.name.unwrap_or_default(),
                 density: request.density.unwrap_or_default(),
-                // O enum do wire e o do domínio têm os mesmos índices — os dois
-                // saem do mesmo `.fbs`. A conversão passa pelo índice em vez de
-                // casar variante a variante, para que acrescentar uma classe de
-                // risco não exija tocar aqui.
                 risk_class: risk_class_of(request.risk_class),
             })
             .await
@@ -161,12 +158,14 @@ mod tests {
 
     use crate::wire::tables as fbs;
 
+    /// Os dois saem do mesmo `.fbs`, mas por caminhos diferentes: um pelo
+    /// planus, outro escrito à mão no domain.
+    ///
+    /// Se divergirem, um produto cadastrado como corrosivo vira radioativo em
+    /// silêncio — e o índice é justamente o que o DTO carrega, então é por ele
+    /// que se compara.
     #[test]
     fn os_indices_dos_dois_enums_coincidem() {
-        // Os dois saem do mesmo `.fbs`, mas por caminhos diferentes: um pelo
-        // planus, outro escrito à mão no domain. Se divergirem, um produto
-        // cadastrado como corrosivo vira radioativo em silêncio — e o índice é
-        // justamente o que o DTO carrega, então é por ele que se compara.
         assert_eq!(
             risk_class_of(Some(i32::from(
                 fbs::common::RiskClass::Class8CorrosiveSubstances as u8
@@ -185,10 +184,10 @@ mod tests {
         );
     }
 
+    /// Campo ausente não é erro nesta camada: vira o neutro, e é o
+    /// `TableModule` que decide se aquilo era obrigatório.
     #[test]
     fn um_campo_ausente_ou_fora_da_faixa_cai_no_neutro() {
-        // Campo ausente não é erro nesta camada: vira o neutro, e é o
-        // `TableModule` que decide se aquilo era obrigatório.
         assert_eq!(risk_class_of(None), portmaster_app::domain::RiskClass::None);
         assert_eq!(
             risk_class_of(Some(99)),

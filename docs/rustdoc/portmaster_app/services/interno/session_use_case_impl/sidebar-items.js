@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["ADMINISTRATOR_ROLE"],"struct":["SessionUseCaseImpl"]};

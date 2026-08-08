@@ -9,7 +9,12 @@ use std::collections::BTreeMap;
 /// vazá-lo para os demais.
 #[derive(Debug, Clone)]
 pub struct Logger {
+    /// O nome do logger, que vira o alvo da linha.
     name: String,
+    /// Os campos fixos deste logger, herdados por toda linha que ele emite.
+    ///
+    /// `BTreeMap` e não `HashMap`: a ordem estável faz duas linhas do mesmo
+    /// evento saírem iguais, o que importa para quem faz diff de log.
     fields: BTreeMap<String, String>,
 }
 
@@ -68,10 +73,10 @@ mod tests {
         assert_eq!(logger.name(), "auth");
     }
 
+    /// É o que permite carimbar o `request_id` num escopo sem que ele vaze para
+    /// as demais requisições que compartilham o mesmo logger base.
     #[test]
     fn acrescentar_campo_nao_altera_o_logger_de_origem() {
-        // É o que permite carimbar o request_id num escopo sem que ele vaze para
-        // as demais requisições que compartilham o mesmo logger base.
         let base = TracingLoggerFactory::new().create("http");
         let scoped = base.with_field("request_id", "abc123");
 

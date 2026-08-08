@@ -8,6 +8,7 @@ use portmaster_app::views::OccupancyView;
 
 /// Monta a tabela da ocupação.
 pub(crate) struct OccupancyDivisionFactory {
+    /// A View de origem, que a `table()` traduz.
     source: OccupancyView,
 }
 

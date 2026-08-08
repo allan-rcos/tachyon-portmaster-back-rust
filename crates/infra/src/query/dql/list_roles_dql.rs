@@ -23,6 +23,7 @@ const USER_COUNT: &str =
 
 /// A listagem de papéis.
 pub struct ListRolesDql {
+    /// Cursor, limite e busca da página pedida.
     params: ListParams,
 }
 
@@ -114,10 +115,10 @@ mod tests {
     use crate::query::sql::Bind;
     use pretty_assertions::assert_eq;
 
+    /// Com LEFT JOIN + GROUP BY, um papel sem nenhum usuário sairia da
+    /// listagem em vez de sair com zero.
     #[test]
     fn a_contagem_de_usuarios_e_correlacionada() {
-        // Com LEFT JOIN + GROUP BY, um papel sem nenhum usuário sairia da
-        // listagem em vez de sair com zero.
         let query = GetRoleDql::new(7).build();
 
         assert_eq!(

@@ -34,36 +34,45 @@ pub async fn connect(secrets: &InfraSecrets) -> anyhow::Result<MySqlPool> {
     Ok(pool)
 }
 
+/// Fixa o fuso da sessão em UTC, **depois** do parse da URI.
+///
+/// O `sqlx` já traz `+00:00` por padrão, mas duas coisas tornam o padrão
+/// insuficiente para uma regra do sistema: ele é decisão do driver e pode mudar
+/// de versão, e uma `?timezone=` na URI de conexão o sobrescreveria sem que
+/// nada avisasse. Fixar depois do parse fecha as duas portas.
+///
+/// ## O que está em jogo
+///
+/// As colunas são `DATETIME`, que o `MariaDB` guarda sem converter — o que entra
+/// é o que sai. O fuso da sessão é quem decide o que `CURRENT_TIMESTAMP` e
+/// `NOW()` valem na hora do INSERT. Com a sessão em UTC, o que o servidor grava
+/// por default é o mesmo instante que o Rust grava como `DateTime<Utc>`, e a
+/// leitura de volta fecha.
+///
+/// Sem isso, um servidor em fuso local produziria linhas com `created_at`
+/// deslocado das demais colunas de tempo — e o erro só apareceria como um
+/// relatório com horas erradas, meses depois.
+fn pinned_to_utc(options: MySqlConnectOptions) -> MySqlConnectOptions {
+    options.timezone(Some("+00:00".to_owned()))
+}
+
 /// Traduz os segredos nas opções de conexão do driver.
+///
+/// `verify_ca` sem o bundle da CA é recusado aqui: sem a cadeia não há o que
+/// validar, e cair em silêncio para um modo mais fraco entregaria exatamente a
+/// garantia que se pediu.
 fn connect_options(secrets: &InfraSecrets) -> anyhow::Result<MySqlConnectOptions> {
     let uri = secrets.database_uri.expose_secret();
     let options: MySqlConnectOptions = uri
         .parse()
         .context("a URI do banco não está num formato que o driver entenda")?;
 
-    // UTC, sempre, e explicitamente.
-    //
-    // O `sqlx` já traz `+00:00` por padrão, mas duas coisas tornam o padrão
-    // insuficiente para uma regra do sistema: ele é decisão do driver e pode
-    // mudar de versão, e uma `?timezone=` na URI de conexão o sobrescreveria
-    // sem que nada avisasse. Fixar **depois** do parse fecha as duas portas.
-    //
-    // O que está em jogo: as colunas são `DATETIME`, que o MariaDB guarda sem
-    // converter — o que entra é o que sai. O fuso da sessão é quem decide o que
-    // `CURRENT_TIMESTAMP` e `NOW()` valem na hora do INSERT. Com a sessão em
-    // UTC, o que o servidor grava por default é o mesmo instante que o Rust
-    // grava como `DateTime<Utc>`, e a leitura de volta fecha. Sem isso, um
-    // servidor em fuso local produziria linhas com `created_at` deslocado das
-    // demais colunas de tempo — e o erro só apareceria como um relatório com
-    // horas erradas, meses depois.
-    let options = options.timezone(Some("+00:00".to_owned()));
+    let options = pinned_to_utc(options);
 
     let options = match secrets.ssl_mode {
         DatabaseSslMode::Disabled => options.ssl_mode(MySqlSslMode::Disabled),
         DatabaseSslMode::Required => options.ssl_mode(MySqlSslMode::Required),
         DatabaseSslMode::VerifyCa => {
-            // Sem a CA não há o que validar, e cair em silêncio para um modo mais
-            // fraco entregaria exatamente a garantia que se pediu.
             let Some(ca_path) = secrets.ssl_ca_path.as_deref() else {
                 bail!("ssl_mode verify_ca exige o caminho do bundle da CA");
             };
@@ -95,10 +104,10 @@ mod tests {
         }
     }
 
+    /// O modo pede validação de cadeia; sem cadeia configurada, a única saída
+    /// honesta é falhar em vez de conectar mais fraco do que se pediu.
     #[test]
     fn verify_ca_sem_bundle_e_recusado() {
-        // O modo pede validação de cadeia; sem cadeia configurada, a única saída
-        // honesta é falhar em vez de conectar mais fraco do que se pediu.
         let error = connect_options(&secrets(DatabaseSslMode::VerifyCa, None))
             .expect_err("deveria recusar");
 

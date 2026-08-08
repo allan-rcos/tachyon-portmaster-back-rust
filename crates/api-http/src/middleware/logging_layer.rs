@@ -8,6 +8,7 @@ use super::logging::{Logging, CHANNEL};
 /// Aplica o [`Logging`].
 #[derive(Clone)]
 pub struct LoggingLayer<F> {
+    /// De onde o logger de cada requisição sai.
     factory: F,
 }
 

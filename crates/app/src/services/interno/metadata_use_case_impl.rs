@@ -9,7 +9,9 @@ use portmaster_infra::repository::PermissionRepository;
 
 /// A implementação, genérica sobre os ports que consome.
 pub(crate) struct MetadataUseCaseImpl<R> {
+    /// O catálogo de permissões, em memória.
     permissions: R,
+    /// A permissão exigida para list.
     list_permission: RequiresPermission,
 }
 
@@ -24,12 +26,14 @@ impl<R> MetadataUseCaseImpl<R> {
 }
 
 impl<R: PermissionRepository + Send + Sync> MetadataUseCase for MetadataUseCaseImpl<R> {
+    /// O catálogo de permissões, opcionalmente filtrado.
+    ///
+    /// Sem transação e sem cache de leitura: o registro **é** um cache em
+    /// memória, com dezenas de entradas fixas. Envolvê-lo numa transação abriria
+    /// uma conexão de banco para não consultar banco nenhum.
     async fn list_permissions(&self, query: ListPermissionsQuery) -> Result<Vec<String>, AppError> {
         self.list_permission.authorize(&query.context)?;
 
-        // Sem transação e sem cache de leitura: o registro **é** um cache em
-        // memória, com dezenas de entradas fixas. Envolvê-lo numa transação
-        // abriria uma conexão de banco para não consultar banco nenhum.
         let all = self.permissions.all().await?;
 
         let Some(needle) = query

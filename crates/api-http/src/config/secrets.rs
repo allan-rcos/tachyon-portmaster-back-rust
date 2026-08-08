@@ -164,10 +164,10 @@ mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
 
+    /// O mesmo modo aparece escrito de formas diferentes em compose, shell e
+    /// documentação; recusar por causa de um hífen seria hostilidade.
     #[test]
     fn o_modo_de_tls_aceita_as_grafias_usuais() {
-        // O mesmo modo aparece escrito de formas diferentes em compose, shell e
-        // documentação; recusar por causa de um hífen seria hostilidade.
         for grafia in ["verify_ca", "verify-ca", "VERIFY_CA"] {
             temporarily(Env::DB_SSL_MODE, Some(grafia), || {
                 assert_eq!(ssl_mode().unwrap(), DatabaseSslMode::VerifyCa);
@@ -220,11 +220,12 @@ mod tests {
     /// atropelam e o que falha é sorteado a cada execução.
     static ENV: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
+    ///
+    /// `unwrap_or_else` em vez de `unwrap`: se um teste anterior entrou em
+    /// pânico segurando o lock, envenená-lo faria os outros falharem por
+    /// arrasto, escondendo qual foi o problema original.
     /// Roda `body` com a variável definida, e a restaura depois.
     fn temporarily(name: &str, value: Option<&str>, body: impl FnOnce()) {
-        // `unwrap_or_else` em vez de `unwrap`: se um teste anterior entrou em
-        // pânico segurando o lock, envenená-lo faria os outros falharem por
-        // arrasto, escondendo qual foi o problema original.
         let _guard = ENV
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);

@@ -17,7 +17,18 @@ use sqlx::mysql::MySqlRow;
 const COLUMNS: &str = "p.id, p.name, p.density, p.risk_class";
 
 /// A listagem de produtos.
+///
+/// ## A contagem repete os filtros da página
+///
+/// O total tem que descrever o conjunto de onde a página sai. Contar sem o
+/// filtro de busca reportaria o catálogo inteiro numa busca por uma palavra só.
+///
+/// ## A paginação é keyset, não offset
+///
+/// A página seguinte começa **depois do último id servido**, e inserções no
+/// meio-tempo não deslocam nada — que é o defeito que o `OFFSET` tem.
 pub struct ListProductsDql {
+    /// Cursor, limite e busca da página pedida.
     params: ListParams,
 }
 
@@ -55,9 +66,6 @@ impl SqlDql for ListProductsDql {
         let last_id =
             Cursor::last_id_or_start(self.params.cursor.as_deref(), &self.cursor_filters());
 
-        // A contagem repete o filtro de busca porque o total tem que descrever o
-        // conjunto de onde a página sai. Contar sem o filtro reportaria o
-        // catálogo inteiro numa busca por uma palavra só.
         let (total_sql, total_binds) = match &search {
             Some(term) => (
                 "(SELECT COUNT(*) FROM products WHERE deleted_at IS NULL AND search_name LIKE ?) AS _total",
@@ -72,8 +80,6 @@ impl SqlDql for ListProductsDql {
         let mut select = Select::from("products p")
             .column(COLUMNS)
             .column_bound(total_sql, total_binds)
-            // Keyset: a página seguinte começa depois do último id servido, e
-            // inserções no meio-tempo não deslocam nada.
             .filter("p.id > ?", [Bind::Int(last_id)])
             .filter("p.deleted_at IS NULL", [])
             .order_by("p.id ASC")
@@ -113,10 +119,10 @@ mod tests {
     use crate::query::sql::Bind;
     use pretty_assertions::assert_eq;
 
+    /// O total tem que descrever o mesmo conjunto que a página percorre —
+    /// senão uma busca por uma palavra reportaria o catálogo inteiro.
     #[test]
     fn a_busca_entra_na_pagina_e_na_contagem() {
-        // O total tem que descrever o mesmo conjunto que a página percorre —
-        // senão uma busca por uma palavra reportaria o catálogo inteiro.
         let query = ListProductsDql::new(ListParams {
             search: Some("Cimento".into()),
             ..ListParams::default()
@@ -169,10 +175,10 @@ mod tests {
         assert_eq!(seguinte.binds, vec![Bind::Int(4_242)]);
     }
 
+    /// Trocar o termo e reenviar o cursor antigo continuaria a varredura do
+    /// conjunto anterior sob o filtro novo.
     #[test]
     fn um_cursor_de_outra_busca_recomeca_do_zero() {
-        // Trocar o termo e reenviar o cursor antigo continuaria a varredura do
-        // conjunto anterior sob o filtro novo.
         let dql = ListProductsDql::new(ListParams {
             search: Some("cimento".into()),
             ..ListParams::default()

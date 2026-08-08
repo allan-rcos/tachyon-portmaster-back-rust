@@ -15,7 +15,9 @@ use crate::repository::{MarkerGroupRepository, MarkerRepository};
 /// nomes paralelo em silêncio, e nada do que fosse marcado nele seria encontrado
 /// depois.
 pub struct MokaMarkerRepository<G> {
+    /// Os marcadores, com o TTL que os expira sozinhos.
     cache: MarkerCache,
+    /// Os grupos declarados, para recusar marcador de grupo que não existe.
     groups: G,
 }
 
@@ -54,10 +56,11 @@ impl<G: MarkerGroupRepository + Send + Sync> MarkerRepository for MokaMarkerRepo
         Ok(())
     }
 
+    /// Inexistente, expirado e desligado respondem igual.
+    ///
+    /// Quem pergunta quer saber se pode seguir; distinguir os casos vazaria se
+    /// um token já existiu.
     async fn is_valid(&self, group: &str, key: &str) -> anyhow::Result<bool> {
-        // Inexistente, expirado e desligado respondem igual. Quem pergunta quer
-        // saber se pode seguir; distinguir os casos vazaria se um token já
-        // existiu.
         Ok(self
             .cache
             .0
@@ -154,10 +157,10 @@ mod tests {
             .unwrap());
     }
 
+    /// Se isto passasse, um logout seria reversível por quem guardasse o token
+    /// antigo.
     #[tokio::test]
     async fn nao_revalida_marca_invalidada() {
-        // Se isto passasse, um logout seria reversível por quem guardasse o
-        // token antigo.
         let repository = repository().await;
         repository.put(&marker(true), 60).await.unwrap();
         repository.put(&marker(false), 60).await.unwrap();
@@ -173,10 +176,10 @@ mod tests {
         assert!(repository.put(&marker(true), 60).await.is_err());
     }
 
+    /// Um slug com erro de digitação criaria um espaço de nomes paralelo em
+    /// que nada seria reencontrado.
     #[tokio::test]
     async fn recusa_grupo_nao_registrado() {
-        // Um slug com erro de digitação criaria um espaço de nomes paralelo em
-        // que nada seria reencontrado.
         let repository = repository().await;
         let stray = StubMarker {
             group: "refresh-tokens",

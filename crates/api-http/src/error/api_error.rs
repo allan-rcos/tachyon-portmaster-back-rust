@@ -33,8 +33,11 @@ const PROBLEM_JSON: &str = "application/problem+json";
 /// e é da mesma natureza do status — parte da resposta, não do erro.
 #[derive(Debug)]
 pub struct ApiError {
+    /// O status HTTP da resposta.
     status: StatusCode,
+    /// O que aconteceu, em texto, para o corpo do problema.
     detail: String,
+    /// Os `Set-Cookie` a acrescentar na resposta, um cabeçalho por entrada.
     cookies: Vec<String>,
 }
 
@@ -115,12 +118,32 @@ impl ApiError {
     ///
     /// É o **único** ponto de tradução do sistema. Um `match` exaustivo garante
     /// que uma variante nova de [`AppError`] não passe despercebida como 500.
+    /// ## Validação vem em lote
+    ///
+    /// O domínio acumula **todos** os campos em vez de parar no primeiro.
+    /// Juntá-los num `detail` só é o que o `ProblemDetails` do schema comporta:
+    /// ele não tem `details[]`, e o `.fbs` é contrato com o cliente, não algo a
+    /// alterar por conveniência.
+    ///
+    /// ## O slug da permissão negada não vai no corpo
+    ///
+    /// Dizer ao cliente qual permissão faltou descreve para ele o mapa de
+    /// autorização do sistema. Quem precisa do detalhe é o operador, e para esse
+    /// ele já está no log.
+    ///
+    /// ## Regra de negócio violada é conflito, não erro de formato
+    ///
+    /// O pedido estava bem escrito; é o contêiner que não podia ser selado
+    /// agora. Credencial recusada responde igual para e-mail desconhecido e
+    /// senha errada — o `app` já garante isso.
+    ///
+    /// ## Falha de infra não descreve a topologia
+    ///
+    /// O que a infra reportou fica no log com a cadeia inteira; o cliente recebe
+    /// só que houve falha. O motivo real ("a conexão com o banco foi recusada")
+    /// não é acionável para ele.
     pub fn of_app(error: AppError) -> Self {
         match error {
-            // Validação vem em lote — o domínio acumula todos os campos em vez de
-            // parar no primeiro. Juntá-los num `detail` só é o que o
-            // `ProblemDetails` do schema comporta: ele não tem `details[]`, e o
-            // `.fbs` é contrato com o cliente, não algo a alterar por conveniência.
             AppError::Validation(fields) => {
                 Self::new(StatusCode::UNPROCESSABLE_ENTITY, describe_fields(&fields))
             }
@@ -130,9 +153,6 @@ impl ApiError {
                 AppError::Unauthenticated.to_string(),
             ),
 
-            // O slug **não** vai no corpo. Dizer ao cliente qual permissão faltou
-            // descreve para ele o mapa de autorização do sistema; quem precisa do
-            // detalhe é o operador, e para esse ele já está no log.
             AppError::Forbidden { permission } => {
                 tracing::info!(permission, "acesso negado por falta de permissão");
                 Self::new(
@@ -148,21 +168,13 @@ impl ApiError {
 
             AppError::Conflict(message) => Self::new(StatusCode::CONFLICT, message),
 
-            // Regras de negócio violadas são conflito de estado, não erro de
-            // formato: o pedido estava bem escrito, e é o contêiner que não podia
-            // ser selado agora.
             AppError::Container(e) => Self::new(StatusCode::CONFLICT, e.to_string()),
             AppError::Manifest(e) => Self::new(StatusCode::CONFLICT, e.to_string()),
             AppError::Marker(e) => Self::new(StatusCode::CONFLICT, e.to_string()),
             AppError::Metadata(e) => Self::new(StatusCode::CONFLICT, e.to_string()),
 
-            // Credencial recusada. A mensagem é a mesma para e-mail desconhecido e
-            // senha errada — o `app` já garante isso.
             AppError::Auth(e) => Self::new(StatusCode::UNAUTHORIZED, e.to_string()),
 
-            // O que a infra reportou fica no log com a cadeia inteira; o cliente
-            // recebe só que houve falha. O motivo real ("a conexão com o banco foi
-            // recusada") não é acionável para ele e descreve a topologia interna.
             AppError::Infra(e) => {
                 tracing::error!(error = ?e, "falha de infraestrutura");
                 Self::new(
@@ -175,6 +187,11 @@ impl ApiError {
 }
 
 impl IntoResponse for ApiError {
+    /// Escreve o corpo `application/problem+json` e os cookies.
+    ///
+    /// A serialização de uma struct de quatro campos escalares não falha; se um
+    /// dia falhasse, um corpo vazio com o status certo ainda é uma resposta
+    /// melhor do que um pânico dentro do handler de erro.
     fn into_response(self) -> Response {
         let problem = ProblemDetails {
             r#type: "about:blank",
@@ -183,9 +200,6 @@ impl IntoResponse for ApiError {
             detail: &self.detail,
         };
 
-        // A serialização de uma struct de quatro campos escalares não falha; se
-        // um dia falhasse, um corpo vazio com o status certo ainda é uma
-        // resposta melhor do que um pânico dentro do handler de erro.
         let body = serde_json::to_vec(&problem).unwrap_or_default();
 
         let mut response =
@@ -224,10 +238,11 @@ mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
 
+    /// O slug vai para o log.
+    ///
+    /// No corpo, ele descreveria ao cliente o mapa de autorização do sistema.
     #[test]
     fn a_permissao_negada_nao_vaza_o_slug_no_corpo() {
-        // O slug vai para o log. No corpo, ele descreveria ao cliente o mapa de
-        // autorização do sistema.
         let error = ApiError::of_app(AppError::Forbidden {
             permission: "container:seal".into(),
         });
@@ -254,10 +269,10 @@ mod tests {
         );
     }
 
+    /// O domínio acumula; perder campos aqui obrigaria o cliente a descobrir
+    /// um problema por requisição.
     #[test]
     fn a_validacao_lista_todos_os_campos() {
-        // O domínio acumula; perder campos aqui obrigaria o cliente a descobrir
-        // um problema por requisição.
         let error = ApiError::of_app(AppError::Validation(vec![
             FieldError::new("email", "malformado"),
             FieldError::new("password", "curta demais"),

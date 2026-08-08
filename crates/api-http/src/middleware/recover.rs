@@ -12,6 +12,7 @@ use tower::Service;
 /// O serviço que captura pânico.
 #[derive(Clone)]
 pub struct Recover<S> {
+    /// O serviço interno, que este envolve.
     pub(super) inner: S,
 }
 

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["login_command","setup_command"]};

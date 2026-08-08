@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["change_password_command","update_account_command"]};

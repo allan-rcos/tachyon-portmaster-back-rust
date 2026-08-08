@@ -19,6 +19,7 @@ const USER_COUNT: &str =
 
 /// Um papel pelo id.
 pub struct GetRoleDql {
+    /// O alvo, como `BIGINT` — o base62 já foi decodificado pelo caso de uso.
     id: i64,
 }
 

@@ -14,18 +14,25 @@ use portmaster_api_http::{config, router};
 use tokio::net::TcpListener;
 use tokio::signal;
 
+/// Última linha de defesa contra pânico.
+///
+/// A infra previne na fonte e o middleware Recover evita a queda; o que
+/// escapar dos dois cai aqui, e o hook existe para que isso seja logado com o
+/// máximo de contexto em vez de morrer em silêncio.
 #[tokio::main]
+/// Sobe o processo: log, segredos, camadas, router e escuta.
+///
+/// O pânico é reportado no `tracing` **e** no stderr. O `tracing` é o caminho
+/// normal, e o stderr é o que sobra quando ele não é o caminho: um pânico
+/// durante a inicialização do subscriber, ou durante o desligamento depois que
+/// ele já foi baixado, não deixaria rastro nenhum.
+///
+/// Falta de segredo derruba o boot antes de qualquer conexão: um servidor que
+/// sobe com o JWT num valor padrão aceita token forjado, e descobrir isso em
+/// produção custa mais do que não subir.
 async fn main() -> anyhow::Result<()> {
-    // Última linha de defesa contra pânico. A infra previne na fonte e o
-    // middleware Recover evita a queda; o que escapar dos dois cai aqui, e o
-    // hook existe para que isso seja logado com o máximo de contexto em vez de
-    // morrer em silêncio.
     std::panic::set_hook(Box::new(|info| {
         tracing::error!(panic = %info, "pânico não capturado");
-        // O `tracing` acima é o caminho normal, e o stderr é o que sobra quando
-        // ele não é o caminho: um pânico durante a inicialização do subscriber,
-        // ou durante o desligamento depois que ele já foi baixado, não deixaria
-        // rastro nenhum. Duplicar aqui custa uma linha e cobre esse buraco.
         #[allow(
             clippy::print_stderr,
             clippy::disallowed_macros,
@@ -38,9 +45,6 @@ async fn main() -> anyhow::Result<()> {
 
     logging();
 
-    // Falta de segredo derruba o boot antes de qualquer conexão: um servidor que
-    // sobe com o JWT num valor padrão aceita token forjado, e descobrir isso em
-    // produção custa mais do que não subir.
     let secrets = config::secrets::Secrets::load()?;
     let address = format!("{}:{}", secrets.api.host, secrets.api.port);
 
@@ -79,6 +83,10 @@ fn logging() {
 /// SIGTERM é o que o Docker manda ao parar um contêiner, e SIGINT é o Ctrl-C.
 /// Atender aos dois é o que faz uma requisição em andamento terminar em vez de
 /// virar conexão cortada no cliente durante um deploy.
+/// Espera o sinal de desligamento.
+///
+/// Sem o handler de `SIGTERM` resta o Ctrl-C: é pior, mas não é motivo para o
+/// servidor recusar-se a servir.
 async fn shutdown() {
     let interrupt = async {
         let _ = signal::ctrl_c().await;
@@ -90,8 +98,6 @@ async fn shutdown() {
             Ok(mut stream) => {
                 stream.recv().await;
             }
-            // Sem o handler resta o Ctrl-C: é pior, mas não é motivo para o
-            // servidor recusar-se a servir.
             Err(error) => {
                 tracing::warn!(error = %error, "não foi possível ouvir SIGTERM");
                 std::future::pending::<()>().await;

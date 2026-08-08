@@ -16,9 +16,13 @@ use crate::wire::wire::Wire;
 /// obrigaria cada um a virar um `enum`. É o segundo e último ponto dinâmico do
 /// wire — o primeiro é a strategy dentro do [`Wire`].
 pub(crate) struct ApiResponse {
+    /// O formato negociado desta requisição.
     wire: Wire,
+    /// O status HTTP da resposta.
     status: StatusCode,
+    /// O corpo já pronto para ser escrito, com o tipo apagado.
     body: Box<dyn Renderable>,
+    /// Os `Set-Cookie` a acrescentar na resposta, um cabeçalho por entrada.
     cookies: Vec<String>,
 }
 
@@ -56,6 +60,12 @@ impl ApiResponse {
 }
 
 impl IntoResponse for ApiResponse {
+    /// Escreve o corpo no formato negociado, e os cookies.
+    ///
+    /// Falhar ao escrever a **própria** resposta é defeito nosso, não do
+    /// cliente. O 502 que o `ApiError::unrenderable` produz distingue isso do
+    /// 500 que o middleware `Recover` devolve quando algo entrou em pânico — e a
+    /// diferença importa para quem lê o painel.
     fn into_response(self) -> Response {
         let encode = self.wire.encode();
 
@@ -66,10 +76,6 @@ impl IntoResponse for ApiResponse {
                 bytes,
             )
                 .into_response(),
-            // Falhar ao escrever a **própria** resposta é defeito nosso, não do
-            // cliente. O 502 que o `ApiError::unrenderable` produz distingue
-            // isso do 500 que o middleware `Recover` devolve quando algo entrou
-            // em pânico — e a diferença importa para quem lê o painel.
             Err(error) => error.into_response(),
         };
 
@@ -120,11 +126,11 @@ mod tests {
         Wire::new(MediaType::FlatBuffers, Arc::new(FlatBuffersEncodeStrategy))
     }
 
+    /// O `Content-Type` que sai é o da strategy que escreveu os bytes, e não
+    /// uma segunda decisão tomada aqui — é o que garante que os dois nunca
+    /// divirjam.
     #[test]
     fn a_resposta_anuncia_o_formato_em_que_saiu() {
-        // O `Content-Type` que sai é o da strategy que escreveu os bytes, e não
-        // uma segunda decisão tomada aqui — é o que garante que os dois nunca
-        // divirjam.
         let text = ApiResponse::ok(json(), ProductFactory).into_response();
         let binary = ApiResponse::ok(flatbuffers(), ProductFactory).into_response();
 

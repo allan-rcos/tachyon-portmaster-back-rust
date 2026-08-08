@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["get_product_query","list_products_query"]};

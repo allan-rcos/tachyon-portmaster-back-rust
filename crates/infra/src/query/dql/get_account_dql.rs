@@ -26,6 +26,7 @@ const JOIN_ROLES: &str = "LEFT JOIN user_roles ur ON ur.user_id = u.id \
 
 /// Um usuário pelo id, com os papéis.
 pub struct GetAccountDql {
+    /// O alvo, como `BIGINT` — o base62 já foi decodificado pelo caso de uso.
     user_id: i64,
 }
 
@@ -51,9 +52,11 @@ impl SqlDql for GetAccountDql {
             .build()
     }
 
+    /// Sem linha nenhuma o usuário não existe.
+    ///
+    /// Com linhas, ele existe mesmo que todas tenham `role_id` nulo — é o
+    /// usuário sem papel.
     fn read(&self, rows: Vec<MySqlRow>) -> anyhow::Result<Self::View> {
-        // Sem linha nenhuma o usuário não existe. Com linhas, ele existe mesmo
-        // que todas tenham `role_id` nulo — é o usuário sem papel.
         let Some(first) = rows.first() else {
             return Ok(None);
         };

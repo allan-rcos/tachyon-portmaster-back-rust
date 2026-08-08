@@ -13,6 +13,7 @@ use crate::repository::{RoleRepository, UserRepository};
 /// descobrir isso varre a tabela inteira à toa.
 const HAS_ANY: &str = "SELECT 1 FROM `users` WHERE deleted_at IS NULL LIMIT 1";
 
+/// Busca por id, já filtrando o soft-delete.
 const FIND_BY_ID: &str =
     "SELECT id, name, email, password_hash, created_at, updated_at, deleted_at \
      FROM `users` WHERE id = ? AND deleted_at IS NULL";
@@ -23,16 +24,21 @@ const FIND_BY_EMAIL: &str =
     "SELECT id, name, email, password_hash, created_at, updated_at, deleted_at \
      FROM `users` WHERE email = ? AND deleted_at IS NULL";
 
+/// Grava a linha nova.
 const INSERT: &str = "INSERT INTO `users` (id, name, email, password_hash) VALUES (?, ?, ?, ?)";
 
+/// Atualiza a linha existente.
 const UPDATE: &str = "UPDATE `users` SET name = ?, email = ?, password_hash = ? \
                       WHERE id = ? AND deleted_at IS NULL";
 
+/// Marca como removida em vez de apagar — o histórico continua auditável.
 const SOFT_DELETE: &str =
     "UPDATE `users` SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL";
 
+/// Tira todos os papéis do usuário, antes de regravá-los.
 const CLEAR_ROLES: &str = "DELETE FROM `user_roles` WHERE user_id = ?";
 
+/// Liga um papel ao usuário.
 const LINK_ROLE: &str = "INSERT INTO `user_roles` (user_id, role_id) VALUES (?, ?)";
 
 /// O repositório de usuários.
@@ -41,6 +47,7 @@ const LINK_ROLE: &str = "INSERT INTO `user_roles` (user_id, role_id) VALUES (?, 
 /// sem eles: os papéis decidem o que ele pode fazer, e devolvê-lo sem papéis
 /// faria toda verificação de autorização falhar em silêncio.
 pub struct UserMariadbRepository<R> {
+    /// De onde os papéis do usuário são lidos, na mesma leitura.
     roles: R,
 }
 
@@ -153,6 +160,11 @@ impl<R: RoleRepository + Send + Sync> UserRepository for UserMariadbRepository<R
         Ok(())
     }
 
+    /// Substitui os vínculos de papel do usuário — apaga e regrava.
+    ///
+    /// O vínculo é entidade fraca, e "mudar" um conjunto de vínculos é
+    /// removê-los e recriá-los. Calcular o diferencial daria o mesmo resultado
+    /// por mais trabalho, e os dois rodam na mesma transação.
     async fn sync_roles(&self, user_id: &str, role_ids: &[String]) -> anyhow::Result<()> {
         let raw_user = Codec::decode_id(user_id)?;
         let raw_roles: Vec<i64> = role_ids
@@ -162,9 +174,6 @@ impl<R: RoleRepository + Send + Sync> UserRepository for UserMariadbRepository<R
 
         let mut transaction = MariadbUnitOfWork::current().await?;
 
-        // Apaga e regrava: o vínculo é entidade fraca, e "mudar" um conjunto de
-        // vínculos é removê-los e recriá-los. Calcular o diferencial daria o
-        // mesmo resultado por mais trabalho, e os dois rodam na mesma transação.
         sqlx::query(CLEAR_ROLES)
             .bind(raw_user)
             .execute(&mut **transaction.as_mut())

@@ -15,6 +15,7 @@ use crate::wire::wire::Wire;
 
 /// Os handlers de métrica.
 pub struct MetricsHandlers<M> {
+    /// O caso de uso de métrica.
     metrics: M,
 }
 

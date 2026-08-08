@@ -9,13 +9,24 @@ use crate::models::{Role, User};
 /// Construída e alterada **apenas** pelo [`UserTM`](crate::table_modules::UserTM), que é
 /// quem conhece as regras. Nem o `UseCase` nem o repositório a instanciam.
 pub struct UserModel {
+    /// Identidade, em base62.
     id: String,
+    /// Nome de exibição.
     name: String,
+    /// E-mail, que também é a credencial de login.
     email: String,
+    /// O hash Argon2 da senha.
+    ///
+    /// Nunca a senha em claro, e nunca publicado no fio: a tabela de
+    /// resposta não tem onde pô-lo, e é isso que garante que não vaze.
     password_hash: String,
+    /// Os papéis concedidos; a união das permissões deles é o que o usuário pode.
     roles: Vec<Box<dyn Role>>,
+    /// Quando foi criado, em UTC.
     created_at: DateTime<Utc>,
+    /// Quando mudou pela última vez; o `set_*` o move.
     updated_at: DateTime<Utc>,
+    /// Quando foi removido, ou `None` se ativo — o soft-delete.
     deleted_at: Option<DateTime<Utc>>,
 }
 

@@ -60,10 +60,10 @@ mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
 
+    /// Um `COUNT(*)` acima de 2^31 é absurdo, mas truncá-lo produziria um
+    /// negativo — que o cliente exibiria como se fosse um dado.
     #[test]
     fn a_contagem_satura_em_vez_de_truncar() {
-        // Um `COUNT(*)` acima de 2^31 é absurdo, mas truncá-lo produziria um
-        // negativo — que o cliente exibiria como se fosse um dado.
         assert_eq!(Convert::count(i64::from(i32::MAX) + 1), i32::MAX);
         assert_eq!(Convert::count(7), 7);
     }

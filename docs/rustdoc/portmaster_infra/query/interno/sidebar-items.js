@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["mariadb_query_factory","mariadb_query_repository"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["COLUMNS","RECENT_LOGS"],"struct":["ListContainerSummariesDql"]};

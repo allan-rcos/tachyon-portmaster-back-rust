@@ -10,6 +10,7 @@ use crate::error::AppError;
 /// requisição — seria trabalho por nada.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct RequiresPermission {
+    /// O slug exigido, declarado na construção do caso de uso.
     slug: &'static str,
 }
 
@@ -69,18 +70,20 @@ mod tests {
         );
     }
 
+    /// O número é contrato: são as permissões que já existem em papéis
+    /// gravados.
+    ///
+    /// Este teste quebra tanto se alguém acrescentar um caso de uso sem
+    /// catalogar a permissão quanto se remover uma que ainda está em uso.
     #[test]
     fn o_catalogo_tem_as_25_permissoes_do_php() {
-        // O número é contrato: são as permissões que já existem em papéis
-        // gravados. Este teste quebra tanto se alguém acrescentar um caso de uso
-        // sem catalogar a permissão quanto se remover uma que ainda está em uso.
         assert_eq!(PermissionCatalog::ALL.len(), 25);
     }
 
+    /// O `TableModule` de permissão recusa slug fora deste formato — melhor
+    /// descobrir aqui do que ver o boot falhar.
     #[test]
     fn todo_slug_segue_o_formato_recurso_acao() {
-        // O TableModule de permissão recusa slug fora deste formato — melhor
-        // descobrir aqui do que ver o boot falhar.
         for slug in PermissionCatalog::ALL {
             let (resource, action) = slug
                 .split_once(':')

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["cursor","cursor_filters"]};

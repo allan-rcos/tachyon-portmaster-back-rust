@@ -8,13 +8,24 @@ use portmaster_domain::models::Product;
 
 /// A entity, com o id já traduzido para base62.
 pub struct ProductEntity {
+    /// Identidade em base62.
     id: String,
+    /// O mesmo id como `BIGINT`, para os `WHERE` e as FKs.
+    ///
+    /// Guardado junto do base62 para que a escrita não precise decodificar de
+    /// volta a cada consulta.
     raw_id: i64,
+    /// Nome comercial.
     name: String,
+    /// Quilos por litro.
     density: f64,
+    /// A classe de risco, já como enum de domínio.
     risk_class: RiskClass,
+    /// Quando a linha nasceu, em UTC.
     created_at: DateTime<Utc>,
+    /// Quando a linha mudou pela última vez, em UTC.
     updated_at: DateTime<Utc>,
+    /// Quando foi removida, ou `None` se ativa — o soft-delete.
     deleted_at: Option<DateTime<Utc>>,
 }
 

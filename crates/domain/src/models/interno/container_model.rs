@@ -7,13 +7,21 @@ use crate::models::Container;
 
 /// A implementação do domínio de [`Container`].
 pub struct ContainerModel {
+    /// Identidade, em base62.
     id: String,
+    /// O código do contêiner, como o pátio o chama.
     code: String,
+    /// Peso da carga embarcada, em quilos.
     current_weight: f64,
+    /// Teto de peso; embarcar além dele é recusado.
     max_capacity: f64,
+    /// Onde o contêiner está no ciclo — vazio, carregando, selado, em trânsito.
     status: ContainerStatus,
+    /// Quando foi criado, em UTC.
     created_at: DateTime<Utc>,
+    /// Quando mudou pela última vez; o `set_*` o move.
     updated_at: DateTime<Utc>,
+    /// Quando foi removido, ou `None` se ativo — o soft-delete.
     deleted_at: Option<DateTime<Utc>>,
 }
 

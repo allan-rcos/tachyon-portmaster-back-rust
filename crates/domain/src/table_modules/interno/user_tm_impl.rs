@@ -13,7 +13,9 @@ use crate::table_modules::UserTM;
 /// factory do provider, o que os torna substituíveis em teste sem que nada além
 /// do domínio saiba que existem.
 pub(crate) struct UserTMImpl<G, H> {
+    /// De onde sai a identidade de um usuário novo.
     id_generator: G,
+    /// Quem transforma a senha em hash — lento de propósito.
     password_hasher: H,
 }
 
@@ -219,10 +221,12 @@ mod tests {
         assert_eq!(user.deleted_at(), None);
     }
 
+    /// O ponto do lote.
+    ///
+    /// Quem enviou três campos errados descobre os três agora, não um por
+    /// requisição.
     #[test]
     fn acumula_todos_os_campos_invalidos_de_uma_vez() {
-        // O ponto do lote: quem enviou três campos errados descobre os três
-        // agora, não um por requisição.
         let error = table_module()
             .create(
                 String::new(),
@@ -269,11 +273,12 @@ mod tests {
         }
     }
 
+    /// A transição produz um objeto novo, e não muta o argumento.
+    ///
+    /// Se ela mutasse, uma atualização recusada mais adiante deixaria o
+    /// chamador com um objeto meio-alterado.
     #[test]
     fn update_nao_altera_o_usuario_recebido() {
-        // A transição produz um objeto novo. Se ela mutasse o argumento, uma
-        // atualização recusada mais adiante deixaria o chamador com um objeto
-        // meio-alterado.
         let original = valid_user();
         let updated = table_module()
             .update(

@@ -1,0 +1,40 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/domain/src/models/manifest_change.rs`."><title>manifest_change.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="portmaster_domain" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0 (ac68faa20 2026-05-25)" data-channel="1.96.0" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">portmaster_domain/models/</div>manifest_change.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! O contrato de leitura do efeito de um movimento de carga.
+<a href=#2 id=2 data-nosnippet>2</a>
+<a href=#3 id=3 data-nosnippet>3</a></span><span class="kw">use </span><span class="kw">crate</span>::enums::TelemetryEvent;
+<a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span><span class="kw">crate</span>::models::{Container, ManifestCargo};
+<a href=#5 id=5 data-nosnippet>5</a>
+<a href=#6 id=6 data-nosnippet>6</a><span class="doccomment">/// O efeito completo de um embarque ou desembarque.
+<a href=#7 id=7 data-nosnippet>7</a>///
+<a href=#8 id=8 data-nosnippet>8</a>/// Um único movimento de carga toca três coisas — o peso e o status do
+<a href=#9 id=9 data-nosnippet>9</a>/// contêiner, a linha do manifesto, e o registro de telemetria — e as três
+<a href=#10 id=10 data-nosnippet>10</a>/// precisam ser gravadas juntas ou nenhuma. Devolvê-las num objeto só é o que
+<a href=#11 id=11 data-nosnippet>11</a>/// impede o `app` de aplicar metade.
+<a href=#12 id=12 data-nosnippet>12</a></span><span class="kw">pub trait </span>ManifestChange: Send + Sync {
+<a href=#13 id=13 data-nosnippet>13</a>    <span class="doccomment">/// O contêiner como fica depois do movimento.
+<a href=#14 id=14 data-nosnippet>14</a>    </span><span class="kw">fn </span>container(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="kw">dyn </span>Container;
+<a href=#15 id=15 data-nosnippet>15</a>
+<a href=#16 id=16 data-nosnippet>16</a>    <span class="doccomment">/// Produto movimentado, em base62.
+<a href=#17 id=17 data-nosnippet>17</a>    </span><span class="kw">fn </span>product_id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>str;
+<a href=#18 id=18 data-nosnippet>18</a>
+<a href=#19 id=19 data-nosnippet>19</a>    <span class="doccomment">/// A linha do manifesto como fica, ou `None` se ela deixou de existir.
+<a href=#20 id=20 data-nosnippet>20</a>    </span><span class="kw">fn </span>cargo(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="kw">dyn </span>ManifestCargo&gt;;
+<a href=#21 id=21 data-nosnippet>21</a>
+<a href=#22 id=22 data-nosnippet>22</a>    <span class="doccomment">/// Se o manifesto inteiro deve ser apagado.
+<a href=#23 id=23 data-nosnippet>23</a>    ///
+<a href=#24 id=24 data-nosnippet>24</a>    /// Verdadeiro quando o desembarque esvaziou o contêiner: em vez de remover
+<a href=#25 id=25 data-nosnippet>25</a>    /// linha a linha, o manifesto vai junto.
+<a href=#26 id=26 data-nosnippet>26</a>    </span><span class="kw">fn </span>clear_manifest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool;
+<a href=#27 id=27 data-nosnippet>27</a>
+<a href=#28 id=28 data-nosnippet>28</a>    <span class="doccomment">/// O que registrar na telemetria.
+<a href=#29 id=29 data-nosnippet>29</a>    </span><span class="kw">fn </span>event(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; TelemetryEvent;
+<a href=#30 id=30 data-nosnippet>30</a>
+<a href=#31 id=31 data-nosnippet>31</a>    <span class="doccomment">/// Desmonta a mudança e entrega o contêiner resultante.
+<a href=#32 id=32 data-nosnippet>32</a>    ///
+<a href=#33 id=33 data-nosnippet>33</a>    /// Existe porque quem responde ao movimento precisa **publicar** o contêiner
+<a href=#34 id=34 data-nosnippet>34</a>    /// no estado novo, e não só gravá-lo: a resposta de embarque leva o peso e o
+<a href=#35 id=35 data-nosnippet>35</a>    /// status atualizados. Consumir a mudança é o que evita reler do banco o que
+<a href=#36 id=36 data-nosnippet>36</a>    /// já está em memória — e, por consumi-la, garante que ninguém a persista de
+<a href=#37 id=37 data-nosnippet>37</a>    /// novo depois de tê-la publicado.
+<a href=#38 id=38 data-nosnippet>38</a>    </span><span class="kw">fn </span>into_container(<span class="self">self</span>: Box&lt;<span class="self">Self</span>&gt;) -&gt; Box&lt;<span class="kw">dyn </span>Container&gt;;
+<a href=#39 id=39 data-nosnippet>39</a>}
+</code></pre></div></section></main></body></html>

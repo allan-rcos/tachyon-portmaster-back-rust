@@ -9,6 +9,7 @@ use crate::table_modules::MarkerTM;
 
 /// A implementação, genérica sobre o hasher de indexação.
 pub(crate) struct MarkerTMImpl<H> {
+    /// Quem transforma a chave do marcador em índice — rápido de propósito.
     hasher: H,
 }
 
@@ -20,6 +21,12 @@ impl<H: IndexHasher> MarkerTMImpl<H> {
 }
 
 impl<H: IndexHasher> MarkerTM for MarkerTMImpl<H> {
+    /// Monta um marcador, com a chave já hasheada.
+    ///
+    /// Valor vazio é recusado, e não é preciosismo: ele hasharia para uma
+    /// constante, e aí todo chamador que esquecesse de passar algo
+    /// compartilharia um único marcador — cada um vendo o booleano dos outros
+    /// virar.
     fn create(
         &self,
         group: String,
@@ -37,9 +44,6 @@ impl<H: IndexHasher> MarkerTM for MarkerTMImpl<H> {
             );
         }
 
-        // Valor vazio hasharia para uma constante, e aí todo chamador que
-        // esquecesse de passar algo compartilharia um único marcador — cada um
-        // vendo o booleano dos outros virar.
         errors.add_if(plain.is_empty(), "value", "Value is required.");
 
         errors.into_result(()).map_err(MarkerError::Validation)?;
@@ -73,10 +77,11 @@ mod tests {
         assert!(marker.flag());
     }
 
+    /// É o que faz o refresh funcionar.
+    ///
+    /// Marcar no login e consultar depois precisam cair na mesma chave.
     #[test]
     fn o_mesmo_valor_reencontra_a_mesma_marca() {
-        // É o que faz o refresh funcionar: marcar no login e consultar depois
-        // precisam cair na mesma chave.
         let first = table_module()
             .create("refresh-token".into(), "abc", true)
             .expect("válido");

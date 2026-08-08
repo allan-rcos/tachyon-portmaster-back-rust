@@ -27,19 +27,33 @@ use portmaster_infra::repository::{RoleRepository, UserRepository};
 
 /// A implementação, genérica sobre os ports que consome.
 pub(crate) struct UserUseCaseImpl<UR, RR, T, Q, F, C, U> {
+    /// Persistência de usuários.
     users: UR,
+    /// Persistência de papéis.
     roles: RR,
+    /// As regras de usuário — quem constrói e valida.
     user_tm: T,
+    /// Quem executa um DQL contra o banco.
     queries: Q,
+    /// De onde os DQLs saem, já com os parâmetros.
     dqls: F,
+    /// O cache de leitura, para o read-through e a invalidação.
     cache: C,
+    /// Quem abre e fecha a transação.
     unit_of_work: U,
+    /// A permissão exigida para create.
     create_permission: RequiresPermission,
+    /// A permissão exigida para update.
     update_permission: RequiresPermission,
+    /// A permissão exigida para update roles.
     update_roles_permission: RequiresPermission,
+    /// A permissão exigida para change password.
     change_password_permission: RequiresPermission,
+    /// A permissão exigida para delete.
     delete_permission: RequiresPermission,
+    /// A permissão exigida para get.
     get_permission: RequiresPermission,
+    /// A permissão exigida para list.
     list_permission: RequiresPermission,
 }
 
@@ -111,12 +125,18 @@ where
     C: ReadCache + Send + Sync,
     U: UnitOfWork + Send + Sync,
 {
+    /// Cria um usuário e liga os papéis dele.
+    ///
+    /// O e-mail é único, e a duplicidade é descoberta **aqui** em vez de deixar
+    /// o índice reclamar: assim o cliente recebe um conflito com sentido, e não
+    /// um erro de banco.
+    ///
+    /// Os papéis são uma tabela de ligação à parte, então `insert` grava a linha
+    /// de `users` e o vínculo precisa do seu próprio comando.
     async fn create(&self, command: CreateUserCommand) -> Result<Box<dyn User>, AppError> {
         self.create_permission.authorize(&command.context)?;
 
         let user = Transaction::run(&self.unit_of_work, async {
-            // E-mail é único. Descobrir aqui devolve um conflito com sentido;
-            // deixar o índice reclamar devolveria erro de banco.
             if self.users.find_by_email(&command.email).await?.is_some() {
                 return Err(AppError::Conflict(
                     "A user with this e-mail already exists.".into(),
@@ -134,8 +154,6 @@ where
             )?;
 
             self.users.insert(user.as_ref()).await?;
-            // Os papéis são uma tabela de ligação à parte: `insert` grava a
-            // linha de `users`, e o vínculo precisa do seu próprio comando.
             self.users.sync_roles(user.id(), &role_ids).await?;
 
             Ok(user)
@@ -201,6 +219,11 @@ where
         Ok(user)
     }
 
+    /// Redefine a senha de outro usuário.
+    ///
+    /// **Sem pedir a senha atual**: quem redefine a senha de outro não a
+    /// conhece. É a permissão que autoriza, não o conhecimento do segredo — ao
+    /// contrário de `AccountUseCase::change_password`, que rege a própria conta.
     async fn reset_password(&self, command: ResetUserPasswordCommand) -> Result<(), AppError> {
         self.change_password_permission
             .authorize(&command.context)?;
@@ -212,8 +235,6 @@ where
                 .await?
                 .ok_or_else(|| AppError::not_found("usuário", &command.id))?;
 
-            // Sem pedir a senha atual: quem redefine a senha de outro não a
-            // conhece. É a permissão que autoriza, não o conhecimento do segredo.
             let updated = self
                 .user_tm
                 .change_password(existing.as_ref(), command.new_password)?;
@@ -245,14 +266,16 @@ where
         ReadThrough::invalidate(&self.cache, Invalidation::USER_WRITE).await
     }
 
+    /// Um usuário com os papéis dele, pelo lado de leitura.
+    ///
+    /// Usa a mesma consulta de `GET /account`: um usuário com os papéis dele é o
+    /// mesmo recorte, seja o próprio ou outro.
     async fn get(&self, query: GetUserQuery) -> Result<AccountView, AppError> {
         self.get_permission.authorize(&query.context)?;
 
         let key = CacheKey::of(CacheKey::USER, "get", &[&query.id]);
 
         ReadThrough::cached(&self.cache, &key, async {
-            // A mesma consulta de `GET /account`: um usuário com os papéis dele
-            // é o mesmo recorte, seja o próprio ou outro.
             let dql = self.dqls.get_account(&query.id)?;
 
             Transaction::run(&self.unit_of_work, async {

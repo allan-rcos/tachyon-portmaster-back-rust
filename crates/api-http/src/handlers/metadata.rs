@@ -18,6 +18,7 @@ use crate::wire::wire::Wire;
 
 /// Os handlers de metadado.
 pub struct MetadataHandlers<M> {
+    /// O caso de uso de metadado.
     metadata: M,
 }
 
@@ -28,6 +29,8 @@ impl<M: MetadataUseCase> MetadataHandlers<M> {
     }
 
     /// `GET /metadata/permissions`
+    /// Sem correspondência é uma **lista vazia**, e não 404: o catálogo existe,
+    /// e o que não existe é a busca — que é resposta, não ausência de recurso.
     pub(crate) async fn list_permissions(
         &self,
         wire: Wire,
@@ -44,8 +47,6 @@ impl<M: MetadataUseCase> MetadataHandlers<M> {
             .await
             .map_err(ApiError::of_app)?;
 
-        // Sem correspondência é uma lista vazia, e não 404: o catálogo existe, e
-        // o que não existe é a busca — que é resposta, não ausência de recurso.
         Ok(ApiResponse::ok(
             wire,
             PermissionListResponseFactory::of(slugs),

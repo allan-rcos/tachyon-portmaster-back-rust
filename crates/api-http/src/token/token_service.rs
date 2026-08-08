@@ -52,9 +52,13 @@ struct Claims {
 /// Emite e confere tokens.
 #[derive(Clone)]
 pub struct TokenService {
+    /// A chave de assinatura.
     encoding: EncodingKey,
+    /// A chave de verificação.
     decoding: DecodingKey,
+    /// Quem emitiu, gravado e conferido na claim `iss`.
     issuer: String,
+    /// Validade do access token.
     ttl: Duration,
 }
 
@@ -97,14 +101,22 @@ impl TokenService {
     /// Recusa por qualquer motivo — assinatura, validade, emissor, payload
     /// ilegível — respondem igual: `None`. Quem chama só precisa saber se há
     /// sessão, e distinguir "expirou" de "foi forjado" não muda o que ele faz.
+    /// Confere a assinatura e devolve o principal que o token carrega.
+    ///
+    /// Recusa por qualquer motivo — assinatura, validade, emissor, payload
+    /// ilegível — responde igual: `None`. Quem chama só precisa saber se há
+    /// sessão, e distinguir "expirou" de "foi forjado" não muda o que ele faz.
+    ///
+    /// ## Sem tolerância de relógio
+    ///
+    /// O padrão da lib são 60 segundos, pensados para quando quem assina e quem
+    /// confere são máquinas diferentes — aqui são o mesmo processo, com o mesmo
+    /// relógio. Mantê-la só faria todo token valer um minuto a mais do que o
+    /// `exp` que ele mesmo declara.
     pub(crate) fn verify(&self, token: &str) -> Option<UserContext> {
         let mut validation = Validation::new(Algorithm::HS256);
         validation.set_issuer(&[&self.issuer]);
 
-        // Sem tolerância de relógio. O padrão da lib são 60 segundos, pensados
-        // para quando quem assina e quem confere são máquinas diferentes — aqui
-        // são o mesmo processo, com o mesmo relógio. Mantê-la só faria todo
-        // token valer um minuto a mais do que o `exp` que ele mesmo declara.
         validation.leeway = 0;
 
         let claims = jsonwebtoken::decode::<Claims>(token, &self.decoding, &validation)
@@ -303,10 +315,10 @@ mod tests {
         }
     }
 
+    /// É o que sustenta a autenticação stateless: tudo que a autorização
+    /// precisa saber viaja no token, e nenhum middleware toca o banco.
     #[test]
     fn o_token_devolve_o_principal_inteiro() {
-        // É o que sustenta a autenticação stateless: tudo que a autorização
-        // precisa saber viaja no token, e nenhum middleware toca o banco.
         let service = service();
         let token = service.issue(&user()).unwrap();
 
@@ -320,10 +332,10 @@ mod tests {
         assert!(context.has_permission("container:seal"));
     }
 
+    /// O trait `User` o expõe, e empacotar o usuário inteiro por descuido o
+    /// mandaria para o navegador dentro de um cookie.
     #[test]
     fn o_hash_da_senha_nao_entra_no_token() {
-        // O trait `User` o expõe, e empacotar o usuário inteiro por descuido o
-        // mandaria para o navegador dentro de um cookie.
         let token = service().issue(&user()).unwrap();
 
         assert!(

@@ -30,6 +30,7 @@ use crate::wire::wire::Wire;
 
 /// Os handlers da conta própria.
 pub struct AccountHandlers<A> {
+    /// O caso de uso da conta própria.
     account: A,
 }
 
@@ -67,6 +68,8 @@ impl<A: AccountUseCase> AccountHandlers<A> {
     }
 
     /// `PUT /account/password`
+    /// Responde `204` sem corpo de propósito: o cookie de sessão continua
+    /// valendo, e a resposta não tem nada a dizer que o cliente já não saiba.
     pub(crate) async fn change_password(
         &self,
         Body(request): Body<PasswordChangeRequestFactory>,
@@ -82,8 +85,6 @@ impl<A: AccountUseCase> AccountHandlers<A> {
             .await
             .map_err(ApiError::of_app)?;
 
-        // Sem corpo de propósito: o cookie de sessão continua valendo, e a
-        // resposta não tem nada a dizer que o cliente já não saiba.
         Ok(NoContent::new())
     }
 

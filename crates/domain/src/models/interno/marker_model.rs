@@ -4,8 +4,11 @@ use crate::models::Marker;
 
 /// A implementação do domínio de [`Marker`].
 pub(crate) struct MarkerModel {
+    /// O grupo do marcador — o namespace que separa um uso do outro.
     group: String,
+    /// A chave dentro do grupo, já hasheada.
     key: String,
+    /// O que o marcador afirma; `false` é a revogação.
     flag: bool,
 }
 
