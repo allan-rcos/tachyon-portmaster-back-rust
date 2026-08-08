@@ -12,72 +12,75 @@
 //! errado em vez de nenhum. Reler pelo lado de leitura é o que mantém a resposta
 //! igual à do `GET` que vem logo depois.
 
-use portmaster_app::account::{
-    AccountUseCase, ChangePasswordCommand, GetAccountQuery, UpdateAccountCommand,
-};
+use portmaster_app::commands::account::ChangePasswordCommand;
+use portmaster_app::commands::account::UpdateAccountCommand;
 use portmaster_app::context::UserContext;
+use portmaster_app::queries::account::GetAccountQuery;
+use portmaster_app::services::AccountUseCase;
 
-use crate::error::{app_error_to_status, ApiError};
+use crate::error::api_error::ApiError;
 use crate::session::Session;
-use crate::wire::http::{Accept, Body, Negotiated, NoContent};
-use crate::wire::tables as fbs;
+use crate::wire::api_response::ApiResponse;
+use crate::wire::body::Body;
+use crate::wire::dto::account::account_profile_response_factory::AccountProfileResponseFactory;
+use crate::wire::dto::account::account_update_request_factory::AccountUpdateRequestFactory;
+use crate::wire::dto::account::password_change_request_factory::PasswordChangeRequestFactory;
+use crate::wire::no_content::NoContent;
+use crate::wire::wire::Wire;
 
 /// Os handlers da conta própria.
-pub(crate) struct AccountHandlers<A> {
+pub struct AccountHandlers<A> {
     account: A,
 }
 
 impl<A: AccountUseCase> AccountHandlers<A> {
     /// Monta os handlers.
-    pub(crate) fn new(account: A) -> Self {
+    pub(crate) const fn new(account: A) -> Self {
         Self { account }
     }
 
     /// `GET /account`
-    pub(crate) async fn get(
-        &self,
-        accept: Accept,
-    ) -> Result<Negotiated<fbs::account::AccountProfileResponse>, ApiError> {
+    pub(crate) async fn get(&self, wire: Wire) -> Result<ApiResponse, ApiError> {
         let context = Session::require_user()?;
 
-        Ok(Negotiated::ok(accept, self.profile(context).await?))
+        Ok(ApiResponse::ok(wire, self.profile(context).await?))
     }
 
     /// `PUT /account`
     pub(crate) async fn update(
         &self,
-        accept: Accept,
-        Body(request): Body<fbs::account::AccountUpdateRequest>,
-    ) -> Result<Negotiated<fbs::account::AccountProfileResponse>, ApiError> {
+        wire: Wire,
+        Body(request): Body<AccountUpdateRequestFactory>,
+    ) -> Result<ApiResponse, ApiError> {
         let context = Session::require_user()?;
 
         self.account
             .update(UpdateAccountCommand {
                 context: context.clone(),
-                name: request.name,
-                email: request.email,
+                name: request.name.unwrap_or_default(),
+                email: request.email.unwrap_or_default(),
             })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
-        Ok(Negotiated::ok(accept, self.profile(context).await?))
+        Ok(ApiResponse::ok(wire, self.profile(context).await?))
     }
 
     /// `PUT /account/password`
     pub(crate) async fn change_password(
         &self,
-        Body(request): Body<fbs::account::AccountPasswordChangeRequest>,
+        Body(request): Body<PasswordChangeRequestFactory>,
     ) -> Result<NoContent, ApiError> {
         let context = Session::require_user()?;
 
         self.account
             .change_password(ChangePasswordCommand {
                 context,
-                current_password: request.current_password,
-                new_password: request.new_password,
+                current_password: request.current_password.unwrap_or_default(),
+                new_password: request.new_password.unwrap_or_default(),
             })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
         // Sem corpo de propósito: o cookie de sessão continua valendo, e a
         // resposta não tem nada a dizer que o cliente já não saiba.
@@ -88,13 +91,13 @@ impl<A: AccountUseCase> AccountHandlers<A> {
     async fn profile(
         &self,
         context: UserContext,
-    ) -> Result<fbs::account::AccountProfileResponse, ApiError> {
+    ) -> Result<AccountProfileResponseFactory, ApiError> {
         let view = self
             .account
             .get(GetAccountQuery { context })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
-        Ok(view.into())
+        Ok(AccountProfileResponseFactory::of(view))
     }
 }

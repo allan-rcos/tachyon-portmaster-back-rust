@@ -1,2 +1,59 @@
 cognitive-complexity-threshold = 25
 too-many-arguments-threshold = 8
+
+# Testes podem usar unwrap/expect/print (não é código de produção)
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-dbg-in-tests = true
+
+# (A) Guardas que NUNCA podem atravessar um .await
+#
+# A lista está VAZIA de propósito, e isso é um desvio consciente do que
+# tmp/clippy.md pediu. A doc mandava listar aqui o `TransactionGuard` da
+# UnitOfWork, com o lema "pegue, solte, então await". Mas o guard que a infra
+# realmente implementa é um `tokio::sync::OwnedMutexGuard`, não um guard
+# síncrono — e um mutex assíncrono existe justamente para ser segurado através
+# de um `.await`. Toda leitura e toda escrita fazem, obrigatoriamente:
+#
+#     let mut transaction = MariadbUnitOfWork::current().await?;
+#     sqlx::query(…).execute(transaction.as_mut()).await?;
+#
+# Não há como executar uma query na transação sem segurar o guard durante o
+# `.await` da query. Listá-lo aqui marcaria como erro os 26 pontos que são o
+# uso correto e único da UoW, e o lint deixaria de significar qualquer coisa.
+#
+# O bug que a doc queria pegar — um guard SÍNCRONO atravessando await — continua
+# coberto, e por lints melhores: `await_holding_lock` (MutexGuard/RwLockGuard do
+# std) e `await_holding_refcell_ref`, os dois em `deny` no Cargo.toml. Somados ao
+# ban de `std::sync::Mutex` logo abaixo, o caminho para o erro está fechado.
+await-holding-invalid-types = []
+
+# (E) Métodos proibidos: força relógio/ids INJETADOS (providers), nunca ad-hoc
+disallowed-methods = [
+  { path = "std::time::SystemTime::now", reason = "use o clock injetado pelo provider (testável, ver ids.md/config.md)" },
+  { path = "std::time::Instant::now", reason = "use o clock injetado pelo provider" },
+  { path = "uuid::Uuid::new_v4", reason = "ids são Snowflake/NanoID via id-gen do provider (ids.md)" },
+
+  # O sistema é UTC de ponta a ponta: os modelos carregam `DateTime<Utc>`, a
+  # sessão do pool é fixada em `+00:00` e o servidor sobe com
+  # `--default-time-zone=+00:00`. `Local::now()` leria o fuso de quem está
+  # rodando o processo, e um contêiner com TZ diferente do outro produziria
+  # registros que não ordenam entre si — o tipo de erro que não aparece na
+  # máquina de quem escreveu.
+  { path = "chrono::offset::Local::now", reason = "o sistema é UTC de ponta a ponta: use Utc::now()" },
+]
+
+# (E) Tipos proibidos no wiring interno
+disallowed-types = [
+  { path = "std::sync::Mutex", reason = "estado por-requisição é task-local (request-context.md); Mutex só em recurso de borda justificado" },
+  { path = "openssl::ssl::SslContext", reason = "TLS é rustls em todo lugar (sem OpenSSL) — ver security.md" },
+  { path = "chrono::offset::Local", reason = "o sistema é UTC de ponta a ponta: use chrono::Utc" },
+]
+
+# (D) Macros proibidas: saída vai por tracing, nunca stdout/stderr direto
+disallowed-macros = [
+  { path = "std::print", reason = "use tracing (tracing.md), não stdout" },
+  { path = "std::println", reason = "use tracing (tracing.md), não stdout" },
+  { path = "std::eprint", reason = "use tracing, não stderr" },
+  { path = "std::eprintln", reason = "use tracing, não stderr" },
+]

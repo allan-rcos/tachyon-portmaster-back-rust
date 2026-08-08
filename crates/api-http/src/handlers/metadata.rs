@@ -6,32 +6,33 @@
 //! porque saber o mapa de autorização já é privilégio.
 
 use axum::extract::Query;
-use portmaster_app::metadata::{ListPermissionsQuery, MetadataUseCase};
+use portmaster_app::queries::metadata::ListPermissionsQuery;
+use portmaster_app::services::MetadataUseCase;
 
-use super::SearchParams;
-use crate::error::{app_error_to_status, ApiError};
+use crate::error::api_error::ApiError;
+use crate::handlers::params::search_params::SearchParams;
 use crate::session::Session;
-use crate::wire::http::{Accept, Negotiated};
-use crate::wire::tables as fbs;
-use crate::wire::view::permission_list;
+use crate::wire::api_response::ApiResponse;
+use crate::wire::dto::metadata::permission_list_response_factory::PermissionListResponseFactory;
+use crate::wire::wire::Wire;
 
 /// Os handlers de metadado.
-pub(crate) struct MetadataHandlers<M> {
+pub struct MetadataHandlers<M> {
     metadata: M,
 }
 
 impl<M: MetadataUseCase> MetadataHandlers<M> {
     /// Monta os handlers.
-    pub(crate) fn new(metadata: M) -> Self {
+    pub(crate) const fn new(metadata: M) -> Self {
         Self { metadata }
     }
 
     /// `GET /metadata/permissions`
     pub(crate) async fn list_permissions(
         &self,
-        accept: Accept,
+        wire: Wire,
         Query(params): Query<SearchParams>,
-    ) -> Result<Negotiated<fbs::metadata::PermissionListResponse>, ApiError> {
+    ) -> Result<ApiResponse, ApiError> {
         let context = Session::require_user()?;
 
         let slugs = self
@@ -41,10 +42,13 @@ impl<M: MetadataUseCase> MetadataHandlers<M> {
                 search: params.search,
             })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
         // Sem correspondência é uma lista vazia, e não 404: o catálogo existe, e
         // o que não existe é a busca — que é resposta, não ausência de recurso.
-        Ok(Negotiated::ok(accept, permission_list(slugs)))
+        Ok(ApiResponse::ok(
+            wire,
+            PermissionListResponseFactory::of(slugs),
+        ))
     }
 }

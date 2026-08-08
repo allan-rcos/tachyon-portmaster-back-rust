@@ -17,36 +17,46 @@
 //! parâmetro de conveniência em erro de integração.
 
 use axum::extract::{Path, Query};
-use portmaster_app::container::{
-    ContainerCommand, ContainerUseCase, CreateContainerCommand, GetContainerQuery,
-    ListContainerSummariesQuery, ListContainersQuery, UpdateContainerCommand,
-};
+use portmaster_app::commands::container::ContainerCommand;
+use portmaster_app::commands::container::CreateContainerCommand;
+use portmaster_app::commands::container::UpdateContainerCommand;
 use portmaster_app::domain::ContainerStatus;
+use portmaster_app::queries::container::GetContainerQuery;
+use portmaster_app::queries::container::ListContainerSummariesQuery;
+use portmaster_app::queries::container::ListContainersQuery;
+use portmaster_app::services::ContainerUseCase;
 
-use super::{ContainerPageParams, SummaryPageParams};
-use crate::error::{app_error_to_status, ApiError};
+use crate::error::api_error::ApiError;
+use crate::handlers::params::container_page_params::ContainerPageParams;
+use crate::handlers::params::summary_page_params::SummaryPageParams;
 use crate::session::Session;
-use crate::wire::http::{Accept, Body, Negotiated, NoContent};
-use crate::wire::tables as fbs;
-use crate::wire::view::container_of;
+use crate::wire::api_response::ApiResponse;
+use crate::wire::body::Body;
+use crate::wire::dto::container::container_create_request_factory::ContainerCreateRequestFactory;
+use crate::wire::dto::container::container_list_response_factory::ContainerListResponseFactory;
+use crate::wire::dto::container::container_response_factory::ContainerResponseFactory;
+use crate::wire::dto::container::container_summary_list_response_factory::ContainerSummaryListResponseFactory;
+use crate::wire::dto::container::container_update_request_factory::ContainerUpdateRequestFactory;
+use crate::wire::no_content::NoContent;
+use crate::wire::wire::Wire;
 
 /// Os handlers de contêiner.
-pub(crate) struct ContainerHandlers<C> {
+pub struct ContainerHandlers<C> {
     containers: C,
 }
 
 impl<C: ContainerUseCase> ContainerHandlers<C> {
     /// Monta os handlers.
-    pub(crate) fn new(containers: C) -> Self {
+    pub(crate) const fn new(containers: C) -> Self {
         Self { containers }
     }
 
     /// `GET /containers`
     pub(crate) async fn list(
         &self,
-        accept: Accept,
+        wire: Wire,
         Query(params): Query<ContainerPageParams>,
-    ) -> Result<Negotiated<fbs::container::ContainerListResponse>, ApiError> {
+    ) -> Result<ApiResponse, ApiError> {
         let context = Session::require_user()?;
 
         let view = self
@@ -64,9 +74,12 @@ impl<C: ContainerUseCase> ContainerHandlers<C> {
                     .unwrap_or_default(),
             })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
-        Ok(Negotiated::ok(accept, view.into()))
+        Ok(ApiResponse::ok(
+            wire,
+            ContainerListResponseFactory::of(view),
+        ))
     }
 
     /// `GET /containers/summary`
@@ -75,9 +88,9 @@ impl<C: ContainerUseCase> ContainerHandlers<C> {
     /// `summary` casa como id.
     pub(crate) async fn summary(
         &self,
-        accept: Accept,
+        wire: Wire,
         Query(params): Query<SummaryPageParams>,
-    ) -> Result<Negotiated<fbs::container::ContainerSummaryListResponse>, ApiError> {
+    ) -> Result<ApiResponse, ApiError> {
         let context = Session::require_user()?;
 
         let view = self
@@ -89,17 +102,20 @@ impl<C: ContainerUseCase> ContainerHandlers<C> {
                 limit: params.limit,
             })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
-        Ok(Negotiated::ok(accept, view.into()))
+        Ok(ApiResponse::ok(
+            wire,
+            ContainerSummaryListResponseFactory::of(view),
+        ))
     }
 
     /// `POST /containers`
     pub(crate) async fn create(
         &self,
-        accept: Accept,
-        Body(request): Body<fbs::container::ContainerCreateRequest>,
-    ) -> Result<Negotiated<fbs::container::ContainerResponse>, ApiError> {
+        wire: Wire,
+        Body(request): Body<ContainerCreateRequestFactory>,
+    ) -> Result<ApiResponse, ApiError> {
         let context = Session::require_user()?;
 
         let container = self
@@ -107,41 +123,41 @@ impl<C: ContainerUseCase> ContainerHandlers<C> {
             .create(CreateContainerCommand {
                 context,
                 code: request.code.unwrap_or_default(),
-                max_capacity: request.max_capacity,
+                max_capacity: request.max_capacity.unwrap_or_default(),
             })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
-        Ok(Negotiated::created(
-            accept,
-            container_of(container.as_ref()),
+        Ok(ApiResponse::created(
+            wire,
+            ContainerResponseFactory::of_domain(container.as_ref()),
         ))
     }
 
     /// `GET /containers/{id}`
     pub(crate) async fn get(
         &self,
-        accept: Accept,
+        wire: Wire,
         Path(id): Path<String>,
-    ) -> Result<Negotiated<fbs::container::ContainerResponse>, ApiError> {
+    ) -> Result<ApiResponse, ApiError> {
         let context = Session::require_user()?;
 
         let view = self
             .containers
             .get(GetContainerQuery { context, id })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
-        Ok(Negotiated::ok(accept, view.into()))
+        Ok(ApiResponse::ok(wire, ContainerResponseFactory::of(view)))
     }
 
     /// `PUT /containers/{id}`
     pub(crate) async fn update(
         &self,
-        accept: Accept,
+        wire: Wire,
         Path(id): Path<String>,
-        Body(request): Body<fbs::container::ContainerUpdateRequest>,
-    ) -> Result<Negotiated<fbs::container::ContainerResponse>, ApiError> {
+        Body(request): Body<ContainerUpdateRequestFactory>,
+    ) -> Result<ApiResponse, ApiError> {
         let context = Session::require_user()?;
 
         let container = self
@@ -149,12 +165,15 @@ impl<C: ContainerUseCase> ContainerHandlers<C> {
             .update(UpdateContainerCommand {
                 context,
                 id,
-                max_capacity: request.max_capacity,
+                max_capacity: request.max_capacity.unwrap_or_default(),
             })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
-        Ok(Negotiated::ok(accept, container_of(container.as_ref())))
+        Ok(ApiResponse::ok(
+            wire,
+            ContainerResponseFactory::of_domain(container.as_ref()),
+        ))
     }
 
     /// `DELETE /containers/{id}`
@@ -164,7 +183,7 @@ impl<C: ContainerUseCase> ContainerHandlers<C> {
         self.containers
             .delete(ContainerCommand { context, id })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
         Ok(NoContent::new())
     }
@@ -176,7 +195,7 @@ impl<C: ContainerUseCase> ContainerHandlers<C> {
         self.containers
             .seal(ContainerCommand { context, id })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
         Ok(NoContent::new())
     }
@@ -188,7 +207,7 @@ impl<C: ContainerUseCase> ContainerHandlers<C> {
         self.containers
             .dispatch(ContainerCommand { context, id })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
         Ok(NoContent::new())
     }

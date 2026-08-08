@@ -1,0 +1,31 @@
+# Bans de crate — o que o Clippy não cobre.
+#
+# O Clippy linta código; ele não sabe dizer "este crate não entra". Os dois bans
+# abaixo são regras de arquitetura que só se expressam aqui, e estão descritos em
+# tmp/clippy.md.
+
+[bans]
+multiple-versions = "warn"
+
+deny = [
+    # Os ports assíncronos usam `async fn` nativo em trait, não a macro. A
+    # diferença não é de estilo: `#[async_trait]` embrulha todo retorno num
+    # `Pin<Box<dyn Future + Send>>`, o que é exatamente a alocação e o despacho
+    # dinâmico que esta arquitetura existe para não ter. Ver
+    # tmp/architecture/lifetimes-auto-traits.md.
+    #
+    # `wrappers = ["config"]` porque o crate `config` depende de `async-trait`
+    # por dentro, e isso não é decisão nossa nem afeta os nossos ports — o que o
+    # ban precisa impedir é alguém declarar a dependência **direta**, que é o que
+    # significaria voltar a escrever port com a macro.
+    { name = "async-trait", wrappers = [
+        "config",
+    ], reason = "ports usam async fn nativo em trait — ver lifetimes-auto-traits.md" },
+
+    # TLS é rustls em todo lugar. Não é preferência: o OpenSSL arrastaria uma
+    # toolchain C para dentro do build multi-stage do Dockerfile, que hoje
+    # produz um binário estático de 16,8 MB. Ver security.md.
+    { name = "openssl", reason = "TLS é rustls em todo lugar (sem OpenSSL) — ver security.md" },
+]
+
+skip-tree = []

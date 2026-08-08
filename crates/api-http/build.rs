@@ -1,4 +1,4 @@
-//! Geração dos tipos de wire FlatBuffers.
+//! Geração dos tipos de wire `FlatBuffers`.
 //!
 //! Os `.fbs` de `swagger/flatbuffers/schemas/` são compilados **em Rust**, pelo
 //! planus, para `OUT_DIR`. Não há shell-out para o binário `flatc`: ele não
@@ -7,6 +7,11 @@
 //!
 //! Os schemas são a fonte compartilhada com o cliente e não são tocados por este
 //! passo — o que sai daqui é só a tradução deles para Rust.
+
+#![allow(
+    clippy::disallowed_macros,
+    reason = "build.rs comunica diretivas ao cargo via stdout"
+)]
 
 use std::path::{Path, PathBuf};
 

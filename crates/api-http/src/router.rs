@@ -26,7 +26,7 @@
 //! Os `.layer()` do axum aplicam-se **de baixo para cima**: o último declarado é
 //! o mais externo. A ordem abaixo é lida de fora para dentro assim:
 //!
-//! 1. **RequestId** — carimba antes de tudo, para que a linha de log tenha id.
+//! 1. **`RequestId`** — carimba antes de tudo, para que a linha de log tenha id.
 //! 2. **Logging** — vê o status final, inclusive o 500 que o Recover produziu.
 //! 3. **Recover** — um pânico vira 500 desta requisição, não queda do processo.
 //! 4. **Timeout** — o teto vale para o handler, não para o log em volta dele.
@@ -42,7 +42,7 @@ use axum::Router;
 use portmaster_app::AppProvider;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
-use crate::config::ApiConfig;
+use crate::config::api_config::ApiConfig;
 use crate::cookie::AuthCookie;
 use crate::handlers::account::AccountHandlers;
 use crate::handlers::auth::AuthHandlers;
@@ -54,12 +54,13 @@ use crate::handlers::product::ProductHandlers;
 use crate::handlers::role::RoleHandlers;
 use crate::handlers::server::ServerHandlers;
 use crate::handlers::user::UserHandlers;
-use crate::middleware::logging::LoggingLayer;
-use crate::middleware::recover::RecoverLayer;
-use crate::middleware::request_id::RequestIdLayer;
-use crate::middleware::timeout::TimeoutLayer;
-use crate::middleware::token::TokenLayer;
-use crate::token::TokenService;
+use crate::middleware::logging_layer::LoggingLayer;
+use crate::middleware::negotiation_layer::NegotiationLayer;
+use crate::middleware::recover_layer::RecoverLayer;
+use crate::middleware::request_id_layer::RequestIdLayer;
+use crate::middleware::timeout_layer::TimeoutLayer;
+use crate::middleware::token_layer::TokenLayer;
+use crate::token::token_service::TokenService;
 
 /// Liga uma rota ao método de um handler de recurso.
 ///
@@ -122,15 +123,42 @@ struct AuthParts {
 }
 
 /// Monta o router inteiro sobre um provider.
+#[allow(
+    clippy::too_many_lines,
+    reason = "é a tabela de rotas: quebrá-la em pedaços esconderia o mapa que o arquivo existe para mostrar"
+)]
+#[allow(
+    clippy::needless_pass_by_value,
+    reason = "o router toma posse do provider e da config: eles vivem enquanto o servidor viver"
+)]
 pub fn router<P: AppProvider + Send + Sync + 'static>(
     provider: Arc<P>,
     config: ApiConfig,
 ) -> Router {
-    use crate::handlers::user::RoleIdsRequest;
-    use crate::handlers::UserPageParams;
-    use crate::handlers::{ContainerPageParams, PageParams, SearchParams, SummaryPageParams};
-    use crate::wire::http::{Accept, Body, JsonBody};
-    use crate::wire::tables as fbs;
+    use crate::handlers::params::container_page_params::ContainerPageParams;
+    use crate::handlers::params::page_params::PageParams;
+    use crate::handlers::params::search_params::SearchParams;
+    use crate::handlers::params::summary_page_params::SummaryPageParams;
+    use crate::handlers::params::user_page_params::UserPageParams;
+    use crate::wire::body::Body;
+    use crate::wire::dto::account::account_update_request_factory::AccountUpdateRequestFactory;
+    use crate::wire::dto::account::password_change_request_factory::PasswordChangeRequestFactory;
+    use crate::wire::dto::admin::role_create_request_factory::RoleCreateRequestFactory;
+    use crate::wire::dto::admin::role_ids_request::RoleIdsRequest;
+    use crate::wire::dto::admin::role_permissions_update_request_factory::RolePermissionsUpdateRequestFactory;
+    use crate::wire::dto::admin::user_create_request_factory::UserCreateRequestFactory;
+    use crate::wire::dto::admin::user_password_reset_request_factory::UserPasswordResetRequestFactory;
+    use crate::wire::dto::admin::user_update_request_factory::UserUpdateRequestFactory;
+    use crate::wire::dto::auth::login_request_factory::LoginRequestFactory;
+    use crate::wire::dto::auth::setup_request_factory::SetupRequestFactory;
+    use crate::wire::dto::container::container_create_request_factory::ContainerCreateRequestFactory;
+    use crate::wire::dto::container::container_update_request_factory::ContainerUpdateRequestFactory;
+    use crate::wire::dto::manifest::load_item_request_factory::LoadItemRequestFactory;
+    use crate::wire::dto::manifest::unload_item_request_factory::UnloadItemRequestFactory;
+    use crate::wire::dto::product::product_create_request_factory::ProductCreateRequestFactory;
+    use crate::wire::dto::product::product_update_request_factory::ProductUpdateRequestFactory;
+    use crate::wire::json_body::JsonBody;
+    use crate::wire::wire::Wire;
     use axum::extract::{Path, Query};
     use axum::http::HeaderMap;
 
@@ -150,10 +178,10 @@ pub fn router<P: AppProvider + Send + Sync + 'static>(
             get({
                 let handlers = Arc::new(ServerHandlers::new(environment));
 
-                move |accept: Accept| {
+                move |wire: Wire| {
                     let handlers = Arc::clone(&handlers);
 
-                    async move { handlers.info(accept).await }
+                    async move { handlers.info(wire).await }
                 }
             }),
         )
@@ -164,8 +192,8 @@ pub fn router<P: AppProvider + Send + Sync + 'static>(
                 provider,
                 auth,
                 setup,
-                accept: Accept,
-                body: Body<fbs::auth::SetupRequest>,
+                wire: Wire,
+                body: Body<SetupRequestFactory>,
             )),
         )
         .route(
@@ -174,8 +202,8 @@ pub fn router<P: AppProvider + Send + Sync + 'static>(
                 provider,
                 auth,
                 login,
-                accept: Accept,
-                body: Body<fbs::auth::LoginRequest>,
+                wire: Wire,
+                body: Body<LoginRequestFactory>,
             )),
         )
         .route(
@@ -189,12 +217,12 @@ pub fn router<P: AppProvider + Send + Sync + 'static>(
         // --- Conta própria ----------------------------------------------
         .route(
             "/account",
-            get(route!(provider, account_use_case => AccountHandlers::get, accept: Accept)).put(
+            get(route!(provider, account_use_case => AccountHandlers::get, wire: Wire)).put(
                 route!(
                     provider,
                     account_use_case => AccountHandlers::update,
-                    accept: Accept,
-                    body: Body<fbs::account::AccountUpdateRequest>,
+                    wire: Wire,
+                    body: Body<AccountUpdateRequestFactory>,
                 ),
             ),
         )
@@ -203,7 +231,7 @@ pub fn router<P: AppProvider + Send + Sync + 'static>(
             put(route!(
                 provider,
                 account_use_case => AccountHandlers::change_password,
-                body: Body<fbs::account::AccountPasswordChangeRequest>,
+                body: Body<PasswordChangeRequestFactory>,
             )),
         )
         // --- Produtos ----------------------------------------------------
@@ -212,14 +240,14 @@ pub fn router<P: AppProvider + Send + Sync + 'static>(
             get(route!(
                 provider,
                 product_use_case => ProductHandlers::list,
-                accept: Accept,
+                wire: Wire,
                 params: Query<PageParams>,
             ))
             .post(route!(
                 provider,
                 product_use_case => ProductHandlers::create,
-                accept: Accept,
-                body: Body<fbs::product::ProductCreateRequest>,
+                wire: Wire,
+                body: Body<ProductCreateRequestFactory>,
             )),
         )
         .route(
@@ -227,15 +255,15 @@ pub fn router<P: AppProvider + Send + Sync + 'static>(
             get(route!(
                 provider,
                 product_use_case => ProductHandlers::get,
-                accept: Accept,
+                wire: Wire,
                 id: Path<String>,
             ))
             .put(route!(
                 provider,
                 product_use_case => ProductHandlers::update,
-                accept: Accept,
+                wire: Wire,
                 id: Path<String>,
-                body: Body<fbs::product::ProductUpdateRequest>,
+                body: Body<ProductUpdateRequestFactory>,
             ))
             .delete(route!(
                 provider,
@@ -249,14 +277,14 @@ pub fn router<P: AppProvider + Send + Sync + 'static>(
             get(route!(
                 provider,
                 role_use_case => RoleHandlers::list,
-                accept: Accept,
+                wire: Wire,
                 params: Query<PageParams>,
             ))
             .post(route!(
                 provider,
                 role_use_case => RoleHandlers::create,
-                accept: Accept,
-                body: Body<fbs::admin::RoleCreateRequest>,
+                wire: Wire,
+                body: Body<RoleCreateRequestFactory>,
             )),
         )
         .route(
@@ -264,9 +292,9 @@ pub fn router<P: AppProvider + Send + Sync + 'static>(
             put(route!(
                 provider,
                 role_use_case => RoleHandlers::update_permissions,
-                accept: Accept,
+                wire: Wire,
                 id: Path<String>,
-                body: Body<fbs::admin::RolePermissionsUpdateRequest>,
+                body: Body<RolePermissionsUpdateRequestFactory>,
             )),
         )
         // --- Contêineres ---------------------------------------------------
@@ -275,14 +303,14 @@ pub fn router<P: AppProvider + Send + Sync + 'static>(
             get(route!(
                 provider,
                 container_use_case => ContainerHandlers::list,
-                accept: Accept,
+                wire: Wire,
                 params: Query<ContainerPageParams>,
             ))
             .post(route!(
                 provider,
                 container_use_case => ContainerHandlers::create,
-                accept: Accept,
-                body: Body<fbs::container::ContainerCreateRequest>,
+                wire: Wire,
+                body: Body<ContainerCreateRequestFactory>,
             )),
         )
         // Antes de `/containers/{id}`: um literal e um parâmetro no mesmo
@@ -293,7 +321,7 @@ pub fn router<P: AppProvider + Send + Sync + 'static>(
             get(route!(
                 provider,
                 container_use_case => ContainerHandlers::summary,
-                accept: Accept,
+                wire: Wire,
                 params: Query<SummaryPageParams>,
             )),
         )
@@ -302,15 +330,15 @@ pub fn router<P: AppProvider + Send + Sync + 'static>(
             get(route!(
                 provider,
                 container_use_case => ContainerHandlers::get,
-                accept: Accept,
+                wire: Wire,
                 id: Path<String>,
             ))
             .put(route!(
                 provider,
                 container_use_case => ContainerHandlers::update,
-                accept: Accept,
+                wire: Wire,
                 id: Path<String>,
-                body: Body<fbs::container::ContainerUpdateRequest>,
+                body: Body<ContainerUpdateRequestFactory>,
             ))
             .delete(route!(
                 provider,
@@ -340,8 +368,8 @@ pub fn router<P: AppProvider + Send + Sync + 'static>(
             post(route!(
                 provider,
                 manifest_use_case => ManifestHandlers::load,
-                accept: Accept,
-                body: Body<fbs::manifest::LoadItemRequest>,
+                wire: Wire,
+                body: Body<LoadItemRequestFactory>,
             )),
         )
         .route(
@@ -349,8 +377,8 @@ pub fn router<P: AppProvider + Send + Sync + 'static>(
             post(route!(
                 provider,
                 manifest_use_case => ManifestHandlers::unload,
-                accept: Accept,
-                body: Body<fbs::manifest::UnloadItemRequest>,
+                wire: Wire,
+                body: Body<UnloadItemRequestFactory>,
             )),
         )
         // --- Usuários --------------------------------------------------------
@@ -359,14 +387,14 @@ pub fn router<P: AppProvider + Send + Sync + 'static>(
             get(route!(
                 provider,
                 user_use_case => UserHandlers::list,
-                accept: Accept,
+                wire: Wire,
                 params: Query<UserPageParams>,
             ))
             .post(route!(
                 provider,
                 user_use_case => UserHandlers::create,
-                accept: Accept,
-                body: Body<fbs::admin::UserCreateRequest>,
+                wire: Wire,
+                body: Body<UserCreateRequestFactory>,
             )),
         )
         .route(
@@ -374,15 +402,15 @@ pub fn router<P: AppProvider + Send + Sync + 'static>(
             get(route!(
                 provider,
                 user_use_case => UserHandlers::get,
-                accept: Accept,
+                wire: Wire,
                 id: Path<String>,
             ))
             .put(route!(
                 provider,
                 user_use_case => UserHandlers::update,
-                accept: Accept,
+                wire: Wire,
                 id: Path<String>,
-                body: Body<fbs::admin::UserUpdateRequest>,
+                body: Body<UserUpdateRequestFactory>,
             ))
             .delete(route!(
                 provider,
@@ -396,7 +424,7 @@ pub fn router<P: AppProvider + Send + Sync + 'static>(
                 provider,
                 user_use_case => UserHandlers::reset_password,
                 id: Path<String>,
-                body: Body<fbs::admin::UserAdminPasswordResetRequest>,
+                body: Body<UserPasswordResetRequestFactory>,
             )),
         )
         .route(
@@ -404,7 +432,7 @@ pub fn router<P: AppProvider + Send + Sync + 'static>(
             put(route!(
                 provider,
                 user_use_case => UserHandlers::update_roles,
-                accept: Accept,
+                wire: Wire,
                 id: Path<String>,
                 body: JsonBody<RoleIdsRequest>,
             )),
@@ -415,7 +443,7 @@ pub fn router<P: AppProvider + Send + Sync + 'static>(
             get(route!(
                 provider,
                 metadata_use_case => MetadataHandlers::list_permissions,
-                accept: Accept,
+                wire: Wire,
                 params: Query<SearchParams>,
             )),
         )
@@ -424,11 +452,18 @@ pub fn router<P: AppProvider + Send + Sync + 'static>(
             get(route!(
                 provider,
                 metrics_use_case => MetricsHandlers::get,
-                accept: Accept,
+                wire: Wire,
             )),
         )
         // --- A pilha, de dentro para fora --------------------------------------
+        //
+        // A negociação vem **imediatamente acima** do token: ela precisa estar
+        // instalada antes de qualquer handler extrair um `Wire`, e não depende
+        // de nada que as camadas de fora façam. Reordená-la para depois faria
+        // toda rota com `Wire` responder 500 — deliberado, e documentado no
+        // `FromRequestParts` do `Wire`.
         .layer(TokenLayer::new(tokens, cookies))
+        .layer(NegotiationLayer::new())
         .layer(cors_layer(&config.cors_origins))
         .layer(TimeoutLayer::new(config.request_timeout))
         .layer(RecoverLayer::new())

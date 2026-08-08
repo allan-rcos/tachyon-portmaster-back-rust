@@ -1,6 +1,10 @@
-//! Acesso ao MariaDB: o pool e a transação da requisição.
+//! A conexão e a transação.
 
+pub mod scope;
+pub mod unit_of_work;
+
+pub(crate) mod interno;
 pub(crate) mod pool;
-pub mod uow;
 
-pub use uow::{in_scope, scope, UnitOfWork};
+pub use scope::TransactionScope;
+pub use unit_of_work::UnitOfWork;

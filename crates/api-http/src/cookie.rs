@@ -10,11 +10,11 @@
 
 use axum::http::HeaderMap;
 
-use crate::config::JwtConfig;
+use crate::config::jwt_config::JwtConfig;
 
 /// Emite e lê os cookies de sessão.
 #[derive(Clone)]
-pub(crate) struct AuthCookie {
+pub struct AuthCookie {
     access_name: String,
     refresh_name: String,
     access_max_age: u64,
@@ -101,7 +101,7 @@ fn read_cookie(headers: &HeaderMap, name: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::JwtConfig;
+    use crate::config::jwt_config::JwtConfig;
     use portmaster_app::SecretString;
     use pretty_assertions::assert_eq;
     use std::time::Duration;

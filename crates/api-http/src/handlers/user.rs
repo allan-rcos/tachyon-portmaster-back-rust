@@ -18,48 +18,48 @@
 //! idêntica ao `GET` que vem depois.
 
 use axum::extract::{Path, Query};
+use portmaster_app::commands::user::CreateUserCommand;
+use portmaster_app::commands::user::DeleteUserCommand;
+use portmaster_app::commands::user::ResetUserPasswordCommand;
+use portmaster_app::commands::user::UpdateUserCommand;
+use portmaster_app::commands::user::UpdateUserRolesCommand;
 use portmaster_app::context::UserContext;
-use portmaster_app::user::{
-    CreateUserCommand, DeleteUserCommand, GetUserQuery, ListUsersQuery, ResetUserPasswordCommand,
-    UpdateUserCommand, UpdateUserRolesCommand, UserUseCase,
-};
-use serde::Deserialize;
+use portmaster_app::queries::user::GetUserQuery;
+use portmaster_app::queries::user::ListUsersQuery;
+use portmaster_app::services::UserUseCase;
 
-use super::UserPageParams;
-use crate::error::{app_error_to_status, ApiError};
+use crate::error::api_error::ApiError;
+use crate::handlers::params::user_page_params::UserPageParams;
 use crate::session::Session;
-use crate::wire::http::{Accept, Body, JsonBody, Negotiated, NoContent};
-use crate::wire::tables as fbs;
-
-/// O corpo de `PUT /users/{id}/roles`.
-///
-/// Não é uma tabela de `.fbs`: este payload nunca entrou no schema publicado, e
-/// inventá-lo agora mudaria o contrato de um endpoint que já está em uso. Ver
-/// [`JsonBody`].
-#[derive(Debug, Default, Deserialize)]
-pub(crate) struct RoleIdsRequest {
-    /// O conjunto **final** de papéis; o que ficar de fora é retirado.
-    #[serde(default)]
-    pub(crate) role_ids: Vec<String>,
-}
+use crate::wire::api_response::ApiResponse;
+use crate::wire::body::Body;
+use crate::wire::dto::admin::role_ids_request::RoleIdsRequest;
+use crate::wire::dto::admin::user_admin_response_factory::UserAdminResponseFactory;
+use crate::wire::dto::admin::user_create_request_factory::UserCreateRequestFactory;
+use crate::wire::dto::admin::user_list_response_factory::UserListResponseFactory;
+use crate::wire::dto::admin::user_password_reset_request_factory::UserPasswordResetRequestFactory;
+use crate::wire::dto::admin::user_update_request_factory::UserUpdateRequestFactory;
+use crate::wire::json_body::JsonBody;
+use crate::wire::no_content::NoContent;
+use crate::wire::wire::Wire;
 
 /// Os handlers de usuário.
-pub(crate) struct UserHandlers<U> {
+pub struct UserHandlers<U> {
     users: U,
 }
 
 impl<U: UserUseCase> UserHandlers<U> {
     /// Monta os handlers.
-    pub(crate) fn new(users: U) -> Self {
+    pub(crate) const fn new(users: U) -> Self {
         Self { users }
     }
 
     /// `GET /users`
     pub(crate) async fn list(
         &self,
-        accept: Accept,
+        wire: Wire,
         Query(params): Query<UserPageParams>,
-    ) -> Result<Negotiated<fbs::admin::UserListResponse>, ApiError> {
+    ) -> Result<ApiResponse, ApiError> {
         let context = Session::require_user()?;
 
         let view = self
@@ -70,54 +70,54 @@ impl<U: UserUseCase> UserHandlers<U> {
                 limit: params.limit,
             })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
-        Ok(Negotiated::ok(accept, view.into()))
+        Ok(ApiResponse::ok(wire, UserListResponseFactory::of(view)))
     }
 
     /// `POST /users`
     pub(crate) async fn create(
         &self,
-        accept: Accept,
-        Body(request): Body<fbs::admin::UserCreateRequest>,
-    ) -> Result<Negotiated<fbs::admin::UserAdminResponse>, ApiError> {
+        wire: Wire,
+        Body(request): Body<UserCreateRequestFactory>,
+    ) -> Result<ApiResponse, ApiError> {
         let context = Session::require_user()?;
 
         let user = self
             .users
             .create(CreateUserCommand {
                 context: context.clone(),
-                name: request.name,
-                email: request.email,
-                initial_password: request.initial_password,
+                name: request.name.unwrap_or_default(),
+                email: request.email.unwrap_or_default(),
+                initial_password: request.initial_password.unwrap_or_default(),
                 role_ids: request.role_ids.unwrap_or_default(),
             })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
-        let view = self.read(context, user.id().to_owned()).await?;
+        let user = self.read(context, user.id().to_owned()).await?;
 
-        Ok(Negotiated::created(accept, view))
+        Ok(ApiResponse::created(wire, user))
     }
 
     /// `GET /users/{id}`
     pub(crate) async fn get(
         &self,
-        accept: Accept,
+        wire: Wire,
         Path(id): Path<String>,
-    ) -> Result<Negotiated<fbs::admin::UserAdminResponse>, ApiError> {
+    ) -> Result<ApiResponse, ApiError> {
         let context = Session::require_user()?;
 
-        Ok(Negotiated::ok(accept, self.read(context, id).await?))
+        Ok(ApiResponse::ok(wire, self.read(context, id).await?))
     }
 
     /// `PUT /users/{id}`
     pub(crate) async fn update(
         &self,
-        accept: Accept,
+        wire: Wire,
         Path(id): Path<String>,
-        Body(request): Body<fbs::admin::UserUpdateRequest>,
-    ) -> Result<Negotiated<fbs::admin::UserAdminResponse>, ApiError> {
+        Body(request): Body<UserUpdateRequestFactory>,
+    ) -> Result<ApiResponse, ApiError> {
         let context = Session::require_user()?;
 
         let user = self
@@ -125,24 +125,24 @@ impl<U: UserUseCase> UserHandlers<U> {
             .update(UpdateUserCommand {
                 context: context.clone(),
                 id,
-                name: request.name,
-                email: request.email,
+                name: request.name.unwrap_or_default(),
+                email: request.email.unwrap_or_default(),
             })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
-        let view = self.read(context, user.id().to_owned()).await?;
+        let user = self.read(context, user.id().to_owned()).await?;
 
-        Ok(Negotiated::ok(accept, view))
+        Ok(ApiResponse::ok(wire, user))
     }
 
     /// `PUT /users/{id}/roles`
     pub(crate) async fn update_roles(
         &self,
-        accept: Accept,
+        wire: Wire,
         Path(id): Path<String>,
         JsonBody(request): JsonBody<RoleIdsRequest>,
-    ) -> Result<Negotiated<fbs::admin::UserAdminResponse>, ApiError> {
+    ) -> Result<ApiResponse, ApiError> {
         let context = Session::require_user()?;
 
         let user = self
@@ -159,18 +159,18 @@ impl<U: UserUseCase> UserHandlers<U> {
                     .collect(),
             })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
-        let view = self.read(context, user.id().to_owned()).await?;
+        let user = self.read(context, user.id().to_owned()).await?;
 
-        Ok(Negotiated::ok(accept, view))
+        Ok(ApiResponse::ok(wire, user))
     }
 
     /// `PUT /users/{id}/password`
     pub(crate) async fn reset_password(
         &self,
         Path(id): Path<String>,
-        Body(request): Body<fbs::admin::UserAdminPasswordResetRequest>,
+        Body(request): Body<UserPasswordResetRequestFactory>,
     ) -> Result<NoContent, ApiError> {
         let context = Session::require_user()?;
 
@@ -178,10 +178,10 @@ impl<U: UserUseCase> UserHandlers<U> {
             .reset_password(ResetUserPasswordCommand {
                 context,
                 id,
-                new_password: request.new_password,
+                new_password: request.new_password.unwrap_or_default(),
             })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
         Ok(NoContent::new())
     }
@@ -193,7 +193,7 @@ impl<U: UserUseCase> UserHandlers<U> {
         self.users
             .delete(DeleteUserCommand { context, id })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
         Ok(NoContent::new())
     }
@@ -203,13 +203,13 @@ impl<U: UserUseCase> UserHandlers<U> {
         &self,
         context: UserContext,
         id: String,
-    ) -> Result<fbs::admin::UserAdminResponse, ApiError> {
+    ) -> Result<UserAdminResponseFactory, ApiError> {
         let view = self
             .users
             .get(GetUserQuery { context, id })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
-        Ok(view.into())
+        Ok(UserAdminResponseFactory::of(view))
     }
 }

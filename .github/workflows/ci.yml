@@ -44,6 +44,28 @@ jobs:
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
 
+      - name: Lint exports
+        run: cargo run --package xtask --locked -- lint-exports --github
+
+      # --document-private-items because the `interno/` implementations are the
+      # bulk of what is written here, and without the flag rustdoc renders the
+      # contracts and silently drops the classes behind them — along with every
+      # implementation note on them. -D warnings turns a broken `[`Item`]` link
+      # into a build failure; left as a warning it disappears into the log and
+      # the link quietly renders as plain text.
+      - name: Docs
+        run: cargo doc --workspace --no-deps --document-private-items
+        env:
+          RUSTDOCFLAGS: -D warnings
+
+      # Clippy lints code; it cannot say "this crate does not belong here". The
+      # two bans in deny.toml — async-trait and openssl — are architecture rules
+      # that have no other place to live.
+      - name: Cargo deny
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check bans
+
       - name: Tests
         run: cargo test --workspace
 

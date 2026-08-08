@@ -5,9 +5,10 @@
 //! antes de rodar o `/setup`. Não há nada aqui que descreva topologia — nome,
 //! versão, ambiente e uso de memória — e por isso ela pode ser pública.
 
-use crate::error::ApiError;
-use crate::wire::http::{Accept, Negotiated};
-use crate::wire::tables as fbs;
+use crate::error::api_error::ApiError;
+use crate::wire::api_response::ApiResponse;
+use crate::wire::dto::server::project_info_factory::ProjectInfoFactory;
+use crate::wire::wire::Wire;
 
 /// O nome do projeto, como o PHP o publicava.
 const NAME: &str = "tachyon/portmaster";
@@ -19,30 +20,31 @@ const BYTES_PER_MIB: f64 = 1024.0 * 1024.0;
 ///
 /// Diferente dos demais: não tem caso de uso nenhum atrás, porque o que ele
 /// responde é sobre o próprio processo. Nada disto passa pelo `app`.
-pub(crate) struct ServerHandlers {
+pub struct ServerHandlers {
     environment: String,
 }
 
 impl ServerHandlers {
     /// Monta os handlers com o nome do ambiente.
-    pub(crate) fn new(environment: String) -> Self {
+    pub(crate) const fn new(environment: String) -> Self {
         Self { environment }
     }
 
     /// `GET /info`
-    pub(crate) async fn info(
-        &self,
-        accept: Accept,
-    ) -> Result<Negotiated<fbs::server::ProjectInfo>, ApiError> {
-        Ok(Negotiated::ok(
-            accept,
-            fbs::server::ProjectInfo {
-                name: Some(NAME.to_owned()),
-                version: Some(env!("CARGO_PKG_VERSION").to_owned()),
-                environment: Some(self.environment.clone()),
-                runtime: Some(runtime()),
-                memory_usage_mb: resident_mib(),
-            },
+    #[allow(
+        clippy::unused_async,
+        reason = "assinatura de handler do axum: as rotas são async mesmo quando não esperam nada"
+    )]
+    pub(crate) async fn info(&self, wire: Wire) -> Result<ApiResponse, ApiError> {
+        Ok(ApiResponse::ok(
+            wire,
+            ProjectInfoFactory::of(
+                NAME,
+                env!("CARGO_PKG_VERSION"),
+                self.environment.clone(),
+                runtime(),
+                resident_mib(),
+            ),
         ))
     }
 }

@@ -20,7 +20,7 @@ use std::future::Future;
 
 use portmaster_app::context::UserContext;
 
-use crate::error::ApiError;
+use crate::error::api_error::ApiError;
 
 tokio::task_local! {
     /// Se o middleware de token já rodou nesta requisição.
@@ -35,7 +35,7 @@ tokio::task_local! {
 }
 
 /// Acesso à sessão corrente.
-pub(crate) struct Session;
+pub struct Session;
 
 impl Session {
     /// Executa `future` com o resultado da validação de token.

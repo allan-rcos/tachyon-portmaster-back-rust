@@ -11,14 +11,18 @@
 //! decide se o próximo passo é carregar mais ou selar. A mensagem acompanha por
 //! contrato do schema.
 
-use portmaster_app::domain::Container;
-use portmaster_app::manifest::{ManifestUseCase, MoveItemCommand};
+use portmaster_app::commands::manifest::MoveItemCommand;
+use portmaster_app::services::ManifestUseCase;
 
-use crate::error::{app_error_to_status, ApiError};
+use crate::error::api_error::ApiError;
 use crate::session::Session;
-use crate::wire::http::{Accept, Body, Negotiated};
-use crate::wire::tables as fbs;
-use crate::wire::view::container_of;
+use crate::wire::api_response::ApiResponse;
+use crate::wire::body::Body;
+use crate::wire::dto::container::container_response_factory::ContainerResponseFactory;
+use crate::wire::dto::manifest::load_item_request_factory::LoadItemRequestFactory;
+use crate::wire::dto::manifest::manifest_response_factory::ManifestResponseFactory;
+use crate::wire::dto::manifest::unload_item_request_factory::UnloadItemRequestFactory;
+use crate::wire::wire::Wire;
 
 /// O que o embarque responde.
 const LOADED: &str = "Item loaded successfully.";
@@ -27,22 +31,22 @@ const LOADED: &str = "Item loaded successfully.";
 const UNLOADED: &str = "Item unloaded successfully.";
 
 /// Os handlers de manifesto.
-pub(crate) struct ManifestHandlers<M> {
+pub struct ManifestHandlers<M> {
     manifest: M,
 }
 
 impl<M: ManifestUseCase> ManifestHandlers<M> {
     /// Monta os handlers.
-    pub(crate) fn new(manifest: M) -> Self {
+    pub(crate) const fn new(manifest: M) -> Self {
         Self { manifest }
     }
 
     /// `POST /manifests/load-item`
     pub(crate) async fn load(
         &self,
-        accept: Accept,
-        Body(request): Body<fbs::manifest::LoadItemRequest>,
-    ) -> Result<Negotiated<fbs::manifest::ManifestResponse>, ApiError> {
+        wire: Wire,
+        Body(request): Body<LoadItemRequestFactory>,
+    ) -> Result<ApiResponse, ApiError> {
         let context = Session::require_user()?;
 
         let container = self
@@ -51,20 +55,26 @@ impl<M: ManifestUseCase> ManifestHandlers<M> {
                 context,
                 container_id: request.container_id.unwrap_or_default(),
                 product_id: request.product_id.unwrap_or_default(),
-                quantity: request.quantity,
+                quantity: request.quantity.unwrap_or_default(),
             })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
-        Ok(Negotiated::ok(accept, response(LOADED, container.as_ref())))
+        Ok(ApiResponse::ok(
+            wire,
+            ManifestResponseFactory::of(
+                LOADED,
+                ContainerResponseFactory::of_domain(container.as_ref()),
+            ),
+        ))
     }
 
     /// `POST /manifests/unload-item`
     pub(crate) async fn unload(
         &self,
-        accept: Accept,
-        Body(request): Body<fbs::manifest::UnloadItemRequest>,
-    ) -> Result<Negotiated<fbs::manifest::ManifestResponse>, ApiError> {
+        wire: Wire,
+        Body(request): Body<UnloadItemRequestFactory>,
+    ) -> Result<ApiResponse, ApiError> {
         let context = Session::require_user()?;
 
         let container = self
@@ -73,22 +83,17 @@ impl<M: ManifestUseCase> ManifestHandlers<M> {
                 context,
                 container_id: request.container_id.unwrap_or_default(),
                 product_id: request.product_id.unwrap_or_default(),
-                quantity: request.quantity,
+                quantity: request.quantity.unwrap_or_default(),
             })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
-        Ok(Negotiated::ok(
-            accept,
-            response(UNLOADED, container.as_ref()),
+        Ok(ApiResponse::ok(
+            wire,
+            ManifestResponseFactory::of(
+                UNLOADED,
+                ContainerResponseFactory::of_domain(container.as_ref()),
+            ),
         ))
-    }
-}
-
-/// Monta a resposta de um movimento.
-fn response(message: &str, container: &dyn Container) -> fbs::manifest::ManifestResponse {
-    fbs::manifest::ManifestResponse {
-        message: Some(message.to_owned()),
-        container: Some(Box::new(container_of(container))),
     }
 }

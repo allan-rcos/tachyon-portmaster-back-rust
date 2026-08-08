@@ -4,37 +4,36 @@
 //! por filtro seria outra pergunta com outra resposta. O trabalho pesado é uma
 //! consulta agregada na `infra`, atrás do cache de leitura.
 
-use portmaster_app::metrics::{GetMetricsQuery, MetricsUseCase};
+use portmaster_app::queries::metrics::GetMetricsQuery;
+use portmaster_app::services::MetricsUseCase;
 
-use crate::error::{app_error_to_status, ApiError};
+use crate::error::api_error::ApiError;
 use crate::session::Session;
-use crate::wire::http::{Accept, Negotiated};
-use crate::wire::tables as fbs;
+use crate::wire::api_response::ApiResponse;
+use crate::wire::dto::metrics::metrics_response_factory::MetricsResponseFactory;
+use crate::wire::wire::Wire;
 
 /// Os handlers de métrica.
-pub(crate) struct MetricsHandlers<M> {
+pub struct MetricsHandlers<M> {
     metrics: M,
 }
 
 impl<M: MetricsUseCase> MetricsHandlers<M> {
     /// Monta os handlers.
-    pub(crate) fn new(metrics: M) -> Self {
+    pub(crate) const fn new(metrics: M) -> Self {
         Self { metrics }
     }
 
     /// `GET /metrics`
-    pub(crate) async fn get(
-        &self,
-        accept: Accept,
-    ) -> Result<Negotiated<fbs::metrics::MetricsResponse>, ApiError> {
+    pub(crate) async fn get(&self, wire: Wire) -> Result<ApiResponse, ApiError> {
         let context = Session::require_user()?;
 
         let view = self
             .metrics
             .get(GetMetricsQuery { context })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
-        Ok(Negotiated::ok(accept, view.into()))
+        Ok(ApiResponse::ok(wire, MetricsResponseFactory::of(view)))
     }
 }

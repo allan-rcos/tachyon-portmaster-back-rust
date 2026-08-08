@@ -1,13 +1,4 @@
-//! A última defesa contra pânico dentro de uma requisição.
-//!
-//! A defesa é em três camadas: a `infra` **previne** (embrulha chamada a lib
-//! externa e converte pânico em `anyhow`), este middleware **evita a queda**, e
-//! o `panic::set_hook` do `main` **loga** o que escapar dos dois.
-//!
-//! O que ele compra: um pânico num handler derruba **aquela** requisição com
-//! 500, e não o servidor inteiro. Sem ele, o `tokio` aborta a task e o axum
-//! devolve uma conexão fechada sem resposta — o cliente vê um erro de rede e
-//! ninguém fica sabendo o motivo.
+//! O serviço de captura de pânico.
 
 use std::panic::AssertUnwindSafe;
 use std::task::{Context, Poll};
@@ -16,31 +7,12 @@ use axum::extract::Request;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use futures::future::{BoxFuture, FutureExt};
-use tower::{Layer, Service};
-
-/// Aplica o [`Recover`].
-#[derive(Clone, Copy, Default)]
-pub(crate) struct RecoverLayer;
-
-impl RecoverLayer {
-    /// Monta o layer.
-    pub(crate) fn new() -> Self {
-        Self
-    }
-}
-
-impl<S> Layer<S> for RecoverLayer {
-    type Service = Recover<S>;
-
-    fn layer(&self, inner: S) -> Self::Service {
-        Recover { inner }
-    }
-}
+use tower::Service;
 
 /// O serviço que captura pânico.
 #[derive(Clone)]
-pub(crate) struct Recover<S> {
-    inner: S,
+pub struct Recover<S> {
+    pub(super) inner: S,
 }
 
 impl<S> Service<Request> for Recover<S>
@@ -57,16 +29,10 @@ where
     }
 
     fn call(&mut self, request: Request) -> Self::Future {
-        // O clone é o padrão do tower: `poll_ready` foi chamado neste `self`, e
-        // é este que está pronto — o original fica para a próxima requisição.
         let clone = self.inner.clone();
         let mut inner = std::mem::replace(&mut self.inner, clone);
 
         Box::pin(async move {
-            // `AssertUnwindSafe` porque o futuro do handler não é
-            // `UnwindSafe` — quase nenhum é, já que captura `&mut`. A afirmação
-            // se sustenta porque o que sobra de um pânico aqui é descartado: a
-            // requisição termina, e nada do estado tocado por ela é lido depois.
             let outcome = AssertUnwindSafe(inner.call(request)).catch_unwind().await;
 
             Ok(match outcome {
@@ -101,6 +67,7 @@ fn describe(panic: &Box<dyn std::any::Any + Send>) -> String {
 
 #[cfg(test)]
 mod tests {
+    use super::super::recover_layer::RecoverLayer;
     use super::*;
     use tower::{ServiceBuilder, ServiceExt};
 
@@ -111,7 +78,7 @@ mod tests {
                 .layer(RecoverLayer::new())
                 .service_fn(|_: Request| async move {
                     panic!("algo explodiu no handler");
-                    #[allow(unreachable_code)]
+                    #[allow(unreachable_code, reason = "o panic! acima é o assunto do teste")]
                     Ok::<_, std::convert::Infallible>(Response::new(axum::body::Body::empty()))
                 });
 

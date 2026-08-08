@@ -5,19 +5,19 @@
 //! próprio. É o exemplo canônico de recurso de borda: único, externalizado, e
 //! impossível de monomorfizar por consumidor.
 
+use crate::config::pool::POOL_MAX_CONNECTIONS;
+use crate::config::{DatabaseSslMode, InfraSecrets};
 use anyhow::{bail, Context};
 use secrecy::ExposeSecret;
 use sqlx::mysql::{MySqlConnectOptions, MySqlPoolOptions, MySqlSslMode};
 use sqlx::MySqlPool;
-
-use crate::config::{DatabaseSslMode, InfraSecrets, POOL_MAX_CONNECTIONS};
 
 /// Abre o pool e confirma que o banco responde.
 ///
 /// A verificação de sanidade é deliberada: sem ela, um erro de credencial só
 /// apareceria na primeira requisição, com o processo já reportado como saudável.
 /// Melhor não subir do que subir quebrado.
-pub(crate) async fn connect(secrets: &InfraSecrets) -> anyhow::Result<MySqlPool> {
+pub async fn connect(secrets: &InfraSecrets) -> anyhow::Result<MySqlPool> {
     let options = connect_options(secrets)?;
 
     let pool = MySqlPoolOptions::new()
@@ -40,6 +40,23 @@ fn connect_options(secrets: &InfraSecrets) -> anyhow::Result<MySqlConnectOptions
     let options: MySqlConnectOptions = uri
         .parse()
         .context("a URI do banco não está num formato que o driver entenda")?;
+
+    // UTC, sempre, e explicitamente.
+    //
+    // O `sqlx` já traz `+00:00` por padrão, mas duas coisas tornam o padrão
+    // insuficiente para uma regra do sistema: ele é decisão do driver e pode
+    // mudar de versão, e uma `?timezone=` na URI de conexão o sobrescreveria
+    // sem que nada avisasse. Fixar **depois** do parse fecha as duas portas.
+    //
+    // O que está em jogo: as colunas são `DATETIME`, que o MariaDB guarda sem
+    // converter — o que entra é o que sai. O fuso da sessão é quem decide o que
+    // `CURRENT_TIMESTAMP` e `NOW()` valem na hora do INSERT. Com a sessão em
+    // UTC, o que o servidor grava por default é o mesmo instante que o Rust
+    // grava como `DateTime<Utc>`, e a leitura de volta fecha. Sem isso, um
+    // servidor em fuso local produziria linhas com `created_at` deslocado das
+    // demais colunas de tempo — e o erro só apareceria como um relatório com
+    // horas erradas, meses depois.
+    let options = options.timezone(Some("+00:00".to_owned()));
 
     let options = match secrets.ssl_mode {
         DatabaseSslMode::Disabled => options.ssl_mode(MySqlSslMode::Disabled),

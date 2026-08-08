@@ -22,7 +22,18 @@ async fn main() -> anyhow::Result<()> {
     // morrer em silêncio.
     std::panic::set_hook(Box::new(|info| {
         tracing::error!(panic = %info, "pânico não capturado");
-        eprintln!("panic não capturado: {info}");
+        // O `tracing` acima é o caminho normal, e o stderr é o que sobra quando
+        // ele não é o caminho: um pânico durante a inicialização do subscriber,
+        // ou durante o desligamento depois que ele já foi baixado, não deixaria
+        // rastro nenhum. Duplicar aqui custa uma linha e cobre esse buraco.
+        #[allow(
+            clippy::print_stderr,
+            clippy::disallowed_macros,
+            reason = "último recurso quando o próprio tracing pode não estar de pé"
+        )]
+        {
+            eprintln!("panic não capturado: {info}");
+        }
     }));
 
     logging();
@@ -30,7 +41,7 @@ async fn main() -> anyhow::Result<()> {
     // Falta de segredo derruba o boot antes de qualquer conexão: um servidor que
     // sobe com o JWT num valor padrão aceita token forjado, e descobrir isso em
     // produção custa mais do que não subir.
-    let secrets = config::load_secrets()?;
+    let secrets = config::secrets::Secrets::load()?;
     let address = format!("{}:{}", secrets.api.host, secrets.api.port);
 
     let provider = Arc::new(portmaster_app::register(secrets.app).await?);

@@ -1,0 +1,17 @@
+# Exceções ao Single Export Pattern.
+#
+# Está **vazia**, e essa é a condição normal. O arquivo existe para dívida em
+# trânsito — uma migração que atravessa mais de um commit — e não para folga
+# permanente: toda entrada exige `max` (que só encolhe), `reason` e `expires`, e
+# uma entrada vencida derruba o CI.
+#
+# Se a regra estiver empurrando um arquivo de três linhas, a saída não é uma
+# entrada aqui: é a struct-namespace do molde PHP (`Base62`, `SearchKey`,
+# `Convert`, `Env`) — um tipo com funções associadas, que é um export só.
+#
+# Formato:
+#
+#   ["crates/<crate>/src/<caminho>.rs"]
+#   max = 2
+#   reason = "por que ainda não foi dividido"
+#   expires = "AAAA-MM-DD"

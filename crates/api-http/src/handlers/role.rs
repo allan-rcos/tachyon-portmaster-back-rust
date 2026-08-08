@@ -18,34 +18,41 @@
 //! que faz a resposta da criação ser igual à linha que a listagem vai mostrar.
 
 use axum::extract::{Path, Query};
+use portmaster_app::commands::role::CreateRoleCommand;
+use portmaster_app::commands::role::UpdateRolePermissionsCommand;
 use portmaster_app::context::UserContext;
-use portmaster_app::role::{
-    CreateRoleCommand, GetRoleQuery, ListRolesQuery, RoleUseCase, UpdateRolePermissionsCommand,
-};
+use portmaster_app::queries::role::GetRoleQuery;
+use portmaster_app::queries::role::ListRolesQuery;
+use portmaster_app::services::RoleUseCase;
 
-use super::PageParams;
-use crate::error::{app_error_to_status, ApiError};
+use crate::error::api_error::ApiError;
+use crate::handlers::params::page_params::PageParams;
 use crate::session::Session;
-use crate::wire::http::{Accept, Body, Negotiated};
-use crate::wire::tables as fbs;
+use crate::wire::api_response::ApiResponse;
+use crate::wire::body::Body;
+use crate::wire::dto::account::role_response_factory::RoleResponseFactory;
+use crate::wire::dto::admin::role_create_request_factory::RoleCreateRequestFactory;
+use crate::wire::dto::admin::role_list_response_factory::RoleListResponseFactory;
+use crate::wire::dto::admin::role_permissions_update_request_factory::RolePermissionsUpdateRequestFactory;
+use crate::wire::wire::Wire;
 
 /// Os handlers de papel.
-pub(crate) struct RoleHandlers<R> {
+pub struct RoleHandlers<R> {
     roles: R,
 }
 
 impl<R: RoleUseCase> RoleHandlers<R> {
     /// Monta os handlers.
-    pub(crate) fn new(roles: R) -> Self {
+    pub(crate) const fn new(roles: R) -> Self {
         Self { roles }
     }
 
     /// `GET /roles`
     pub(crate) async fn list(
         &self,
-        accept: Accept,
+        wire: Wire,
         Query(params): Query<PageParams>,
-    ) -> Result<Negotiated<fbs::admin::RoleListResponse>, ApiError> {
+    ) -> Result<ApiResponse, ApiError> {
         let context = Session::require_user()?;
 
         let view = self
@@ -57,41 +64,41 @@ impl<R: RoleUseCase> RoleHandlers<R> {
                 search: params.search,
             })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
-        Ok(Negotiated::ok(accept, view.into()))
+        Ok(ApiResponse::ok(wire, RoleListResponseFactory::of(view)))
     }
 
     /// `POST /roles`
     pub(crate) async fn create(
         &self,
-        accept: Accept,
-        Body(request): Body<fbs::admin::RoleCreateRequest>,
-    ) -> Result<Negotiated<fbs::account::RoleResponse>, ApiError> {
+        wire: Wire,
+        Body(request): Body<RoleCreateRequestFactory>,
+    ) -> Result<ApiResponse, ApiError> {
         let context = Session::require_user()?;
 
         let role = self
             .roles
             .create(CreateRoleCommand {
                 context: context.clone(),
-                name: request.name,
+                name: request.name.unwrap_or_default(),
                 permissions: request.permissions.unwrap_or_default(),
             })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
-        let view = self.read(context, role.id().to_owned()).await?;
+        let role = self.read(context, role.id().to_owned()).await?;
 
-        Ok(Negotiated::created(accept, view))
+        Ok(ApiResponse::created(wire, role))
     }
 
     /// `PUT /roles/{id}/permissions`
     pub(crate) async fn update_permissions(
         &self,
-        accept: Accept,
+        wire: Wire,
         Path(id): Path<String>,
-        Body(request): Body<fbs::admin::RolePermissionsUpdateRequest>,
-    ) -> Result<Negotiated<fbs::account::RoleResponse>, ApiError> {
+        Body(request): Body<RolePermissionsUpdateRequestFactory>,
+    ) -> Result<ApiResponse, ApiError> {
         let context = Session::require_user()?;
 
         let role = self
@@ -102,11 +109,11 @@ impl<R: RoleUseCase> RoleHandlers<R> {
                 permissions: request.permissions.unwrap_or_default(),
             })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
-        let view = self.read(context, role.id().to_owned()).await?;
+        let role = self.read(context, role.id().to_owned()).await?;
 
-        Ok(Negotiated::ok(accept, view))
+        Ok(ApiResponse::ok(wire, role))
     }
 
     /// O papel pelo lado de leitura, já na forma do fio.
@@ -114,13 +121,13 @@ impl<R: RoleUseCase> RoleHandlers<R> {
         &self,
         context: UserContext,
         id: String,
-    ) -> Result<fbs::account::RoleResponse, ApiError> {
+    ) -> Result<RoleResponseFactory, ApiError> {
         let view = self
             .roles
             .get(GetRoleQuery { context, id })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
-        Ok(view.into())
+        Ok(RoleResponseFactory::of(view))
     }
 }

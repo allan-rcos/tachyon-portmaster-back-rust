@@ -22,19 +22,29 @@
 //! login. É a razão de [`ApiError`] carregar cookies.
 
 use axum::http::{HeaderMap, StatusCode};
-use portmaster_app::authorization::REFRESH_TOKEN_GROUP;
+use portmaster_app::commands::marker::SetMarkerCommand;
+use portmaster_app::commands::session::LoginCommand;
+use portmaster_app::commands::session::SetupCommand;
 use portmaster_app::context::UserContext;
 use portmaster_app::domain::User;
-use portmaster_app::marker::{GetMarkerQuery, MarkUseCase, SetMarkerCommand};
-use portmaster_app::session::{LoginCommand, SessionUseCase, SetupCommand};
+use portmaster_app::queries::marker::GetMarkerQuery;
+use portmaster_app::security::REFRESH_TOKEN_GROUP;
+use portmaster_app::services::MarkUseCase;
+use portmaster_app::services::SessionUseCase;
 use portmaster_app::RandomIdGenerator;
 
 use crate::cookie::AuthCookie;
-use crate::error::{app_error_to_status, ApiError};
-use crate::token::{issue_refresh, owner_of_refresh, TokenService};
-use crate::wire::http::{Accept, Body, Negotiated, NoContent};
-use crate::wire::tables as fbs;
-use crate::wire::view::login_user_of;
+use crate::error::api_error::ApiError;
+use crate::token::refresh_token::RefreshToken;
+use crate::token::token_service::TokenService;
+use crate::wire::api_response::ApiResponse;
+use crate::wire::body::Body;
+use crate::wire::dto::auth::login_request_factory::LoginRequestFactory;
+use crate::wire::dto::auth::login_response_factory::LoginResponseFactory;
+use crate::wire::dto::auth::setup_request_factory::SetupRequestFactory;
+use crate::wire::dto::auth::user_response_factory::UserResponseFactory;
+use crate::wire::no_content::NoContent;
+use crate::wire::wire::Wire;
 
 /// O que o `token_type` da resposta declara.
 ///
@@ -44,7 +54,7 @@ use crate::wire::view::login_user_of;
 const TOKEN_TYPE: &str = "cookie";
 
 /// Os handlers de sessão.
-pub(crate) struct AuthHandlers<S, M, R> {
+pub struct AuthHandlers<S, M, R> {
     sessions: S,
     marks: M,
     random: R,
@@ -60,7 +70,7 @@ where
     R: RandomIdGenerator,
 {
     /// Monta os handlers.
-    pub(crate) fn new(
+    pub(crate) const fn new(
         sessions: S,
         marks: M,
         random: R,
@@ -85,20 +95,25 @@ where
     /// digitar a senha a chamar `/auth/login` em seguida seria cerimônia.
     pub(crate) async fn setup(
         &self,
-        accept: Accept,
-        Body(request): Body<fbs::auth::SetupRequest>,
-    ) -> Result<Negotiated<fbs::auth::LoginResponse>, ApiError> {
+        wire: Wire,
+        Body(request): Body<SetupRequestFactory>,
+    ) -> Result<ApiResponse, ApiError> {
         let user = self
             .sessions
+            // `unwrap_or_default` e não um erro aqui: campo ausente vira string
+            // vazia, e é o `TableModule` que a recusa — nomeando **todos** os
+            // campos que faltaram, de uma vez. Levantar erro nesta camada
+            // devolveria um problema por requisição e duplicaria, no `api-http`,
+            // uma regra que já mora no `domain`.
             .setup(SetupCommand {
-                name: request.name,
-                email: request.email,
-                password: request.password,
+                name: request.name.unwrap_or_default(),
+                email: request.email.unwrap_or_default(),
+                password: request.password.unwrap_or_default(),
             })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
-        self.issue_session(accept, user.as_ref(), true).await
+        self.issue_session(wire, user.as_ref(), true).await
     }
 
     /// `POST /auth/login`
@@ -108,19 +123,23 @@ where
     /// sobre a mesma coisa.
     pub(crate) async fn login(
         &self,
-        accept: Accept,
-        Body(request): Body<fbs::auth::LoginRequest>,
-    ) -> Result<Negotiated<fbs::auth::LoginResponse>, ApiError> {
+        wire: Wire,
+        Body(request): Body<LoginRequestFactory>,
+    ) -> Result<ApiResponse, ApiError> {
         let user = self
             .sessions
+            // Credencial ausente vira string vazia e falha como credencial
+            // errada: o `app` responde igual para e-mail desconhecido e senha
+            // errada, e distinguir "não mandou o campo" aqui entregaria ao
+            // atacante metade da resposta.
             .login(LoginCommand {
-                email: request.email,
-                password: request.password,
+                email: request.email.unwrap_or_default(),
+                password: request.password.unwrap_or_default(),
             })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
-        self.issue_session(accept, user.as_ref(), false).await
+        self.issue_session(wire, user.as_ref(), false).await
     }
 
     /// `POST /auth/refresh`
@@ -173,23 +192,20 @@ where
     /// Emite access e refresh, e monta o corpo da sessão.
     async fn issue_session(
         &self,
-        accept: Accept,
+        wire: Wire,
         user: &dyn User,
         created: bool,
-    ) -> Result<Negotiated<fbs::auth::LoginResponse>, ApiError> {
+    ) -> Result<ApiResponse, ApiError> {
         let refresh = self.mint_refresh(user).await?;
         let access = self.tokens.issue(user)?;
 
-        let body = fbs::auth::LoginResponse {
-            token: Some(access.clone()),
-            token_type: Some(TOKEN_TYPE.to_owned()),
-            user: Some(Box::new(login_user_of(user))),
-        };
+        let body =
+            LoginResponseFactory::new(access.clone(), TOKEN_TYPE, UserResponseFactory::of(user));
 
         let response = if created {
-            Negotiated::created(accept, body)
+            ApiResponse::created(wire, body)
         } else {
-            Negotiated::ok(accept, body)
+            ApiResponse::ok(wire, body)
         };
 
         Ok(response
@@ -203,7 +219,7 @@ where
     /// reencontrado. Invalidar antes queimaria a sessão de quem apresentou um
     /// token bom num momento em que o banco estava fora.
     async fn rotate(&self, presented: &str) -> Result<Box<dyn User>, ApiError> {
-        let Some(owner) = owner_of_refresh(presented) else {
+        let Some(owner) = RefreshToken::owner_of(presented) else {
             return Err(refused());
         };
 
@@ -214,7 +230,7 @@ where
                 value: presented.to_owned(),
             })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
         if !valid {
             return Err(refused());
@@ -234,14 +250,14 @@ where
             .await
             .map_err(|_| refused())?;
 
-        self.revoke(presented).await.map_err(app_error_to_status)?;
+        self.revoke(presented).await.map_err(ApiError::of_app)?;
 
         Ok(user)
     }
 
     /// Emite um refresh novo para um usuário e o marca como válido.
     async fn mint_refresh(&self, user: &dyn User) -> Result<String, ApiError> {
-        let token = issue_refresh(user.id(), &self.random.next());
+        let token = RefreshToken::issue(user.id(), &self.random.next());
 
         self.marks
             .set(SetMarkerCommand {
@@ -251,7 +267,7 @@ where
                 ttl_seconds: self.refresh_ttl_seconds,
             })
             .await
-            .map_err(app_error_to_status)?;
+            .map_err(ApiError::of_app)?;
 
         Ok(token)
     }

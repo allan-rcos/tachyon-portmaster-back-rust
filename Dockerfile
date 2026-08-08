@@ -38,6 +38,12 @@ COPY Cargo.toml Cargo.lock rust-toolchain.toml .clippy.toml ./
 COPY crates ./crates
 COPY swagger ./swagger
 
+# O `xtask` não vai para a imagem, mas o seu `Cargo.toml` precisa existir: ele é
+# membro do workspace, e o cargo carrega o manifesto de todos os membros antes de
+# decidir o que compilar. O `default-members` mantém o crate fora do build.
+COPY xtask/Cargo.toml ./xtask/Cargo.toml
+RUN mkdir -p xtask/src && echo 'fn main() {}' > xtask/src/main.rs
+
 # Os caches de registro e de artefato ficam em mounts do BuildKit em vez de numa
 # camada: uma recompilação reaproveita o que já foi construído sem que nada disso
 # vá parar na imagem. Por isso o binário é copiado para fora do `target` ainda

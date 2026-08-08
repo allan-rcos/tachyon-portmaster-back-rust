@@ -5,6 +5,13 @@ members = [
     "crates/infra",
     "crates/app",
     "crates/api-http",
+    "xtask",
+]
+default-members = [
+    "crates/domain",
+    "crates/infra",
+    "crates/app",
+    "crates/api-http",
 ]
 
 [workspace.package]
@@ -45,7 +52,7 @@ moka = { version = "0.12", features = ["future"] }
 # --- domínio ----------------------------------------------------------------
 # nutype SEM a feature serde: o domain valida, não serializa.
 nutype = "0.5"
-argon2 = "0.5"
+argon2 = { version = "0.5", features = ["std"] }
 base62 = "2"
 base64 = "0.22"            # token de cursor keyset (base64url, sem padding)
 rs-snowflake = "0.6"           # dep OPCIONAL da feature `id-snowflake` (default)
@@ -89,6 +96,120 @@ tokio-test = "0.4"
 # retorno dos factories. `deny` é o que impede alguém de reintroduzir o problema.
 [workspace.lints.rust]
 async_fn_in_trait = "deny"
+
+# Os links de doc são navegação, e navegação quebrada é pior que ausente: um
+# `[`Coisa`]` que não resolve some do HTML como texto simples, sem aviso para
+# quem lê. A migração para um export por módulo quebrou 21 deles de uma vez —
+# todo item que mudou de caminho levou junto os links que o nomeavam — e nada
+# apontou, porque `cargo doc` não estava no portão. Agora está, e estes três
+# lints são o que ele confere.
+[workspace.lints.rustdoc]
+broken_intra_doc_links = "deny"
+private_intra_doc_links = "deny"
+invalid_html_tags = "deny"
+
+# Os grupos A–F de tmp/clippy.md. O CI roda com `-D warnings`, então aqui não há
+# diferença prática entre `warn` e `deny`: os dois quebram o build. O nível ainda
+# vale como declaração de intenção — `deny` é regra de arquitetura, `warn` é
+# higiene — e como diferença real no editor de quem está escrevendo.
+#
+# O que está em `allow` está em `allow` por medida, não por comodismo: cada um
+# foi ligado, contado e desligado com o motivo escrito ao lado.
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+type_complexity = "allow"
+
+# A prosa é em pt-BR e a seção `# Errors` é convenção de rustdoc em inglês, que
+# este projeto não segue: o que cada erro significa já está escrito no doc da
+# função, em português. Eram 28 achados, todos com a falha já documentada.
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+
+# Grupo A: Disciplina async / task-local
+await_holding_refcell_ref = "deny"
+await_holding_lock = "deny"
+await_holding_invalid_type = "deny"
+significant_drop_in_scrutinee = "deny"
+
+# tmp/clippy.md queria este lint como canário de `!Send` antes da borda do
+# router. Ele não serve para esta arquitetura, e vale registrar por quê.
+#
+# O lint prova `Send` no corpo de cada função. Aqui **todo** caminho assíncrono é
+# genérico sobre suas dependências — é o que a DI estática significa — e dentro
+# de um corpo genérico `Send` de um parâmetro de tipo não é provável: `S` só
+# ganha um tipo concreto na monomorfização. Resultado: ~45 acusações, todas em
+# futuros que **são** `Send` no ponto de uso, e nenhuma verdadeira. Um lint que
+# só produz falso positivo deixa de ser lido.
+#
+# A garantia de verdade está em outro lugar, e é mais forte: os dois testes de
+# app/src/lib.rs que não rodam nada e só precisam compilar, passando o caso de
+# uso por um `tokio::spawn` — que exige `Send + 'static` sobre o tipo concreto.
+# Se um port passar a segurar algo `!Send` através de um `.await`, aqueles dois
+# param de compilar. É a convenção 1 do handoff, e continua valendo.
+future_not_send = "allow"
+
+# Nursery de gosto discutível: troca um `if let/else` legível por um
+# `map_or_else` com dois fechamentos, e no caso do argon2 o `_` do erro fica
+# menos claro que o `Err(_)` escrito por extenso.
+option_if_let_else = "allow"
+
+# Este entra em conflito direto com o Single Export Pattern, e o padrão ganha.
+#
+# O lint reclama de `pub(crate) struct X` dentro de um `pub(crate) mod interno`:
+# como o módulo já limita o alcance, o `pub(crate)` do item seria redundante e
+# ele pede um item privado. Mas é justamente esse `pub(crate)` que **declara**
+# qual é o item exportado do arquivo — é o que o `cargo xtask lint-exports`
+# conta, e é o que diz a quem lê "isto atravessa a fronteira do módulo, o resto
+# não". Removê-lo deixaria todo arquivo de `interno/` com zero export declarado,
+# e a regra do repositório perderia o que ela mede.
+redundant_pub_crate = "allow"
+
+# É o padrão da UnitOfWork, não um descuido: o guard da transação precisa viver
+# até o fim da query, e o lint pede para soltá-lo antes. Eram 32 achados, todos
+# o mesmo `let mut transaction = …current().await?` seguido do `execute`.
+significant_drop_tightening = "allow"
+
+# Grupo C: Blindagem de pânico
+#
+# Medido antes de promover: com `allow-*-in-tests` no .clippy.toml, o grupo
+# inteiro rendeu 19 achados, dos quais 14 em `#[cfg(test)]`, 4 provavelmente
+# inofensivos (somas de capacidade, `UNIX_EPOCH + Duration`) e **1 bug de
+# verdade** — `(page - 1) * limit` estourando o u32 com um `?page=` grande, em
+# infra/src/query/dql/account.rs. Foi por isso que `arithmetic_side_effects`
+# ficou em `deny` e não em `warn`, ao contrário do que o plano previa: o lint se
+# pagou na primeira execução.
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+unreachable = "deny"
+indexing_slicing = "deny"
+string_slice = "deny"
+arithmetic_side_effects = "deny"
+panic_in_result_fn = "deny"
+unwrap_in_result = "deny"
+mem_forget = "deny"
+exit = "deny"
+
+# Grupo D: Logging só via tracing
+print_stdout = "deny"
+print_stderr = "deny"
+dbg_macro = "deny"
+use_debug = "warn"
+
+# Grupo F: Legibilidade de erros e supressões
+allow_attributes_without_reason = "deny"
+wildcard_imports = "warn"
+enum_glob_use = "warn"
+semicolon_if_nothing_returned = "warn"
+self_named_module_files = "warn"
+missing_const_for_fn = "warn"
 
 [profile.release]
 lto = "thin"

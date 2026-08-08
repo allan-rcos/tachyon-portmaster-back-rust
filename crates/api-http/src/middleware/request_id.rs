@@ -1,54 +1,21 @@
-//! O identificador de correlação de uma requisição.
-//!
-//! Um id **ordenável** (xid), não aleatório: os logs de uma requisição precisam
-//! se sequenciar, e um id que ordena por emissão deixa isso de graça ao ordenar
-//! por texto. Não é chave primária de nada — nasce aqui e morre no log.
-//!
-//! O id volta no cabeçalho `X-Request-Id` para que quem abre um chamado possa
-//! citar exatamente a requisição que falhou, em vez de descrever a hora
-//! aproximada.
+//! O serviço de identificador de correlação.
 
 use std::task::{Context, Poll};
 
 use axum::extract::Request;
-use axum::http::{HeaderName, HeaderValue};
+use axum::http::HeaderValue;
 use axum::response::Response;
 use futures::future::BoxFuture;
 use portmaster_app::SortableIdGenerator;
-use tower::{Layer, Service};
+use tower::Service;
 
-/// O cabeçalho que devolve o id ao cliente.
-pub(crate) const REQUEST_ID_HEADER: HeaderName = HeaderName::from_static("x-request-id");
-
-/// Aplica o [`RequestId`].
-#[derive(Clone)]
-pub(crate) struct RequestIdLayer<G> {
-    generator: G,
-}
-
-impl<G> RequestIdLayer<G> {
-    /// Monta o layer com o gerador que o provider entregou.
-    pub(crate) fn new(generator: G) -> Self {
-        Self { generator }
-    }
-}
-
-impl<S, G: Clone> Layer<S> for RequestIdLayer<G> {
-    type Service = RequestId<S, G>;
-
-    fn layer(&self, inner: S) -> Self::Service {
-        RequestId {
-            inner,
-            generator: self.generator.clone(),
-        }
-    }
-}
+use super::request_id_header::REQUEST_ID_HEADER;
 
 /// O serviço que carimba a requisição.
 #[derive(Clone)]
-pub(crate) struct RequestId<S, G> {
-    inner: S,
-    generator: G,
+pub struct RequestId<S, G> {
+    pub(super) inner: S,
+    pub(super) generator: G,
 }
 
 impl<S, G> Service<Request> for RequestId<S, G>
@@ -69,9 +36,6 @@ where
         let clone = self.inner.clone();
         let mut inner = std::mem::replace(&mut self.inner, clone);
 
-        // Um id que o cliente mandou é aceito: é o que permite correlacionar uma
-        // cadeia de serviços. Só é gerado um novo quando não veio nenhum — ou
-        // quando o que veio não cabe num cabeçalho.
         let id = request
             .headers()
             .get(REQUEST_ID_HEADER)
