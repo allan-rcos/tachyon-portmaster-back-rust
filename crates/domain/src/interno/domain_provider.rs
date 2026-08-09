@@ -39,46 +39,46 @@ impl DomainProviderImpl {
     /// A impl é escolhida por **feature de compilação** — decisão de
     /// arquitetura, resolvida no build, sem ramo em runtime. Os parâmetros de
     /// identidade vêm dos segredos.
-    fn int_id_generator(&self) -> impl IntIdGenerator {
+    fn int_id_generator(&self) -> impl IntIdGenerator + Clone + use<> + 'static {
         #[cfg(feature = "id-snowflake")]
         SnowflakeIdGenerator::new(self.secrets.cluster_id, self.secrets.server_id)
     }
 }
 
 impl DomainProvider for DomainProviderImpl {
-    fn user_table_module(&self) -> impl UserTM {
+    fn user_table_module(&self) -> impl UserTM + Clone + use<> + 'static {
         UserTMImpl::new(self.int_id_generator(), Argon2Hasher::new())
     }
 
-    fn role_table_module(&self) -> impl RoleTM {
+    fn role_table_module(&self) -> impl RoleTM + Clone + use<> + 'static {
         RoleTMImpl::new(self.int_id_generator())
     }
 
-    fn product_table_module(&self) -> impl ProductTM {
+    fn product_table_module(&self) -> impl ProductTM + Clone + use<> + 'static {
         ProductTMImpl::new(self.int_id_generator())
     }
 
-    fn container_table_module(&self) -> impl ContainerTM {
+    fn container_table_module(&self) -> impl ContainerTM + Clone + use<> + 'static {
         ContainerTMImpl::new(self.int_id_generator())
     }
 
-    fn manifest_table_module(&self) -> impl ManifestTM {
+    fn manifest_table_module(&self) -> impl ManifestTM + Clone + use<> + 'static {
         ManifestTMImpl::new()
     }
 
-    fn auth_table_module(&self) -> impl AuthTM {
+    fn auth_table_module(&self) -> impl AuthTM + Clone + use<> + 'static {
         AuthTMImpl::new(Argon2Hasher::new())
     }
 
-    fn permission_table_module(&self) -> impl PermissionTM {
+    fn permission_table_module(&self) -> impl PermissionTM + Clone + use<> + 'static {
         PermissionTMImpl::new()
     }
 
-    fn marker_group_table_module(&self) -> impl MarkerGroupTM {
+    fn marker_group_table_module(&self) -> impl MarkerGroupTM + Clone + use<> + 'static {
         MarkerGroupTMImpl::new()
     }
 
-    fn marker_table_module(&self) -> impl MarkerTM {
+    fn marker_table_module(&self) -> impl MarkerTM + Clone + use<> + 'static {
         MarkerTMImpl::new(XxIndexHasher::new())
     }
 }

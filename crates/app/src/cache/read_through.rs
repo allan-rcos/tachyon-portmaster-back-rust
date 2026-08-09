@@ -145,7 +145,7 @@ mod tests {
         let cache = FakeCache::default();
 
         let result: Result<i64, _> = ReadThrough::cached(&cache, "product:list", async {
-            Err(AppError::Unauthenticated)
+            Err(AppError::InvalidCredentials)
         })
         .await;
 

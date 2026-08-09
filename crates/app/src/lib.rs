@@ -74,7 +74,12 @@ pub mod domain {
 pub use portmaster_infra::query::views;
 
 /// O log estruturado.
-pub use portmaster_infra::logging::{Logger, LoggerFactory};
+///
+/// O [`SystemLogger`] é o global, para os pontos sem construtor onde injetar.
+pub use portmaster_infra::logging::{Logger, LoggerFactory, SystemLogger};
+
+/// A hora corrente, injetada.
+pub use portmaster_infra::clock::Clock;
 
 /// Os geradores de id que não são identidade de entidade.
 ///

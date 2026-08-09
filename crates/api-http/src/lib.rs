@@ -44,7 +44,12 @@ pub(crate) mod session;
 
 pub(crate) mod middleware;
 
-pub(crate) mod handlers;
+pub(crate) mod controllers;
+
+pub(crate) mod provider;
+pub(crate) mod register;
+
+pub(crate) mod interno;
 
 mod router;
 

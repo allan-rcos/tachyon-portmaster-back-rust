@@ -1,29 +1,33 @@
 //! O erro como o cliente o vê.
 //!
 //! Esta é a **única** camada que conhece status HTTP. O `domain` devolve erro
-//! tipado, o `app` o une num [`AppError`], e a tradução para número acontece
-//! aqui — em [`ApiError::of_app`], num lugar só. Espalhar o código pelo
-//! sistema foi o que o PHP fazia (o `LeafContext` carregava o status desde o
-//! domínio), e o preço era que a mesma violação de regra tinha um status gravado
-//! nela mesmo quando a saída não era HTTP.
+//! tipado, o `app` o une num [`AppError`] e o agrupa por natureza, e a tradução
+//! para número acontece aqui — em [`ApiError::of_app`], num lugar só. Espalhar o
+//! código pelo sistema foi o que o PHP fazia (o `LeafContext` carregava o status
+//! desde o domínio), e o preço era que a mesma violação de regra tinha um status
+//! gravado nela mesmo quando a saída não era HTTP.
 //!
-//! ## O corpo é sempre `application/problem+json`
+//! ## O corpo de erro é negociado como qualquer outro
 //!
-//! Mesmo quando a requisição pediu `FlatBuffers`. É o que o PHP fazia, e há uma
-//! razão para manter: um erro pode acontecer **antes** de a negociação ter sido
-//! resolvida — corpo malformado, `Accept` ilegível, pânico — e nesses casos não
-//! existe formato negociado para responder. Ter um formato de erro único e
-//! sempre disponível evita a pergunta "em que formato eu digo que não entendi o
-//! formato?".
+//! Um erro vira [`ProblemX`], que é um VO de resposta como qualquer outro, e sai
+//! pelo [`Encoder`] da requisição — em JSON ou em `FlatBuffers`, conforme o
+//! `Accept`. Antes o corpo era `application/problem+json` fixo, o que num
+//! sistema cujo cliente de produção fala `FlatBuffers` significava que todo
+//! caminho de erro entregava algo que ele não sabia ler.
+//!
+//! Quando não há requisição de onde negociar — um erro que nasce antes de
+//! qualquer cabeçalho ser lido — vale o padrão do [`Encoder`], que é JSON. É a
+//! mesma escolha que um `Accept` irreconhecível recebe.
 
-use axum::http::{header, StatusCode};
+use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use cookie::Cookie;
 use portmaster_app::domain::FieldError;
-use portmaster_app::error::AppError;
-use serde::Serialize;
+use portmaster_app::error::{AppError, AppErrorKind};
+use portmaster_app::{Logger as _, SystemLogger};
 
-/// O tipo de mídia do corpo de erro (RFC 7807).
-const PROBLEM_JSON: &str = "application/problem+json";
+use crate::wire::encoder::Encoder;
+use crate::wire::vo::common::problem_x::ProblemX;
 
 /// Um erro pronto para virar resposta.
 ///
@@ -38,20 +42,13 @@ pub struct ApiError {
     /// O que aconteceu, em texto, para o corpo do problema.
     detail: String,
     /// Os `Set-Cookie` a acrescentar na resposta, um cabeçalho por entrada.
-    cookies: Vec<String>,
-}
-
-/// O corpo, na forma da RFC 7807 — espelha `ProblemDetails` de `common.fbs`.
-#[derive(Debug, Serialize)]
-struct ProblemDetails<'a> {
-    /// URI do tipo de problema; `about:blank` quando não há uma página.
-    r#type: &'a str,
-    /// O nome canônico do status.
-    title: &'a str,
-    /// O status, repetido no corpo para quem só lê o payload.
-    status: u16,
-    /// O que aconteceu, em texto.
-    detail: &'a str,
+    cookies: Vec<Cookie<'static>>,
+    /// Como escrever o corpo, quando este erro virar resposta sozinho.
+    ///
+    /// Só importa para a recusa de um extractor, que vira resposta sem passar
+    /// por um [`ApiResponse`](crate::wire::api_response::ApiResponse). Nos
+    /// demais caminhos quem codifica é o encoder da resposta.
+    encoder: Encoder,
 }
 
 impl ApiError {
@@ -61,12 +58,21 @@ impl ApiError {
             status,
             detail: detail.into(),
             cookies: Vec::new(),
+            encoder: Encoder::default(),
         }
     }
 
     /// Acrescenta um `Set-Cookie` à recusa.
-    pub(crate) fn with_cookie(mut self, cookie: String) -> Self {
+    #[must_use]
+    pub(crate) fn with_cookie(mut self, cookie: Cookie<'static>) -> Self {
         self.cookies.push(cookie);
+        self
+    }
+
+    /// Fixa por onde este erro sai, se sair sozinho.
+    #[must_use]
+    pub(crate) const fn with_encoder(mut self, encoder: Encoder) -> Self {
+        self.encoder = encoder;
         self
     }
 
@@ -114,10 +120,31 @@ impl ApiError {
         self.status
     }
 
+    /// Desmonta o erro no que a resposta precisa.
+    ///
+    /// Devolver as três peças de uma vez é o que permite ao
+    /// [`ApiResponse`](crate::wire::api_response::ApiResponse) codificar o
+    /// problema pelo **seu** encoder, e não pelo que este erro carrega — que é
+    /// só o de reserva, para quando ele vira resposta sozinho.
+    pub(crate) fn into_parts(self) -> (StatusCode, ProblemX, Vec<Cookie<'static>>) {
+        let problem = ProblemX {
+            kind: "about:blank",
+            title: self.status.canonical_reason().unwrap_or("Error").to_owned(),
+            status: i32::from(self.status.as_u16()),
+            detail: self.detail,
+        };
+
+        (self.status, problem, self.cookies)
+    }
+
     /// Traduz o erro do `app` para o status que o cliente recebe.
     ///
-    /// É o **único** ponto de tradução do sistema. Um `match` exaustivo garante
-    /// que uma variante nova de [`AppError`] não passe despercebida como 500.
+    /// É o **único** ponto de tradução do sistema, e ele traduz o
+    /// [`AppErrorKind`] — não a variante. O `app` agrupa suas falhas por
+    /// natureza; aqui cada natureza tem exatamente um status, e uma variante
+    /// nova entra no agrupamento certo lá em cima em vez de precisar de uma
+    /// linha nova aqui. A variante só é consultada para compor o texto.
+    ///
     /// ## Validação vem em lote
     ///
     /// O domínio acumula **todos** os campos em vez de parar no primeiro.
@@ -131,87 +158,58 @@ impl ApiError {
     /// autorização do sistema. Quem precisa do detalhe é o operador, e para esse
     /// ele já está no log.
     ///
-    /// ## Regra de negócio violada é conflito, não erro de formato
-    ///
-    /// O pedido estava bem escrito; é o contêiner que não podia ser selado
-    /// agora. Credencial recusada responde igual para e-mail desconhecido e
-    /// senha errada — o `app` já garante isso.
-    ///
     /// ## Falha de infra não descreve a topologia
     ///
     /// O que a infra reportou fica no log com a cadeia inteira; o cliente recebe
     /// só que houve falha. O motivo real ("a conexão com o banco foi recusada")
     /// não é acionável para ele.
     pub fn of_app(error: AppError) -> Self {
-        match error {
-            AppError::Validation(fields) => {
-                Self::new(StatusCode::UNPROCESSABLE_ENTITY, describe_fields(&fields))
+        let status = match error.kind() {
+            AppErrorKind::Validation => StatusCode::UNPROCESSABLE_ENTITY,
+            AppErrorKind::Authentication => StatusCode::UNAUTHORIZED,
+            AppErrorKind::Authorization => StatusCode::FORBIDDEN,
+            AppErrorKind::Absence => StatusCode::NOT_FOUND,
+            AppErrorKind::Rule => StatusCode::CONFLICT,
+            AppErrorKind::Internal => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+
+        let detail = match error {
+            AppError::Validation(fields) => describe_fields(&fields),
+
+            AppError::PermissionDenied { permission } => {
+                SystemLogger::get()
+                    .with_field("permission", permission)
+                    .info("acesso negado por falta de permissão");
+
+                "You do not have permission to perform this action.".to_owned()
             }
 
-            AppError::Unauthenticated => Self::new(
-                StatusCode::UNAUTHORIZED,
-                AppError::Unauthenticated.to_string(),
-            ),
+            AppError::Infra(cause) => {
+                SystemLogger::get()
+                    .with_field("error", format!("{cause:?}"))
+                    .error("falha de infraestrutura");
 
-            AppError::Forbidden { permission } => {
-                tracing::info!(permission, "acesso negado por falta de permissão");
-                Self::new(
-                    StatusCode::FORBIDDEN,
-                    "You do not have permission to perform this action.",
-                )
+                "An unexpected error occurred.".to_owned()
             }
 
-            AppError::NotFound { resource, id } => Self::new(
-                StatusCode::NOT_FOUND,
-                format!("{resource} não encontrado: {id}"),
-            ),
+            other => other.to_string(),
+        };
 
-            AppError::Conflict(message) => Self::new(StatusCode::CONFLICT, message),
-
-            AppError::Container(e) => Self::new(StatusCode::CONFLICT, e.to_string()),
-            AppError::Manifest(e) => Self::new(StatusCode::CONFLICT, e.to_string()),
-            AppError::Marker(e) => Self::new(StatusCode::CONFLICT, e.to_string()),
-            AppError::Metadata(e) => Self::new(StatusCode::CONFLICT, e.to_string()),
-
-            AppError::Auth(e) => Self::new(StatusCode::UNAUTHORIZED, e.to_string()),
-
-            AppError::Infra(e) => {
-                tracing::error!(error = ?e, "falha de infraestrutura");
-                Self::new(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "An unexpected error occurred.",
-                )
-            }
-        }
+        Self::new(status, detail)
     }
 }
 
 impl IntoResponse for ApiError {
-    /// Escreve o corpo `application/problem+json` e os cookies.
+    /// Codifica o problema pelo encoder de reserva.
     ///
-    /// A serialização de uma struct de quatro campos escalares não falha; se um
-    /// dia falhasse, um corpo vazio com o status certo ainda é uma resposta
-    /// melhor do que um pânico dentro do handler de erro.
+    /// Este caminho é o da recusa de extractor — o corpo que não deu para ler, a
+    /// sessão que falta. Quem o alcança já anexou o encoder da requisição com
+    /// [`Self::with_encoder`] quando tinha um.
     fn into_response(self) -> Response {
-        let problem = ProblemDetails {
-            r#type: "about:blank",
-            title: title_of(self.status),
-            status: self.status.as_u16(),
-            detail: &self.detail,
-        };
+        let encoder = self.encoder;
+        let (status, problem, cookies) = self.into_parts();
 
-        let body = serde_json::to_vec(&problem).unwrap_or_default();
-
-        let mut response =
-            (self.status, [(header::CONTENT_TYPE, PROBLEM_JSON)], body).into_response();
-
-        for cookie in self.cookies {
-            if let Ok(value) = cookie.parse() {
-                response.headers_mut().append(header::SET_COOKIE, value);
-            }
-        }
-
-        response
+        encoder.respond(status, &problem, cookies)
     }
 }
 
@@ -228,14 +226,10 @@ fn describe_fields(fields: &[FieldError]) -> String {
         .join("; ")
 }
 
-/// O nome canônico de um status.
-fn title_of(status: StatusCode) -> &'static str {
-    status.canonical_reason().unwrap_or("Error")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::http::header;
     use pretty_assertions::assert_eq;
 
     /// O slug vai para o log.
@@ -243,7 +237,7 @@ mod tests {
     /// No corpo, ele descreveria ao cliente o mapa de autorização do sistema.
     #[test]
     fn a_permissao_negada_nao_vaza_o_slug_no_corpo() {
-        let error = ApiError::of_app(AppError::Forbidden {
+        let error = ApiError::of_app(AppError::PermissionDenied {
             permission: "container:seal".into(),
         });
 
@@ -286,18 +280,16 @@ mod tests {
     #[test]
     fn a_regra_de_negocio_violada_e_conflito() {
         // O pedido estava bem escrito; o que não podia era o estado do contêiner.
-        use portmaster_app::domain::ContainerStatus;
-        let _ = ContainerStatus::Empty;
-
-        let error = ApiError::of_app(AppError::Conflict(
+        let error = ApiError::of_app(AppError::RuleViolation(
             "Only a sealed container can be dispatched.".into(),
         ));
 
         assert_eq!(error.status(), StatusCode::CONFLICT);
     }
 
+    /// Sem requisição de onde negociar, vale o padrão — e o padrão é JSON.
     #[test]
-    fn o_corpo_de_erro_e_problem_json() {
+    fn o_erro_sem_negociacao_sai_em_json() {
         let response = ApiError::unauthenticated().into_response();
 
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
@@ -306,7 +298,24 @@ mod tests {
                 .headers()
                 .get(header::CONTENT_TYPE)
                 .and_then(|value| value.to_str().ok()),
-            Some(PROBLEM_JSON)
+            Some("application/json")
+        );
+    }
+
+    /// É o item que motivou o desenho: um cliente que fala `FlatBuffers` recebe
+    /// o erro em `FlatBuffers`, e não num JSON que ele não sabe ler.
+    #[test]
+    fn o_erro_sai_no_formato_que_o_cliente_pediu() {
+        let response = ApiError::unauthenticated()
+            .with_encoder(Encoder::of_response(Some("application/x-flatbuffers")))
+            .into_response();
+
+        assert_eq!(
+            response
+                .headers()
+                .get(header::CONTENT_TYPE)
+                .and_then(|value| value.to_str().ok()),
+            Some("application/x-flatbuffers")
         );
     }
 }

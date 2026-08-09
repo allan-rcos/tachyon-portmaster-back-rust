@@ -7,6 +7,7 @@ use crate::table_modules::interno::slug::Slug;
 use crate::table_modules::PermissionTM;
 
 /// A implementação. Sem helpers: é validação de formato e nada mais.
+#[derive(Clone)]
 pub(crate) struct PermissionTMImpl;
 
 impl PermissionTMImpl {

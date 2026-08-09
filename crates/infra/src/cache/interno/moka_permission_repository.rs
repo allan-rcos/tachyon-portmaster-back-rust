@@ -6,6 +6,7 @@ use crate::cache::interno::permission_cache::PermissionCache;
 use crate::repository::PermissionRepository;
 
 /// Registro de permissões.
+#[derive(Clone)]
 pub struct MokaPermissionRepository {
     /// O catálogo, preenchido no boot e só lido depois.
     cache: PermissionCache,

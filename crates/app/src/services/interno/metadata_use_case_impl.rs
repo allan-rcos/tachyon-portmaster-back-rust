@@ -8,6 +8,7 @@ use crate::services::MetadataUseCase;
 use portmaster_infra::repository::PermissionRepository;
 
 /// A implementação, genérica sobre os ports que consome.
+#[derive(Clone)]
 pub(crate) struct MetadataUseCaseImpl<R> {
     /// O catálogo de permissões, em memória.
     permissions: R,

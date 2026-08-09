@@ -5,13 +5,17 @@ use std::task::{Context, Poll};
 
 use axum::extract::Request;
 use axum::http::StatusCode;
-use axum::response::{IntoResponse, Response};
+use axum::response::Response;
 use futures::future::{BoxFuture, FutureExt};
+use portmaster_app::{Logger as _, SystemLogger};
 use tower::Service;
+
+use crate::error::api_error::ApiError;
+use crate::wire::encoder::Encoder;
 
 /// O serviço que captura pânico.
 #[derive(Clone)]
-pub struct Recover<S> {
+pub(crate) struct Recover<S> {
     /// O serviço interno, que este envolve.
     pub(super) inner: S,
 }
@@ -29,9 +33,18 @@ where
         self.inner.poll_ready(cx)
     }
 
+    /// Chama o serviço interno e transforma um pânico em resposta.
+    ///
+    /// O encoder é montado **antes** da chamada, com os cabeçalhos da
+    /// requisição: depois do pânico não há mais requisição de onde negociar, e o
+    /// corpo de 500 precisa sair no formato que o cliente pediu como qualquer
+    /// outro. O desenho anterior tinha aqui um literal de bytes JSON, que num
+    /// sistema cujo cliente de produção fala `FlatBuffers` era o único corpo que
+    /// ele nunca conseguiria ler.
     fn call(&mut self, request: Request) -> Self::Future {
         let clone = self.inner.clone();
         let mut inner = std::mem::replace(&mut self.inner, clone);
+        let encoder = Encoder::of_headers(request.headers());
 
         Box::pin(async move {
             let outcome = AssertUnwindSafe(inner.call(request)).catch_unwind().await;
@@ -39,14 +52,17 @@ where
             Ok(match outcome {
                 Ok(response) => response?,
                 Err(panic) => {
-                    tracing::error!(panic = %describe(&panic), "pânico capturado no handler");
+                    SystemLogger::get()
+                        .with_field("panic", describe(&panic))
+                        .error("pânico capturado no controller");
 
-                    (
+                    let (status, problem, cookies) = ApiError::new(
                         StatusCode::INTERNAL_SERVER_ERROR,
-                        [(axum::http::header::CONTENT_TYPE, "application/problem+json")],
-                        br#"{"type":"about:blank","title":"Internal Server Error","status":500,"detail":"An unexpected error occurred."}"#.to_vec(),
+                        "An unexpected error occurred.",
                     )
-                        .into_response()
+                    .into_parts();
+
+                    encoder.respond(status, &problem, cookies)
                 }
             })
         })
@@ -70,6 +86,7 @@ fn describe(panic: &Box<dyn std::any::Any + Send>) -> String {
 mod tests {
     use super::super::recover_layer::RecoverLayer;
     use super::*;
+    use axum::response::IntoResponse as _;
     use tower::{ServiceBuilder, ServiceExt};
 
     #[tokio::test]

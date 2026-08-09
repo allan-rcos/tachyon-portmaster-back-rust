@@ -13,29 +13,29 @@ use crate::table_modules::{
 /// não surpresa em produção.
 pub trait DomainProvider {
     /// `TableModule` de usuário.
-    fn user_table_module(&self) -> impl UserTM + Send + Sync;
+    fn user_table_module(&self) -> impl UserTM + Send + Sync + Clone + use<Self> + 'static;
 
     /// `TableModule` de papel.
-    fn role_table_module(&self) -> impl RoleTM + Send + Sync;
+    fn role_table_module(&self) -> impl RoleTM + Send + Sync + Clone + use<Self> + 'static;
 
     /// `TableModule` de produto.
-    fn product_table_module(&self) -> impl ProductTM + Send + Sync;
+    fn product_table_module(&self) -> impl ProductTM + Send + Sync + Clone + use<Self> + 'static;
 
     /// `TableModule` de contêiner.
-    fn container_table_module(&self) -> impl ContainerTM + Send + Sync;
+    fn container_table_module(&self) -> impl ContainerTM + Send + Sync + Clone + use<Self> + 'static;
 
     /// `TableModule` de manifesto.
-    fn manifest_table_module(&self) -> impl ManifestTM + Send + Sync;
+    fn manifest_table_module(&self) -> impl ManifestTM + Send + Sync + Clone + use<Self> + 'static;
 
     /// `TableModule` de autenticação.
-    fn auth_table_module(&self) -> impl AuthTM + Send + Sync;
+    fn auth_table_module(&self) -> impl AuthTM + Send + Sync + Clone + use<Self> + 'static;
 
     /// `TableModule` de permissão.
-    fn permission_table_module(&self) -> impl PermissionTM + Send + Sync;
+    fn permission_table_module(&self) -> impl PermissionTM + Send + Sync + Clone + use<Self> + 'static;
 
     /// `TableModule` de grupo de marcador.
-    fn marker_group_table_module(&self) -> impl MarkerGroupTM + Send + Sync;
+    fn marker_group_table_module(&self) -> impl MarkerGroupTM + Send + Sync + Clone + use<Self> + 'static;
 
     /// `TableModule` de marcador.
-    fn marker_table_module(&self) -> impl MarkerTM + Send + Sync;
+    fn marker_table_module(&self) -> impl MarkerTM + Send + Sync + Clone + use<Self> + 'static;
 }

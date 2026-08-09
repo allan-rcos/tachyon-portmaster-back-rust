@@ -1,11 +1,18 @@
 //! A falha que um caso de uso devolve.
 
+use crate::error::AppErrorKind;
 use portmaster_domain::error::{
     AuthError, ContainerError, FieldError, ManifestError, MarkerError, MetadataError, ProductError,
     RoleError, UserError,
 };
 
 /// O que pode dar errado num caso de uso.
+///
+/// As variantes descrevem a falha no vocabulário do sistema, não no do
+/// protocolo por onde ela sairá: `Missing` e não `NotFound`, `RuleViolation` e
+/// não `Conflict`. Quem precisa decidir em cima do erro sem casar variante por
+/// variante usa [`AppError::kind`]; quem precisa de um status HTTP é o
+/// `api-http`, e a tradução mora lá.
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
     /// Campos inválidos, em lote.
@@ -21,7 +28,7 @@ pub enum AppError {
     /// propósito: distinguir os dois entregaria a quem tentasse adivinhar uma
     /// lista de e-mails cadastrados.
     #[error("Invalid e-mail or password.")]
-    Unauthenticated,
+    InvalidCredentials,
 
     /// Falta a permissão exigida.
     ///
@@ -29,14 +36,14 @@ pub enum AppError {
     /// comportamento que o PHP tinha, e dizer ao cliente qual permissão faltou
     /// descreve para ele o mapa de autorização do sistema.
     #[error("permissão negada: {permission}")]
-    Forbidden {
+    PermissionDenied {
         /// O slug que faltava.
         permission: String,
     },
 
     /// O recurso pedido não existe.
     #[error("{resource} não encontrado: {id}")]
-    NotFound {
+    Missing {
         /// Que tipo de recurso.
         resource: &'static str,
         /// O id procurado.
@@ -45,7 +52,7 @@ pub enum AppError {
 
     /// A operação contradiz o estado atual.
     #[error("{0}")]
-    Conflict(String),
+    RuleViolation(String),
 
     /// Regra de autenticação do domínio.
     #[error(transparent)]
@@ -66,14 +73,6 @@ pub enum AppError {
     #[error(transparent)]
     Manifest(ManifestError),
 
-    /// Regra de marcador.
-    #[error(transparent)]
-    Marker(#[from] MarkerError),
-
-    /// Regra de metadado de sistema.
-    #[error(transparent)]
-    Metadata(#[from] MetadataError),
-
     /// Falha de I/O ou de infraestrutura.
     ///
     /// Opaca de propósito: "o banco recusou a conexão" não é uma regra que o
@@ -84,10 +83,28 @@ pub enum AppError {
 
 impl AppError {
     /// O erro de um recurso que deveria existir e não existe.
-    pub(crate) fn not_found(resource: &'static str, id: impl Into<String>) -> Self {
-        Self::NotFound {
+    pub(crate) fn missing(resource: &'static str, id: impl Into<String>) -> Self {
+        Self::Missing {
             resource,
             id: id.into(),
+        }
+    }
+
+    /// De que natureza é esta falha.
+    ///
+    /// O agrupamento é o contrato estável desta camada; as variantes podem
+    /// crescer sem que quem decide em cima do erro precise mudar. Repare que
+    /// [`Self::Container`] e [`Self::Manifest`] chegam aqui já sem a metade de
+    /// validação — as conversões abaixo a separaram — então o que sobra delas é
+    /// regra de estado, e é só isso que [`AppErrorKind::Rule`] promete.
+    pub const fn kind(&self) -> AppErrorKind {
+        match *self {
+            Self::Validation(_) => AppErrorKind::Validation,
+            Self::InvalidCredentials | Self::Auth(_) => AppErrorKind::Authentication,
+            Self::PermissionDenied { .. } => AppErrorKind::Authorization,
+            Self::Missing { .. } => AppErrorKind::Absence,
+            Self::RuleViolation(_) | Self::Container(_) | Self::Manifest(_) => AppErrorKind::Rule,
+            Self::Infra(_) => AppErrorKind::Internal,
         }
     }
 }
@@ -112,6 +129,22 @@ impl From<ProductError> for AppError {
     fn from(error: ProductError) -> Self {
         match error {
             ProductError::Validation(fields) => Self::Validation(fields),
+        }
+    }
+}
+
+impl From<MarkerError> for AppError {
+    fn from(error: MarkerError) -> Self {
+        match error {
+            MarkerError::Validation(fields) => Self::Validation(fields),
+        }
+    }
+}
+
+impl From<MetadataError> for AppError {
+    fn from(error: MetadataError) -> Self {
+        match error {
+            MetadataError::Validation(fields) => Self::Validation(fields),
         }
     }
 }
@@ -154,7 +187,7 @@ mod tests {
     #[test]
     fn credencial_ruim_nao_diz_qual_metade_falhou() {
         assert_eq!(
-            AppError::Unauthenticated.to_string(),
+            AppError::InvalidCredentials.to_string(),
             "Invalid e-mail or password."
         );
     }
@@ -214,10 +247,60 @@ mod tests {
     #[test]
     fn o_slug_negado_fica_no_erro() {
         // Vai para o log; quem decide não mostrá-lo ao cliente é o api-http.
-        let error = AppError::Forbidden {
+        let error = AppError::PermissionDenied {
             permission: "product:create".into(),
         };
 
         assert!(error.to_string().contains("product:create"));
+    }
+
+    /// Marcador e metadado só carregam campo recusado, e campo recusado é
+    /// validação.
+    ///
+    /// Antes chegavam como variantes próprias e saíam como conflito, o que
+    /// dizia ao cliente que o estado do sistema recusou algo — quando o que
+    /// aconteceu foi um slug fora de forma, que ele corrige reenviando.
+    #[test]
+    fn marcador_e_metadado_sao_validacao() {
+        let marker: AppError =
+            MarkerError::Validation(vec![FieldError::new("group", "vazio")]).into();
+        let metadata: AppError =
+            MetadataError::Validation(vec![FieldError::new("slug", "malformado")]).into();
+
+        assert_eq!(marker.kind(), AppErrorKind::Validation);
+        assert_eq!(metadata.kind(), AppErrorKind::Validation);
+    }
+
+    /// A validação do domínio é validação venha de onde vier.
+    ///
+    /// É o agrupamento que a apresentação consome; se um caminho escapasse
+    /// dele, o mesmo campo recusado sairia com duas respostas diferentes
+    /// dependendo de qual `TableModule` o recusou.
+    #[test]
+    fn o_agrupamento_junta_o_que_tem_a_mesma_natureza() {
+        assert_eq!(
+            AppError::from(UserError::Validation(vec![FieldError::new("email", "x")])).kind(),
+            AppErrorKind::Validation
+        );
+        assert_eq!(
+            AppError::from(ManifestError::InvalidQuantity).kind(),
+            AppErrorKind::Validation
+        );
+        assert_eq!(
+            AppError::from(ManifestError::ExceedsCapacity).kind(),
+            AppErrorKind::Rule
+        );
+        assert_eq!(
+            AppError::from(ContainerError::SealRequiresLoading).kind(),
+            AppErrorKind::Rule
+        );
+        assert_eq!(
+            AppError::InvalidCredentials.kind(),
+            AppErrorKind::Authentication
+        );
+        assert_eq!(
+            AppError::from(AuthError::InvalidCredentials).kind(),
+            AppErrorKind::Authentication
+        );
     }
 }

@@ -36,6 +36,7 @@ const SOFT_DELETE: &str =
     "UPDATE `roles` SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL";
 
 /// O repositório de papéis.
+#[derive(Clone)]
 pub struct RoleMariadbRepository;
 
 impl RoleMariadbRepository {

@@ -3,27 +3,27 @@
 use tower::Layer;
 
 use super::token::Token;
-use crate::cookie::AuthCookie;
+use crate::cookie::auth_cookie::AuthCookie;
 use crate::token::token_service::TokenService;
 
 /// Aplica o [`Token`].
 #[derive(Clone)]
-pub struct TokenLayer {
-    /// Quem emite e confere o access token.
-    tokens: TokenService,
-    /// Como os cookies de sessão são escritos e lidos.
-    cookies: AuthCookie,
+pub(crate) struct TokenLayer<T, A> {
+    /// Quem confere o access token.
+    tokens: T,
+    /// De onde o access token é lido.
+    cookies: A,
 }
 
-impl TokenLayer {
-    /// Monta o layer com o serviço de token e os cookies.
-    pub(crate) const fn new(tokens: TokenService, cookies: AuthCookie) -> Self {
+impl<T, A> TokenLayer<T, A> {
+    /// Monta o layer com o que o provider entregou.
+    pub(crate) const fn new(tokens: T, cookies: A) -> Self {
         Self { tokens, cookies }
     }
 }
 
-impl<S> Layer<S> for TokenLayer {
-    type Service = Token<S>;
+impl<S, T: TokenService, A: AuthCookie> Layer<S> for TokenLayer<T, A> {
+    type Service = Token<S, T, A>;
 
     fn layer(&self, inner: S) -> Self::Service {
         Token {

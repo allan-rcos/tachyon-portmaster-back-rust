@@ -22,6 +22,7 @@ use portmaster_infra::query::{QueryFactory, QueryRepository};
 use portmaster_infra::repository::RoleRepository;
 
 /// A implementação, genérica sobre os ports que consome.
+#[derive(Clone)]
 pub(crate) struct RoleUseCaseImpl<R, T, Q, F, C, U> {
     /// Persistência de papéis.
     roles: R,
@@ -108,7 +109,7 @@ where
                 .roles
                 .find_by_id(&command.id)
                 .await?
-                .ok_or_else(|| AppError::not_found("papel", &command.id))?;
+                .ok_or_else(|| AppError::missing("papel", &command.id))?;
 
             let updated = self
                 .role_tm
@@ -137,7 +138,7 @@ where
                 self.queries
                     .run(dql)
                     .await?
-                    .ok_or_else(|| AppError::not_found("papel", &query.id))
+                    .ok_or_else(|| AppError::missing("papel", &query.id))
             })
             .await
         })

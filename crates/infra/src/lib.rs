@@ -37,6 +37,7 @@
 )]
 
 pub mod cache;
+pub mod clock;
 pub mod config;
 pub mod database;
 pub mod id;

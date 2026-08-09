@@ -17,6 +17,7 @@ use portmaster_infra::repository::{PermissionRepository, RoleRepository, UserRep
 const ADMINISTRATOR_ROLE: &str = "Administrator";
 
 /// A implementação, genérica sobre os ports que consome.
+#[derive(Clone)]
 pub(crate) struct SessionUseCaseImpl<UR, RR, PR, UT, RT, A, U> {
     /// Persistência de usuários.
     users: UR,
@@ -75,7 +76,7 @@ where
     async fn login(&self, command: LoginCommand) -> Result<Box<dyn User>, AppError> {
         Transaction::run(&self.unit_of_work, async {
             let Some(user) = self.users.find_by_email(&command.email).await? else {
-                return Err(AppError::Unauthenticated);
+                return Err(AppError::InvalidCredentials);
             };
 
             self.auth_tm.login(user.as_ref(), &command.password)?;
@@ -90,7 +91,7 @@ where
             self.users
                 .find_by_id(&context.id)
                 .await?
-                .ok_or(AppError::Unauthenticated)
+                .ok_or(AppError::InvalidCredentials)
         })
         .await
     }
@@ -107,7 +108,7 @@ where
     async fn setup(&self, command: SetupCommand) -> Result<Box<dyn User>, AppError> {
         Transaction::run(&self.unit_of_work, async {
             if self.users.has_any().await? {
-                return Err(AppError::Conflict(
+                return Err(AppError::RuleViolation(
                     "This system has already been set up.".into(),
                 ));
             }

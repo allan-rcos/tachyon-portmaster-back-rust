@@ -1,28 +1,31 @@
-//! O formato de fio, e os dois processos que o produzem.
+//! O formato de fio, e os quatro objetos que o produzem.
 //!
 //! Uma requisição chega em `FlatBuffers` ou JSON e uma resposta sai em um dos
-//! dois, negociado por `Content-Type`/`Accept`. Traduzir entre esses formatos
-//! são na verdade **duas responsabilidades diferentes**, e mantê-las separadas é
-//! o que permite acrescentar um terceiro formato sem reescrever nada:
+//! dois, negociado por `Content-Type`/`Accept`. Quatro camadas resolvem isso, e
+//! mantê-las separadas é o que permite acrescentar um terceiro formato sem
+//! reescrever nada:
 //!
-//! * **Serializar/desserializar** ([`strategy`]) não depende de *qual* objeto
-//!   está em jogo. Todo tipo `FlatBuffers` desserializa do mesmo jeito, e todo
-//!   tipo serde também. Cada strategy conhece um formato e nada sobre o payload.
-//! * **Construir** ([`factory`]) depende dos dados e não do formato. O handler
-//!   sabe o que responder, mas não sabe o que foi negociado — então entrega os
-//!   dados a uma factory, que a strategy conduz. Todas devolvem a mesma coisa: o
-//!   corpo da resposta.
+//! * O **VO** ([`vo`]) é a mensagem, independente de formato. É o único destes
+//!   quatro que um controller conhece.
+//! * Os **DTOs** são dois, um por formato: a tabela que o planus gera do `.fbs`
+//!   e a struct de [`dto::json`] com `#[derive(Serialize)]`. São **objetos
+//!   diferentes** de propósito — colar os dois amarraria o corpo textual à forma
+//!   do schema binário.
+//! * As **traits de [`x`]** ligam o VO aos seus dois DTOs.
+//! * As **strategies** ([`strategy`]) serializam, e os **contextos**
+//!   ([`encoder`], [`decoder`]) guardam a strategy da vez.
 //!
-//! ## Onde está o único `dyn`
+//! ## Não há `dyn` em lugar nenhum
 //!
-//! No [`Wire`](wire::Wire), que carrega um `Arc<dyn EncodeStrategy>`. É o preço
-//! de a saída ter que escolher em tempo de execução, e ele é cobrado uma vez: o
-//! `Arc` nasce no boot (as strategies são ZSTs) e a requisição clona o ponteiro.
+//! `EncodeStrategy::encode` e `DecodeStrategy::decode` são genéricos sobre o VO,
+//! e por isso as traits não são object-safe — o que é o ponto, não um efeito
+//! colateral. O que varia em tempo de execução é **qual** strategy está em uso, e
+//! isso é uma variante de enum dentro do contexto: um `match` monomorfizado, sem
+//! vTable, sem `Arc`, sem alocação.
 //!
-//! A entrada não paga nada. `DecodeStrategy::decode` é genérico sobre a factory
-//! e por isso a trait **não** é object-safe — um `match` no
-//! [`Body`](body::Body) resolve a escolha sem vTable, e o caminho de requisição
-//! continua 100% monomorfizado.
+//! O contexto também não atravessa a aplicação. Ele nasce como extractor no
+//! adaptador de rota e morre ao virar resposta; o controller devolve um VO e não
+//! sabe que existe negociação.
 //!
 //! Os schemas `.fbs` são a fonte compartilhada com o cliente e não são alterados
 //! por nada disto. Os tipos `FlatBuffers` em [`fbs`] são gerados a partir deles
@@ -31,18 +34,14 @@
 pub(crate) mod api_response;
 pub(crate) mod body;
 pub(crate) mod convert;
+pub(crate) mod decoder;
 pub(crate) mod dto;
-pub(crate) mod factory;
-pub(crate) mod json;
-pub(crate) mod json_body;
+pub(crate) mod encoder;
 pub(crate) mod media_type;
 pub(crate) mod no_content;
 pub(crate) mod strategy;
-#[allow(
-    clippy::module_inception,
-    reason = "o módulo `wire` exporta o tipo `Wire`: nome do arquivo = nome do tipo"
-)]
-pub(crate) mod wire;
+pub(crate) mod vo;
+pub(crate) mod x;
 
 /// Tipos `FlatBuffers` gerados pelo planus a partir dos schemas, no build.
 ///

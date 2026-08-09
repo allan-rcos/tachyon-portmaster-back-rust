@@ -1,12 +1,11 @@
 //! O serviço de log de requisição.
 
 use std::task::{Context, Poll};
-use std::time::Instant;
 
 use axum::extract::Request;
 use axum::response::Response;
 use futures::future::BoxFuture;
-use portmaster_app::Logger;
+use portmaster_app::{Clock, Logger};
 use tower::Service;
 
 use super::request_id_header::REQUEST_ID_HEADER;
@@ -16,17 +15,21 @@ pub(super) const CHANNEL: &str = "http";
 
 /// O serviço que registra a requisição.
 #[derive(Clone)]
-pub struct Logging<S> {
+pub(crate) struct Logging<S, L, K> {
     /// O serviço interno, que este envolve.
     pub(super) inner: S,
     /// O logger desta requisição, já com o id carimbado.
-    pub(super) logger: Logger,
+    pub(super) logger: L,
+    /// De onde saem os dois instantes que viram latência.
+    pub(super) clock: K,
 }
 
-impl<S> Service<Request> for Logging<S>
+impl<S, L, K> Service<Request> for Logging<S, L, K>
 where
     S: Service<Request, Response = Response> + Clone + Send + 'static,
     S::Future: Send + 'static,
+    L: Logger,
+    K: Clock,
 {
     type Response = Response;
     type Error = S::Error;
@@ -38,9 +41,11 @@ where
 
     /// Mede a latência e emite a linha com o status final.
     ///
-    /// O ban de `Instant::now` mira relógio em regra de negócio. Aqui é medição
-    /// num middleware: `Instant` é monotônico, não é observável pelo domínio, e
-    /// não há o que injetar — o número existe para ir ao log e a nada mais.
+    /// A medição sai do [`Clock`] injetado, e não de um `Instant::now` com
+    /// `allow` em cima. Perde-se a monotonicidade — um ajuste de NTP no meio de
+    /// uma resposta produziria um `duration_ms` esquisito —, e isso é um evento
+    /// que não acontece dentro de uma resposta de milissegundos. Ganha-se um
+    /// relógio só no sistema, e nenhuma exceção de linter para justificar.
     fn call(&mut self, request: Request) -> Self::Future {
         let clone = self.inner.clone();
         let mut inner = std::mem::replace(&mut self.inner, clone);
@@ -60,17 +65,16 @@ where
             .with_field("method", method)
             .with_field("path", path);
 
+        let clock = self.clock.clone();
+        let started = clock.now();
+
         Box::pin(async move {
-            #[allow(
-                clippy::disallowed_methods,
-                reason = "cronômetro monotônico de latência, não relógio de domínio"
-            )]
-            let started = Instant::now();
             let response = inner.call(request).await?;
 
+            let elapsed = clock.now().signed_duration_since(started).num_milliseconds();
             let logger = logger
                 .with_field("status", response.status().as_u16().to_string())
-                .with_field("duration_ms", started.elapsed().as_millis().to_string());
+                .with_field("duration_ms", elapsed.to_string());
 
             if response.status().is_server_error() {
                 logger.error("requisição falhou");

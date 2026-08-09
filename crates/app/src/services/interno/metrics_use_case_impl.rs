@@ -14,6 +14,7 @@ use portmaster_infra::query::views::MetricsView;
 use portmaster_infra::query::{QueryFactory, QueryRepository};
 
 /// A implementação, genérica sobre os ports que consome.
+#[derive(Clone)]
 pub(crate) struct MetricsUseCaseImpl<Q, F, C, U> {
     /// Quem executa um DQL contra o banco.
     queries: Q,

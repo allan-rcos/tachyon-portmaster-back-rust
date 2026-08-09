@@ -8,6 +8,7 @@ use portmaster_domain::table_modules::MarkerTM;
 use portmaster_infra::repository::MarkerRepository;
 
 /// A implementação, genérica sobre os ports que consome.
+#[derive(Clone)]
 pub(crate) struct MarkUseCaseImpl<T, R> {
     /// As regras de marcador.
     marker_tm: T,

@@ -30,7 +30,7 @@ impl RequiresPermission {
             return Ok(());
         }
 
-        Err(AppError::Forbidden {
+        Err(AppError::PermissionDenied {
             permission: self.slug.to_owned(),
         })
     }
@@ -113,7 +113,7 @@ mod tests {
 
         assert!(matches!(
             error,
-            AppError::Forbidden { ref permission } if permission == PermissionSlug::PRODUCT_CREATE
+            AppError::PermissionDenied { ref permission } if permission == PermissionSlug::PRODUCT_CREATE
         ));
     }
 }

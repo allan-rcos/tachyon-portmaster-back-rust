@@ -43,6 +43,7 @@ const INSERT_TELEMETRY: &str =
      VALUES (?, ?, ?, UTC_TIMESTAMP())";
 
 /// O repositório de manifesto.
+#[derive(Clone)]
 pub struct ManifestMariadbRepository;
 
 impl ManifestMariadbRepository {

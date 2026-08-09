@@ -12,6 +12,7 @@ use crate::table_modules::UserTM;
 /// Nem o gerador de id nem o hasher são instanciados aqui: chegam injetados pelo
 /// factory do provider, o que os torna substituíveis em teste sem que nada além
 /// do domínio saiba que existem.
+#[derive(Clone)]
 pub(crate) struct UserTMImpl<G, H> {
     /// De onde sai a identidade de um usuário novo.
     id_generator: G,

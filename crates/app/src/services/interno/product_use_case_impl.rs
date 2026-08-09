@@ -27,6 +27,7 @@ use portmaster_infra::repository::ProductRepository;
 /// Nada de `Arc<dyn>`: os tipos concretos chegam do provider e o compilador
 /// monomorfiza o grafo inteiro. Um caso de uso que não pudesse ser montado seria
 /// erro de compilação, não surpresa no primeiro request.
+#[derive(Clone)]
 pub(crate) struct ProductUseCaseImpl<R, T, Q, F, C, U> {
     /// Persistência de produtos.
     products: R,
@@ -115,7 +116,7 @@ where
                 .products
                 .find_by_id(&command.id)
                 .await?
-                .ok_or_else(|| AppError::not_found("produto", &command.id))?;
+                .ok_or_else(|| AppError::missing("produto", &command.id))?;
 
             let updated = self.product_tm.update(
                 existing.as_ref(),
@@ -147,7 +148,7 @@ where
             self.products
                 .find_by_id(&command.id)
                 .await?
-                .ok_or_else(|| AppError::not_found("produto", &command.id))?;
+                .ok_or_else(|| AppError::missing("produto", &command.id))?;
 
             self.products.delete(&command.id).await?;
 
@@ -172,7 +173,7 @@ where
                 self.queries
                     .run(dql)
                     .await?
-                    .ok_or_else(|| AppError::not_found("produto", &query.id))
+                    .ok_or_else(|| AppError::missing("produto", &query.id))
             })
             .await
         })

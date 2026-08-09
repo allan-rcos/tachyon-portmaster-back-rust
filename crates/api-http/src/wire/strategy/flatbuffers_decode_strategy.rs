@@ -1,24 +1,24 @@
 //! A leitura de um corpo `FlatBuffers`.
 
 use crate::error::api_error::ApiError;
-use crate::wire::factory::request_factory::RequestFactory;
 use crate::wire::strategy::decode_strategy::DecodeStrategy;
+use crate::wire::x::request_x::RequestX;
 
-/// Entrega os bytes crus à factory, que sabe qual tabela ler.
+/// Entrega os bytes crus ao VO, que sabe qual tabela ler.
 #[derive(Debug, Clone, Copy, Default)]
 pub(crate) struct FlatBuffersDecodeStrategy;
 
 impl DecodeStrategy for FlatBuffersDecodeStrategy {
-    fn decode<F: RequestFactory>(&self, bytes: &[u8]) -> Result<F::Message, ApiError> {
-        F::from_flatbuffer(bytes)
+    fn decode<X: RequestX>(&self, bytes: &[u8]) -> Result<X, ApiError> {
+        X::of_fbs(bytes)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::wire::dto::auth::login_request_factory::LoginRequestFactory;
     use crate::wire::tables as fbs;
+    use crate::wire::vo::auth::login_x_request::LoginXRequest;
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -30,8 +30,8 @@ mod tests {
         let mut builder = planus::Builder::new();
         let bytes = builder.finish(&sent, None).to_vec();
 
-        let request = FlatBuffersDecodeStrategy
-            .decode::<LoginRequestFactory>(&bytes)
+        let request: LoginXRequest = FlatBuffersDecodeStrategy
+            .decode(&bytes)
             .expect("o buffer foi escrito por nós");
 
         assert_eq!(request.email.as_deref(), Some("ana@portmaster.local"));
@@ -41,7 +41,7 @@ mod tests {
     #[test]
     fn corpo_ilegivel_vira_400_e_nao_panico() {
         let error = FlatBuffersDecodeStrategy
-            .decode::<LoginRequestFactory>(b"nao e um flatbuffer")
+            .decode::<LoginXRequest>(b"nao e um flatbuffer")
             .expect_err("lixo não é buffer");
 
         assert_eq!(error.status(), axum::http::StatusCode::BAD_REQUEST);
@@ -50,7 +50,7 @@ mod tests {
     #[test]
     fn corpo_vazio_tambem_e_ilegivel() {
         let error = FlatBuffersDecodeStrategy
-            .decode::<LoginRequestFactory>(b"")
+            .decode::<LoginXRequest>(b"")
             .expect_err("corpo vazio não é buffer");
 
         assert_eq!(error.status(), axum::http::StatusCode::BAD_REQUEST);

@@ -9,6 +9,7 @@ use crate::database::scope::CURRENT;
 use crate::database::UnitOfWork;
 
 /// A implementação sobre `MariaDB`.
+#[derive(Clone)]
 pub(crate) struct MariadbUnitOfWork {
     /// De onde a transação sai quando um escopo abre.
     pool: MySqlPool,

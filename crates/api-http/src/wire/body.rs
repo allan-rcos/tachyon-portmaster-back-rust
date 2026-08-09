@@ -1,66 +1,70 @@
-//! O corpo da requisição, já na mensagem que a factory descreve.
+//! O corpo da requisição, já no VO da mensagem.
 
 use axum::body::Bytes;
-use axum::extract::{FromRequest, Request};
-use axum::http::StatusCode;
+use axum::extract::{FromRequest, FromRequestParts as _, Request};
+use axum::http::{header, StatusCode};
 
 use crate::error::api_error::ApiError;
-use crate::wire::factory::request_factory::RequestFactory;
-use crate::wire::media_type::MediaType;
-use crate::wire::strategy::decode_strategy::DecodeStrategy;
-use crate::wire::strategy::flatbuffers_decode_strategy::FlatBuffersDecodeStrategy;
-use crate::wire::strategy::json_decode_strategy::JsonDecodeStrategy;
-use crate::wire::wire::Wire;
+use crate::wire::decoder::Decoder;
+use crate::wire::encoder::Encoder;
+use crate::wire::x::request_x::RequestX;
 
-/// Teto do corpo de uma requisição.
+/// O teto de um corpo de requisição.
 ///
-/// Nenhum endpoint desta API recebe payload grande — o maior é uma lista de ids
-/// de papel. O limite existe para que um corpo enorme seja recusado antes de ser
-/// lido inteiro na memória, e não depois.
+/// Um megabyte cobre com folga a maior mensagem que o `.fbs` descreve. O limite
+/// existe para que um cliente não consiga fazer o processo alocar sem limite
+/// mandando um `Content-Length` grande.
 const MAX_BODY_BYTES: usize = 1024 * 1024;
 
-/// O corpo da requisição, lido pela factory `F`.
+/// Extrai o corpo no VO da mensagem, seja qual for o formato que chegou.
 ///
-/// O parâmetro é a **factory**, não a mensagem: é ela que sabe ler os dois
-/// formatos, e pedi-la por tipo é o que mantém a rota dizendo qual mensagem
-/// espera — `Body<LoginRequestFactory>` — sem instanciar nada.
-pub(crate) struct Body<F: RequestFactory>(pub(crate) F::Message);
+/// A rota escreve `Body<LoginXRequest>` e recebe um `LoginXRequest`: o VO, não
+/// um DTO, não uma factory. Qual dos dois formatos chegou é assunto do
+/// [`Decoder`], que resolve isso e some.
+pub(crate) struct Body<X: RequestX>(pub(crate) X);
 
-impl<S, F> FromRequest<S> for Body<F>
+impl<S, X> FromRequest<S> for Body<X>
 where
-    F: RequestFactory,
+    X: RequestX,
     S: Send + Sync,
 {
     type Rejection = ApiError;
 
-    /// Lê o corpo no formato que a requisição anunciou.
+    /// Lê o corpo e o entrega ao decoder do formato anunciado.
     ///
-    /// O `match` de formato fica aqui, e não num `dyn`: `DecodeStrategy::decode`
-    /// é genérico sobre a factory e por isso a trait não é object-safe — o que é
-    /// conveniente, porque mantém o caminho de requisição estático.
+    /// O encoder é extraído antes de qualquer coisa poder falhar, e anexado à
+    /// recusa: é o que faz um corpo ilegível sair no formato que o cliente
+    /// pediu, em vez de num JSON que ele talvez não leia.
     async fn from_request(request: Request, state: &S) -> Result<Self, Self::Rejection> {
         let (mut parts, body) = request.into_parts();
-        let wire = Wire::from_request_parts(&mut parts, state).await?;
-        let request = Request::from_parts(parts, body);
 
-        let bytes = Bytes::from_request(request, state)
+        let encoder = Encoder::from_request_parts(&mut parts, state)
             .await
-            .map_err(|e| ApiError::unreadable_body(format!("não foi possível ler o corpo: {e}")))?;
+            .unwrap_or_default();
+        let decoder = Decoder::of_request(
+            parts
+                .headers
+                .get(header::CONTENT_TYPE)
+                .and_then(|value| value.to_str().ok()),
+        );
+
+        let bytes = Bytes::from_request(Request::from_parts(parts, body), state)
+            .await
+            .map_err(|e| {
+                ApiError::unreadable_body(format!("não foi possível ler o corpo: {e}"))
+                    .with_encoder(encoder)
+            })?;
 
         if bytes.len() > MAX_BODY_BYTES {
-            return Err(ApiError::new(
-                StatusCode::PAYLOAD_TOO_LARGE,
-                "corpo grande demais",
-            ));
+            return Err(
+                ApiError::new(StatusCode::PAYLOAD_TOO_LARGE, "corpo grande demais")
+                    .with_encoder(encoder),
+            );
         }
 
-        let message = match wire.request() {
-            MediaType::Json => JsonDecodeStrategy.decode::<F>(&bytes),
-            MediaType::FlatBuffers => FlatBuffersDecodeStrategy.decode::<F>(&bytes),
-        }?;
-
-        Ok(Self(message))
+        decoder
+            .decode(&bytes)
+            .map(Self)
+            .map_err(|error| error.with_encoder(encoder))
     }
 }
-
-use axum::extract::FromRequestParts as _;

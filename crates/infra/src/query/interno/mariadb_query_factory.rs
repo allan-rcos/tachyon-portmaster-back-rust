@@ -20,6 +20,7 @@ use crate::query::QueryFactory;
 use crate::query::SqlDql;
 
 /// A implementação da fábrica de DQLs.
+#[derive(Clone)]
 pub(crate) struct MariadbQueryFactory;
 
 impl MariadbQueryFactory {

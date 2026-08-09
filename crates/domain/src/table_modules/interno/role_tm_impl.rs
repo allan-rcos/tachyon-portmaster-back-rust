@@ -7,6 +7,7 @@ use crate::models::Role;
 use crate::table_modules::RoleTM;
 
 /// A implementação, genérica sobre o gerador de id.
+#[derive(Clone)]
 pub(crate) struct RoleTMImpl<G> {
     /// De onde sai a identidade de um papel novo.
     id_generator: G,

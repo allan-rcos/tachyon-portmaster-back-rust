@@ -8,6 +8,7 @@ use crate::models::Product;
 use crate::table_modules::ProductTM;
 
 /// A implementação, genérica sobre o gerador de id.
+#[derive(Clone)]
 pub(crate) struct ProductTMImpl<G> {
     /// De onde sai a identidade de um produto novo.
     id_generator: G,

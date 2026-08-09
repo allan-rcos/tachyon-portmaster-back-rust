@@ -16,7 +16,7 @@
     clippy::disallowed_types,
     reason = "recurso de processo com seção crítica sem await — ver o doc de SnowflakeIdGenerator"
 )]
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, UNIX_EPOCH};
 
 use snowflake::SnowflakeIdGenerator as Generator;
@@ -39,13 +39,20 @@ const EPOCH_MS: u64 = 1_704_067_200_000;
     clippy::disallowed_types,
     reason = "gerador de ID Snowflake sequencial exige sincronização thread-safe entre requisições"
 )]
+#[derive(Clone)]
 pub struct SnowflakeIdGenerator {
-    /// O gerador, atrás de um `Mutex`.
+    /// O gerador, atrás de um `Mutex` compartilhado.
     ///
     /// Um Snowflake guarda o último instante e a sequência dentro dele para
     /// não repetir id no mesmo milissegundo, então há estado a proteger — e
     /// ele é o único do `domain`.
-    inner: Mutex<Generator>,
+    ///
+    /// O `Arc` é o que faz um clone deste gerador continuar sendo **o mesmo**
+    /// gerador. É a exceção de borda que a DI estática admite, e por a razão
+    /// mais literal possível: dois geradores independentes com o mesmo
+    /// `cluster_id`/`server_id` emitiriam ids repetidos. Ele não pode existir em
+    /// mais de um lugar ao mesmo tempo, então é compartilhado em vez de copiado.
+    inner: Arc<Mutex<Generator>>,
 }
 
 impl SnowflakeIdGenerator {
@@ -64,7 +71,9 @@ impl SnowflakeIdGenerator {
             reason = "recurso de processo com seção crítica sem await — ver o doc do tipo"
         )]
         Self {
-            inner: Mutex::new(Generator::with_epoch(cluster_id, server_id, epoch)),
+            inner: Arc::new(Mutex::new(Generator::with_epoch(
+                cluster_id, server_id, epoch,
+            ))),
         }
     }
 

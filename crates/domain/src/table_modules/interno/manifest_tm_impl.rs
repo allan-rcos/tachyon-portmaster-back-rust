@@ -9,6 +9,7 @@ use crate::models::{Container, ManifestCargo, ManifestChange, Product};
 use crate::table_modules::ManifestTM;
 
 /// A implementação. Não precisa de helper nenhum: é aritmética e regra pura.
+#[derive(Clone)]
 pub(crate) struct ManifestTMImpl;
 
 impl ManifestTMImpl {

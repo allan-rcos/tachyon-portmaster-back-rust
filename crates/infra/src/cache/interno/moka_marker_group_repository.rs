@@ -6,6 +6,7 @@ use crate::cache::interno::marker_group_cache::MarkerGroupCache;
 use crate::repository::MarkerGroupRepository;
 
 /// Registro de grupos de marcador.
+#[derive(Clone)]
 pub struct MokaMarkerGroupRepository {
     /// Os grupos declarados no boot.
     cache: MarkerGroupCache,

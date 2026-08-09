@@ -8,6 +8,7 @@ use crate::models::Container;
 use crate::table_modules::ContainerTM;
 
 /// A implementação, genérica sobre o gerador de id.
+#[derive(Clone)]
 pub(crate) struct ContainerTMImpl<G> {
     /// De onde sai a identidade de um contêiner novo.
     id_generator: G,

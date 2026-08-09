@@ -1,20 +1,14 @@
-//! O contrato de quem lê um corpo, sem saber que mensagem é.
+//! O contrato de quem lê um corpo de requisição.
 
 use crate::error::api_error::ApiError;
-use crate::wire::factory::request_factory::RequestFactory;
+use crate::wire::x::request_x::RequestX;
 
-/// Lê um corpo no formato desta strategy.
+/// Lê um VO de requisição de um formato.
 ///
-/// **Não é object-safe, e isso é o desenho.** O `decode` é genérico sobre a
-/// factory, então a trait não vira `dyn` — o que mantém o caminho de requisição
-/// inteiramente estático, monomorfizado por rota. Quem escolhe a strategy é um
-/// `match` sobre o [`MediaType`](crate::wire::media_type::MediaType), não uma
-/// vTable.
-///
-/// A assimetria com a [`EncodeStrategy`](super::encode_strategy::EncodeStrategy)
-/// é proposital: só a saída precisa ser carregada por valor até o fim da
-/// requisição, e por isso só ela paga um `Arc<dyn>`.
+/// Genérica sobre o VO pela mesma razão da
+/// [`EncodeStrategy`](super::encode_strategy::EncodeStrategy), e com a mesma
+/// consequência: quem chama não descobre qual formato a strategy lê.
 pub(crate) trait DecodeStrategy {
-    /// Lê a mensagem que a factory descreve.
-    fn decode<F: RequestFactory>(&self, bytes: &[u8]) -> Result<F::Message, ApiError>;
+    /// Desserializa o VO.
+    fn decode<X: RequestX>(&self, bytes: &[u8]) -> Result<X, ApiError>;
 }

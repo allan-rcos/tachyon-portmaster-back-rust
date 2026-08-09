@@ -26,6 +26,7 @@ use portmaster_infra::query::{QueryFactory, QueryRepository};
 use portmaster_infra::repository::{RoleRepository, UserRepository};
 
 /// A implementação, genérica sobre os ports que consome.
+#[derive(Clone)]
 pub(crate) struct UserUseCaseImpl<UR, RR, T, Q, F, C, U> {
     /// Persistência de usuários.
     users: UR,
@@ -107,7 +108,7 @@ where
                 self.roles
                     .find_by_id(id)
                     .await?
-                    .ok_or_else(|| AppError::not_found("papel", id))?,
+                    .ok_or_else(|| AppError::missing("papel", id))?,
             );
         }
 
@@ -138,7 +139,7 @@ where
 
         let user = Transaction::run(&self.unit_of_work, async {
             if self.users.find_by_email(&command.email).await?.is_some() {
-                return Err(AppError::Conflict(
+                return Err(AppError::RuleViolation(
                     "A user with this e-mail already exists.".into(),
                 ));
             }
@@ -173,7 +174,7 @@ where
                 .users
                 .find_by_id(&command.id)
                 .await?
-                .ok_or_else(|| AppError::not_found("usuário", &command.id))?;
+                .ok_or_else(|| AppError::missing("usuário", &command.id))?;
 
             let updated = self
                 .user_tm
@@ -201,7 +202,7 @@ where
                 .users
                 .find_by_id(&command.id)
                 .await?
-                .ok_or_else(|| AppError::not_found("usuário", &command.id))?;
+                .ok_or_else(|| AppError::missing("usuário", &command.id))?;
 
             let roles = self.resolve_roles(&command.role_ids).await?;
             let role_ids: Vec<String> = roles.iter().map(|role| role.id().to_owned()).collect();
@@ -233,7 +234,7 @@ where
                 .users
                 .find_by_id(&command.id)
                 .await?
-                .ok_or_else(|| AppError::not_found("usuário", &command.id))?;
+                .ok_or_else(|| AppError::missing("usuário", &command.id))?;
 
             let updated = self
                 .user_tm
@@ -255,7 +256,7 @@ where
             self.users
                 .find_by_id(&command.id)
                 .await?
-                .ok_or_else(|| AppError::not_found("usuário", &command.id))?;
+                .ok_or_else(|| AppError::missing("usuário", &command.id))?;
 
             self.users.delete(&command.id).await?;
 
@@ -282,7 +283,7 @@ where
                 self.queries
                     .run(dql)
                     .await?
-                    .ok_or_else(|| AppError::not_found("usuário", &query.id))
+                    .ok_or_else(|| AppError::missing("usuário", &query.id))
             })
             .await
         })

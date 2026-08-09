@@ -26,6 +26,7 @@ use portmaster_infra::query::{QueryFactory, QueryRepository};
 use portmaster_infra::repository::ContainerRepository;
 
 /// A implementação, genérica sobre os ports que consome.
+#[derive(Clone)]
 pub(crate) struct ContainerUseCaseImpl<R, T, Q, F, C, U> {
     /// Persistência de contêineres.
     containers: R,
@@ -105,7 +106,7 @@ where
                 .containers
                 .find_by_id(id)
                 .await?
-                .ok_or_else(|| AppError::not_found("contêiner", id))?;
+                .ok_or_else(|| AppError::missing("contêiner", id))?;
 
             let moved = apply(&self.container_tm, existing.as_ref())?;
 
@@ -161,7 +162,7 @@ where
                 .containers
                 .find_by_id(&command.id)
                 .await?
-                .ok_or_else(|| AppError::not_found("contêiner", &command.id))?;
+                .ok_or_else(|| AppError::missing("contêiner", &command.id))?;
 
             let updated = self
                 .container_tm
@@ -185,7 +186,7 @@ where
             self.containers
                 .find_by_id(&command.id)
                 .await?
-                .ok_or_else(|| AppError::not_found("contêiner", &command.id))?;
+                .ok_or_else(|| AppError::missing("contêiner", &command.id))?;
 
             self.containers.delete(&command.id).await?;
 
@@ -222,7 +223,7 @@ where
                 self.queries
                     .run(dql)
                     .await?
-                    .ok_or_else(|| AppError::not_found("contêiner", &query.id))
+                    .ok_or_else(|| AppError::missing("contêiner", &query.id))
             })
             .await
         })

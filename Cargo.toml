@@ -42,6 +42,10 @@ trait-variant = "0.1"
 # --- wire -------------------------------------------------------------------
 # planus compila os .fbs em Rust puro: nada de flatc, no build ou em produção.
 planus = "1"
+
+# Cookies tipados: construção com SameSite/Max-Age e o parser de Cookie:.
+# Escrever isso à mão custou um parser próprio e cookies como String solta.
+cookie = "0.18"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 

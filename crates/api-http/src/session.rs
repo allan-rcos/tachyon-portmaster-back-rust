@@ -19,6 +19,7 @@
 use std::future::Future;
 
 use portmaster_app::context::UserContext;
+use portmaster_app::{Logger as _, SystemLogger};
 
 use crate::error::api_error::ApiError;
 
@@ -76,8 +77,8 @@ impl Session {
             Ok(true) => Ok(()),
             Ok(false) => Err(ApiError::unauthenticated()),
             Err(_) => {
-                tracing::error!(
-                    "o middleware de token não executou: a ordem dos layers do router está errada"
+                SystemLogger::get().error(
+                    "o middleware de token não executou: a ordem dos layers do router está errada",
                 );
 
                 Err(ApiError::new(

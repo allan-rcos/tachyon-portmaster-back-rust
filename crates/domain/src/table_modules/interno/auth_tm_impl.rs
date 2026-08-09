@@ -6,6 +6,7 @@ use crate::security::PasswordHasher;
 use crate::table_modules::AuthTM;
 
 /// A implementação, genérica sobre o hasher.
+#[derive(Clone)]
 pub(crate) struct AuthTMImpl<H> {
     /// Quem confere a senha apresentada contra o hash gravado.
     password_hasher: H,

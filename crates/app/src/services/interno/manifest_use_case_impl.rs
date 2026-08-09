@@ -16,6 +16,7 @@ use portmaster_infra::database::UnitOfWork;
 use portmaster_infra::repository::{ContainerRepository, ManifestRepository, ProductRepository};
 
 /// A implementação, genérica sobre os ports que consome.
+#[derive(Clone)]
 pub(crate) struct ManifestUseCaseImpl<CR, PR, MR, T, C, U> {
     /// Persistência de contêineres.
     containers: CR,
@@ -94,13 +95,13 @@ where
                 .containers
                 .find_by_id(&command.container_id)
                 .await?
-                .ok_or_else(|| AppError::not_found("contêiner", &command.container_id))?;
+                .ok_or_else(|| AppError::missing("contêiner", &command.container_id))?;
 
             let product = self
                 .products
                 .find_by_id(&command.product_id)
                 .await?
-                .ok_or_else(|| AppError::not_found("produto", &command.product_id))?;
+                .ok_or_else(|| AppError::missing("produto", &command.product_id))?;
 
             let current = self
                 .manifest

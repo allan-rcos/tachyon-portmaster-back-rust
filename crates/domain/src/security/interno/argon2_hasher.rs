@@ -10,6 +10,7 @@ use argon2::{Argon2, PasswordVerifier};
 use crate::security::PasswordHasher;
 
 /// Hasher de senha para armazenamento.
+#[derive(Clone)]
 pub struct Argon2Hasher {
     /// O Argon2 já configurado; construí-lo por chamada desperdiçaria o parse dos parâmetros.
     argon: Argon2<'static>,

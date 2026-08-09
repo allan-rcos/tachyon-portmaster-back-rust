@@ -46,6 +46,7 @@ const LINK_ROLE: &str = "INSERT INTO `user_roles` (user_id, role_id) VALUES (?, 
 /// Genérico sobre o repositório de papéis porque um usuário não está completo
 /// sem eles: os papéis decidem o que ele pode fazer, e devolvê-lo sem papéis
 /// faria toda verificação de autorização falhar em silêncio.
+#[derive(Clone)]
 pub struct UserMariadbRepository<R> {
     /// De onde os papéis do usuário são lidos, na mesma leitura.
     roles: R,

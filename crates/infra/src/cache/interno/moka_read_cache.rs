@@ -6,6 +6,7 @@ use crate::cache::interno::read_cache_store::ReadCacheStore;
 use crate::cache::ReadCache;
 
 /// A implementação sobre Moka.
+#[derive(Clone)]
 pub(crate) struct MokaReadCache {
     /// As entradas de leitura, chaveadas por prefixo e argumento.
     store: ReadCacheStore,

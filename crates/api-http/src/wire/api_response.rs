@@ -1,176 +1,87 @@
-//! A resposta de um handler, antes de virar bytes.
+//! A resposta de um controller, já negociada.
 
-use axum::http::{header, StatusCode};
+use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use cookie::Cookie;
 
-use crate::wire::factory::renderable::Renderable;
-use crate::wire::wire::Wire;
+use crate::error::api_error::ApiError;
+use crate::wire::encoder::Encoder;
+use crate::wire::x::response_x::ResponseX;
 
-/// Uma resposta pronta para ser escrita no formato negociado.
+/// O que um controller produziu, pronto para virar resposta.
 ///
-/// Carrega status, corpo e cookies juntos porque as três coisas saem juntas —
-/// separá-las obrigaria cada handler a montar uma `Response` à mão.
+/// Genérica sobre o VO. Não há `Box<dyn>` aqui, e não há como haver: o corpo é
+/// um tipo concreto que a rota conhece em tempo de compilação, e o
+/// [`Encoder`] é monomorfizado junto com ele.
 ///
-/// O corpo é `Box<dyn Renderable>` e não um genérico: um handler com dois
-/// caminhos de retorno devolve tabelas diferentes, e generificar `ApiResponse`
-/// obrigaria cada um a virar um `enum`. É o segundo e último ponto dinâmico do
-/// wire — o primeiro é a strategy dentro do [`Wire`].
-pub(crate) struct ApiResponse {
-    /// O formato negociado desta requisição.
-    wire: Wire,
-    /// O status HTTP da resposta.
+/// ## Por que ela carrega um `Result`
+///
+/// Porque o erro precisa sair pelo mesmo encoder que o acerto. Se o sucesso
+/// passasse por aqui e a falha por outro caminho, existiriam dois lugares
+/// escrevendo corpo — e um deles acabaria escrevendo num formato que o cliente
+/// não pediu. Envolvendo o `Result`, negociar é uma coisa só que acontece uma
+/// vez, no [`IntoResponse`] abaixo.
+pub(crate) struct ApiResponse<X: ResponseX> {
+    /// Como escrever o corpo.
+    encoder: Encoder,
+    /// O status do acerto — o da falha vem do próprio erro.
     status: StatusCode,
-    /// O corpo já pronto para ser escrito, com o tipo apagado.
-    body: Box<dyn Renderable>,
-    /// Os `Set-Cookie` a acrescentar na resposta, um cabeçalho por entrada.
-    cookies: Vec<String>,
+    /// O que responder, ou por que não dá.
+    body: Result<X, ApiError>,
+    /// Os `Set-Cookie` a acrescentar, um cabeçalho por entrada.
+    cookies: Vec<Cookie<'static>>,
 }
 
-impl ApiResponse {
-    /// Uma resposta `200` com corpo.
-    pub(crate) fn ok(wire: Wire, body: impl Renderable + 'static) -> Self {
-        Self::with_status(wire, StatusCode::OK, body)
+impl<X: ResponseX> ApiResponse<X> {
+    /// Um `200` com o que o controller devolveu.
+    pub(crate) const fn ok(encoder: Encoder, body: Result<X, ApiError>) -> Self {
+        Self::with_status(encoder, StatusCode::OK, body)
     }
 
-    /// Uma resposta `201` com corpo.
-    pub(crate) fn created(wire: Wire, body: impl Renderable + 'static) -> Self {
-        Self::with_status(wire, StatusCode::CREATED, body)
+    /// Um `201` para o recurso recém-criado.
+    pub(crate) const fn created(encoder: Encoder, body: Result<X, ApiError>) -> Self {
+        Self::with_status(encoder, StatusCode::CREATED, body)
     }
 
-    /// Uma resposta com corpo e status escolhido.
-    pub(crate) fn with_status(
-        wire: Wire,
+    /// A resposta com um status escolhido.
+    pub(crate) const fn with_status(
+        encoder: Encoder,
         status: StatusCode,
-        body: impl Renderable + 'static,
+        body: Result<X, ApiError>,
     ) -> Self {
         Self {
-            wire,
+            encoder,
             status,
-            body: Box::new(body),
+            body,
             cookies: Vec::new(),
         }
     }
 
-    /// Acrescenta um `Set-Cookie`.
+    /// Acrescenta um `Set-Cookie` à resposta.
     #[must_use]
-    pub(crate) fn with_cookie(mut self, cookie: String) -> Self {
+    pub(crate) fn with_cookie(mut self, cookie: Cookie<'static>) -> Self {
         self.cookies.push(cookie);
         self
     }
 }
 
-impl IntoResponse for ApiResponse {
-    /// Escreve o corpo no formato negociado, e os cookies.
+impl<X: ResponseX> IntoResponse for ApiResponse<X> {
+    /// Codifica o corpo — ou o problema — e carimba os cookies.
     ///
-    /// Falhar ao escrever a **própria** resposta é defeito nosso, não do
-    /// cliente. O 502 que o `ApiError::unrenderable` produz distingue isso do
-    /// 500 que o middleware `Recover` devolve quando algo entrou em pânico — e a
-    /// diferença importa para quem lê o painel.
+    /// Os cookies do erro entram junto com os da resposta: uma recusa às vezes
+    /// **precisa** mexer na sessão, e um refresh token morto tem que sair do
+    /// navegador junto com o 401.
     fn into_response(self) -> Response {
-        let encode = self.wire.encode();
+        let mut cookies = self.cookies;
 
-        let mut response = match encode.encode(self.body.as_ref()) {
-            Ok(bytes) => (
-                self.status,
-                [(header::CONTENT_TYPE, encode.content_type())],
-                bytes,
-            )
-                .into_response(),
-            Err(error) => error.into_response(),
-        };
+        match self.body {
+            Ok(body) => self.encoder.respond(self.status, &body, cookies),
+            Err(error) => {
+                let (status, problem, from_error) = error.into_parts();
+                cookies.extend(from_error);
 
-        for cookie in self.cookies {
-            if let Ok(value) = cookie.parse() {
-                response.headers_mut().append(header::SET_COOKIE, value);
+                self.encoder.respond(status, &problem, cookies)
             }
         }
-
-        response
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::error::api_error::ApiError;
-    use crate::wire::factory::response_factory::ResponseFactory;
-    use crate::wire::media_type::MediaType;
-    use crate::wire::strategy::encode_strategy::EncodeStrategy as _;
-    use crate::wire::strategy::flatbuffers_encode_strategy::FlatBuffersEncodeStrategy;
-    use crate::wire::strategy::json_encode_strategy::JsonEncodeStrategy;
-    use crate::wire::tables as fbs;
-    use pretty_assertions::assert_eq;
-    use std::sync::Arc;
-
-    /// Uma factory qualquer: o que se testa aqui é o envelope, não a mensagem.
-    struct ProductFactory;
-
-    impl ResponseFactory for ProductFactory {
-        type Table = fbs::product::ProductResponse;
-
-        fn table(&self) -> Result<Self::Table, ApiError> {
-            Ok(fbs::product::ProductResponse {
-                id: Some("aZ3".into()),
-                name: Some("Cimento".into()),
-                density: 1.44,
-                risk_class: fbs::common::RiskClass::None,
-            })
-        }
-    }
-
-    fn json() -> Wire {
-        Wire::new(MediaType::Json, Arc::new(JsonEncodeStrategy))
-    }
-
-    fn flatbuffers() -> Wire {
-        Wire::new(MediaType::FlatBuffers, Arc::new(FlatBuffersEncodeStrategy))
-    }
-
-    /// O `Content-Type` que sai é o da strategy que escreveu os bytes, e não
-    /// uma segunda decisão tomada aqui — é o que garante que os dois nunca
-    /// divirjam.
-    #[test]
-    fn a_resposta_anuncia_o_formato_em_que_saiu() {
-        let text = ApiResponse::ok(json(), ProductFactory).into_response();
-        let binary = ApiResponse::ok(flatbuffers(), ProductFactory).into_response();
-
-        assert_eq!(
-            text.headers()
-                .get(header::CONTENT_TYPE)
-                .and_then(|value| value.to_str().ok()),
-            Some(JsonEncodeStrategy.content_type())
-        );
-        assert_eq!(
-            binary
-                .headers()
-                .get(header::CONTENT_TYPE)
-                .and_then(|value| value.to_str().ok()),
-            Some(FlatBuffersEncodeStrategy.content_type())
-        );
-    }
-
-    #[test]
-    fn a_criacao_responde_201() {
-        let response = ApiResponse::created(json(), ProductFactory).into_response();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-    }
-
-    #[test]
-    fn os_cookies_saem_em_cabecalhos_separados() {
-        // Dois `Set-Cookie` num cabeçalho só não são lidos por navegador nenhum.
-        let response = ApiResponse::ok(json(), ProductFactory)
-            .with_cookie("auth_token=a; Path=/".into())
-            .with_cookie("refresh_token=b; Path=/".into())
-            .into_response();
-
-        assert_eq!(
-            response
-                .headers()
-                .get_all(header::SET_COOKIE)
-                .iter()
-                .count(),
-            2
-        );
     }
 }

@@ -1,8 +1,10 @@
-//! O que a sessão carrega no fio.
+//! O token de sessão — assunto exclusivo desta camada.
 //!
-//! Dois artefatos com naturezas opostas: o access token é auto-contido e
-//! assinado, e o refresh é opaco e revogável. Ficam separados porque a única
-//! coisa que compartilham é o nome.
+//! O access token e o refresh são coisas diferentes: um é assinado e carrega o
+//! principal, o outro é opaco e só serve para pedir um access novo. Cada um tem
+//! o seu arquivo.
 
-pub mod refresh_token;
-pub mod token_service;
+pub(crate) mod refresh_token;
+pub(crate) mod token_service;
+
+pub(crate) mod interno;

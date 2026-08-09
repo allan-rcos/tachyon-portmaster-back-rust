@@ -19,6 +19,7 @@ use portmaster_infra::query::{QueryFactory, QueryRepository};
 use portmaster_infra::repository::UserRepository;
 
 /// A implementação, genérica sobre os ports que consome.
+#[derive(Clone)]
 pub(crate) struct AccountUseCaseImpl<R, T, A, Q, F, C, U> {
     /// Persistência de usuários.
     users: R,
@@ -71,7 +72,7 @@ where
 {
     /// O perfil de quem está na sessão.
     ///
-    /// Responde `Unauthenticated` se a conta não existe mais: ela some entre a
+    /// Responde `InvalidCredentials` se a conta não existe mais: ela some entre a
     /// emissão do token e o pedido quando o usuário foi removido — o token
     /// continua assinado e válido, mas já não descreve ninguém.
     async fn get(&self, query: GetAccountQuery) -> Result<AccountView, AppError> {
@@ -84,7 +85,7 @@ where
                 self.queries
                     .run(dql)
                     .await?
-                    .ok_or(AppError::Unauthenticated)
+                    .ok_or(AppError::InvalidCredentials)
             })
             .await
         })
@@ -97,7 +98,7 @@ where
                 .users
                 .find_by_id(&command.context.id)
                 .await?
-                .ok_or(AppError::Unauthenticated)?;
+                .ok_or(AppError::InvalidCredentials)?;
 
             let updated = self
                 .user_tm
@@ -124,7 +125,7 @@ where
                 .users
                 .find_by_id(&command.context.id)
                 .await?
-                .ok_or(AppError::Unauthenticated)?;
+                .ok_or(AppError::InvalidCredentials)?;
 
             self.auth_tm
                 .login(existing.as_ref(), &command.current_password)?;

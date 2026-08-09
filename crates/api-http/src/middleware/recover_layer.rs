@@ -6,7 +6,7 @@ use super::recover::Recover;
 
 /// Aplica o [`Recover`].
 #[derive(Clone, Copy, Default)]
-pub struct RecoverLayer;
+pub(crate) struct RecoverLayer;
 
 impl RecoverLayer {
     /// Monta o layer.

@@ -16,6 +16,7 @@ use crate::security::IndexHasher;
 const SEED: u64 = 0;
 
 /// Digest de lookup para marcadores.
+#[derive(Clone)]
 pub struct XxIndexHasher;
 
 impl XxIndexHasher {

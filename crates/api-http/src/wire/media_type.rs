@@ -49,7 +49,10 @@ impl MediaType {
     }
 
     /// O valor de `Content-Type` a devolver.
-    pub(crate) const fn header_value(self) -> &'static str {
+    ///
+    /// `pub(super)`: só o [`Encoder`](crate::wire::encoder::Encoder) carimba
+    /// cabeçalho, e é ele quem sabe o que escolheu.
+    pub(super) const fn header_value(self) -> &'static str {
         match self {
             Self::Json => JSON,
             Self::FlatBuffers => FLATBUFFERS,

@@ -111,12 +111,12 @@ mod tests {
         let uow = SpyUnitOfWork::default();
 
         let error = Transaction::run(&uow, async {
-            Err::<(), _>(AppError::Conflict("não deu".into()))
+            Err::<(), _>(AppError::RuleViolation("não deu".into()))
         })
         .await
         .expect_err("o corpo falhou");
 
-        assert!(matches!(error, AppError::Conflict(_)));
+        assert!(matches!(error, AppError::RuleViolation(_)));
         assert_eq!(uow.rolled_back.load(Ordering::SeqCst), 1);
         assert_eq!(
             uow.committed.load(Ordering::SeqCst),
@@ -132,12 +132,12 @@ mod tests {
         let uow = SpyUnitOfWork::default();
 
         let error = Transaction::run(&uow, async {
-            Err::<(), _>(AppError::not_found("produto", "abc"))
+            Err::<(), _>(AppError::missing("produto", "abc"))
         })
         .await
         .expect_err("o corpo falhou");
 
-        assert!(matches!(error, AppError::NotFound { id, .. } if id == "abc"));
+        assert!(matches!(error, AppError::Missing { id, .. } if id == "abc"));
     }
 
     /// Sem o escopo aberto, os repositórios não encontrariam a transação

@@ -14,6 +14,7 @@ use crate::repository::{MarkerGroupRepository, MarkerRepository};
 /// antes de gravar: sem isso, um erro de digitação no slug criaria um espaço de
 /// nomes paralelo em silêncio, e nada do que fosse marcado nele seria encontrado
 /// depois.
+#[derive(Clone)]
 pub struct MokaMarkerRepository<G> {
     /// Os marcadores, com o TTL que os expira sozinhos.
     cache: MarkerCache,

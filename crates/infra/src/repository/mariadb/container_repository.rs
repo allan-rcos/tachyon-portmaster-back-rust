@@ -32,6 +32,7 @@ const SOFT_DELETE: &str =
     "UPDATE `containers` SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL";
 
 /// O repositório de contêineres.
+#[derive(Clone)]
 pub struct ContainerMariadbRepository;
 
 impl ContainerMariadbRepository {

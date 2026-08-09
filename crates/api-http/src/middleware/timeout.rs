@@ -5,13 +5,17 @@ use std::time::Duration;
 
 use axum::extract::Request;
 use axum::http::StatusCode;
-use axum::response::{IntoResponse, Response};
+use axum::response::Response;
 use futures::future::BoxFuture;
+use portmaster_app::{Logger as _, SystemLogger};
 use tower::Service;
+
+use crate::error::api_error::ApiError;
+use crate::wire::encoder::Encoder;
 
 /// O serviço que desiste depois do prazo.
 #[derive(Clone)]
-pub struct Timeout<S> {
+pub(crate) struct Timeout<S> {
     /// O serviço interno, que este envolve.
     pub(super) inner: S,
     /// Teto de tempo ou de tamanho, conforme o tipo.
@@ -35,6 +39,7 @@ where
         let clone = self.inner.clone();
         let mut inner = std::mem::replace(&mut self.inner, clone);
         let limit = self.limit;
+        let encoder = Encoder::of_headers(request.headers());
 
         Box::pin(async move {
             tokio::select! {
@@ -43,9 +48,17 @@ where
                 response = inner.call(request) => response,
 
                 () = tokio::time::sleep(limit) => {
-                    tracing::warn!(?limit, "requisição excedeu o teto de tempo");
+                    SystemLogger::get()
+                        .with_field("limit_ms", limit.as_millis().to_string())
+                        .warn("requisição excedeu o teto de tempo");
 
-                    Ok(StatusCode::GATEWAY_TIMEOUT.into_response())
+                    let (status, problem, cookies) = ApiError::new(
+                        StatusCode::GATEWAY_TIMEOUT,
+                        "The request took too long to complete.",
+                    )
+                    .into_parts();
+
+                    Ok(encoder.respond(status, &problem, cookies))
                 }
             }
         })
@@ -56,6 +69,7 @@ where
 mod tests {
     use super::super::timeout_layer::TimeoutLayer;
     use super::*;
+    use axum::response::IntoResponse as _;
     use tower::{ServiceBuilder, ServiceExt};
 
     #[tokio::test]

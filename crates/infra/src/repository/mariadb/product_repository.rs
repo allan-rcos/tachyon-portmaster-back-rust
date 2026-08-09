@@ -32,6 +32,7 @@ const SOFT_DELETE: &str =
     "UPDATE `products` SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL";
 
 /// O repositório de produtos.
+#[derive(Clone)]
 pub struct ProductMariadbRepository;
 
 impl ProductMariadbRepository {

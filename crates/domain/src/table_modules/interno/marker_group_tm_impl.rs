@@ -7,6 +7,7 @@ use crate::table_modules::interno::slug::Slug;
 use crate::table_modules::MarkerGroupTM;
 
 /// A implementação.
+#[derive(Clone)]
 pub(crate) struct MarkerGroupTMImpl;
 
 impl MarkerGroupTMImpl {

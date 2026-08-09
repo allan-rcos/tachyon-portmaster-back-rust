@@ -8,7 +8,7 @@ use super::timeout::Timeout;
 
 /// Aplica o [`Timeout`].
 #[derive(Clone, Copy)]
-pub struct TimeoutLayer {
+pub(crate) struct TimeoutLayer {
     /// Teto de tempo ou de tamanho, conforme o tipo.
     limit: Duration,
 }

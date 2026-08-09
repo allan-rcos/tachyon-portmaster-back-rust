@@ -10,6 +10,7 @@ use crate::query::{QueryRepository, SqlDql};
 ///
 /// Sem estado: a transação vem do escopo da requisição, o que permite ao
 /// provider reconstruí-la a cada chamada por custo nenhum.
+#[derive(Clone)]
 pub(crate) struct MariadbQueryRepository;
 
 impl MariadbQueryRepository {

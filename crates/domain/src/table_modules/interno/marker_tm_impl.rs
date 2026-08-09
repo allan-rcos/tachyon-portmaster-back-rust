@@ -8,6 +8,7 @@ use crate::table_modules::interno::slug::Slug;
 use crate::table_modules::MarkerTM;
 
 /// A implementação, genérica sobre o hasher de indexação.
+#[derive(Clone)]
 pub(crate) struct MarkerTMImpl<H> {
     /// Quem transforma a chave do marcador em índice — rápido de propósito.
     hasher: H,

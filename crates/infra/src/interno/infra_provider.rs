@@ -15,6 +15,8 @@ use crate::cache::interno::moka_read_cache::MokaReadCache;
 use crate::cache::interno::permission_cache::PermissionCache;
 use crate::cache::interno::read_cache_store::ReadCacheStore;
 use crate::cache::ReadCache;
+use crate::clock::interno::utc_clock::UtcClock;
+use crate::clock::Clock;
 use crate::config::cache_limits::CacheLimits;
 use crate::database::interno::mariadb_unit_of_work::MariadbUnitOfWork;
 use crate::database::UnitOfWork;
@@ -85,63 +87,67 @@ impl InfraProviderImpl {
 }
 
 impl InfraProvider for InfraProviderImpl {
-    fn unit_of_work(&self) -> impl UnitOfWork {
+    fn unit_of_work(&self) -> impl UnitOfWork + Clone + use<> + 'static {
         MariadbUnitOfWork::new(self.pool.clone())
     }
 
-    fn user_repository(&self) -> impl UserRepository {
+    fn user_repository(&self) -> impl UserRepository + Clone + use<> + 'static {
         UserMariadbRepository::new(self.role_repository())
     }
 
-    fn role_repository(&self) -> impl RoleRepository {
+    fn role_repository(&self) -> impl RoleRepository + Clone + use<> + 'static {
         RoleMariadbRepository::new()
     }
 
-    fn product_repository(&self) -> impl ProductRepository {
+    fn product_repository(&self) -> impl ProductRepository + Clone + use<> + 'static {
         ProductMariadbRepository::new()
     }
 
-    fn container_repository(&self) -> impl ContainerRepository {
+    fn container_repository(&self) -> impl ContainerRepository + Clone + use<> + 'static {
         ContainerMariadbRepository::new()
     }
 
-    fn manifest_repository(&self) -> impl ManifestRepository {
+    fn manifest_repository(&self) -> impl ManifestRepository + Clone + use<> + 'static {
         ManifestMariadbRepository::new()
     }
 
-    fn permission_repository(&self) -> impl PermissionRepository {
+    fn permission_repository(&self) -> impl PermissionRepository + Clone + use<> + 'static {
         MokaPermissionRepository::new(self.permission_cache.clone())
     }
 
-    fn marker_group_repository(&self) -> impl MarkerGroupRepository {
+    fn marker_group_repository(&self) -> impl MarkerGroupRepository + Clone + use<> + 'static {
         MokaMarkerGroupRepository::new(self.marker_group_cache.clone())
     }
 
-    fn marker_repository(&self) -> impl MarkerRepository {
+    fn marker_repository(&self) -> impl MarkerRepository + Clone + use<> + 'static {
         MokaMarkerRepository::new(self.marker_cache.clone(), self.marker_group_repository())
     }
 
-    fn query_repository(&self) -> impl QueryRepository {
+    fn query_repository(&self) -> impl QueryRepository + Clone + use<> + 'static {
         MariadbQueryRepository::new()
     }
 
-    fn query_factory(&self) -> impl QueryFactory {
+    fn query_factory(&self) -> impl QueryFactory + Clone + use<> + 'static {
         MariadbQueryFactory::new()
     }
 
-    fn read_cache(&self) -> impl ReadCache {
+    fn read_cache(&self) -> impl ReadCache + Clone + use<> + 'static {
         MokaReadCache::new(self.read_cache.clone())
     }
 
-    fn random_id_generator(&self) -> impl RandomIdGenerator {
+    fn random_id_generator(&self) -> impl RandomIdGenerator + use<> + 'static {
         NanoIdGenerator::new()
     }
 
-    fn sortable_id_generator(&self) -> impl SortableIdGenerator {
+    fn sortable_id_generator(&self) -> impl SortableIdGenerator + use<> + 'static {
         XidGenerator::new()
     }
 
-    fn logger_factory(&self) -> impl LoggerFactory {
+    fn clock(&self) -> impl Clock + use<> + 'static {
+        UtcClock::new()
+    }
+
+    fn logger_factory(&self) -> impl LoggerFactory + use<> + 'static {
         TracingLoggerFactory::new()
     }
 }

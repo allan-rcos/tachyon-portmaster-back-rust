@@ -1,6 +1,7 @@
 //! A implementação do provider da aplicação.
 
 use portmaster_domain::DomainProvider;
+use portmaster_infra::clock::Clock;
 use portmaster_infra::id::{RandomIdGenerator, SortableIdGenerator};
 use portmaster_infra::logging::LoggerFactory;
 use portmaster_infra::InfraProvider;
@@ -40,7 +41,7 @@ impl<D, I> AppProviderImpl<D, I> {
 }
 
 impl<D: DomainProvider, I: InfraProvider> AppProvider for AppProviderImpl<D, I> {
-    fn account_use_case(&self) -> impl AccountUseCase {
+    fn account_use_case(&self) -> impl AccountUseCase + Clone + use<D, I> + 'static {
         AccountUseCaseImpl::new(
             self.infra.user_repository(),
             self.domain.user_table_module(),
@@ -52,7 +53,7 @@ impl<D: DomainProvider, I: InfraProvider> AppProvider for AppProviderImpl<D, I> 
         )
     }
 
-    fn container_use_case(&self) -> impl ContainerUseCase {
+    fn container_use_case(&self) -> impl ContainerUseCase + Clone + use<D, I> + 'static {
         ContainerUseCaseImpl::new(
             self.infra.container_repository(),
             self.domain.container_table_module(),
@@ -63,7 +64,7 @@ impl<D: DomainProvider, I: InfraProvider> AppProvider for AppProviderImpl<D, I> 
         )
     }
 
-    fn manifest_use_case(&self) -> impl ManifestUseCase {
+    fn manifest_use_case(&self) -> impl ManifestUseCase + Clone + use<D, I> + 'static {
         ManifestUseCaseImpl::new(
             self.infra.container_repository(),
             self.infra.product_repository(),
@@ -74,18 +75,18 @@ impl<D: DomainProvider, I: InfraProvider> AppProvider for AppProviderImpl<D, I> 
         )
     }
 
-    fn mark_use_case(&self) -> impl MarkUseCase {
+    fn mark_use_case(&self) -> impl MarkUseCase + Clone + use<D, I> + 'static {
         MarkUseCaseImpl::new(
             self.domain.marker_table_module(),
             self.infra.marker_repository(),
         )
     }
 
-    fn metadata_use_case(&self) -> impl MetadataUseCase {
+    fn metadata_use_case(&self) -> impl MetadataUseCase + Clone + use<D, I> + 'static {
         MetadataUseCaseImpl::new(self.infra.permission_repository())
     }
 
-    fn metrics_use_case(&self) -> impl MetricsUseCase {
+    fn metrics_use_case(&self) -> impl MetricsUseCase + Clone + use<D, I> + 'static {
         MetricsUseCaseImpl::new(
             self.infra.query_repository(),
             self.infra.query_factory(),
@@ -94,7 +95,7 @@ impl<D: DomainProvider, I: InfraProvider> AppProvider for AppProviderImpl<D, I> 
         )
     }
 
-    fn product_use_case(&self) -> impl ProductUseCase {
+    fn product_use_case(&self) -> impl ProductUseCase + Clone + use<D, I> + 'static {
         ProductUseCaseImpl::new(
             self.infra.product_repository(),
             self.domain.product_table_module(),
@@ -105,7 +106,7 @@ impl<D: DomainProvider, I: InfraProvider> AppProvider for AppProviderImpl<D, I> 
         )
     }
 
-    fn role_use_case(&self) -> impl RoleUseCase {
+    fn role_use_case(&self) -> impl RoleUseCase + Clone + use<D, I> + 'static {
         RoleUseCaseImpl::new(
             self.infra.role_repository(),
             self.domain.role_table_module(),
@@ -116,7 +117,7 @@ impl<D: DomainProvider, I: InfraProvider> AppProvider for AppProviderImpl<D, I> 
         )
     }
 
-    fn session_use_case(&self) -> impl SessionUseCase {
+    fn session_use_case(&self) -> impl SessionUseCase + Clone + use<D, I> + 'static {
         SessionUseCaseImpl::new(
             self.infra.user_repository(),
             self.infra.role_repository(),
@@ -128,7 +129,7 @@ impl<D: DomainProvider, I: InfraProvider> AppProvider for AppProviderImpl<D, I> 
         )
     }
 
-    fn user_use_case(&self) -> impl UserUseCase {
+    fn user_use_case(&self) -> impl UserUseCase + Clone + use<D, I> + 'static {
         UserUseCaseImpl::new(
             self.infra.user_repository(),
             self.infra.role_repository(),
@@ -140,15 +141,19 @@ impl<D: DomainProvider, I: InfraProvider> AppProvider for AppProviderImpl<D, I> 
         )
     }
 
-    fn logger_factory(&self) -> impl LoggerFactory {
+    fn logger_factory(&self) -> impl LoggerFactory + use<D, I> + 'static {
         self.infra.logger_factory()
     }
 
-    fn random_id_generator(&self) -> impl RandomIdGenerator {
+    fn random_id_generator(&self) -> impl RandomIdGenerator + use<D, I> + 'static {
         self.infra.random_id_generator()
     }
 
-    fn sortable_id_generator(&self) -> impl SortableIdGenerator {
+    fn sortable_id_generator(&self) -> impl SortableIdGenerator + use<D, I> + 'static {
         self.infra.sortable_id_generator()
+    }
+
+    fn clock(&self) -> impl Clock + use<D, I> + 'static {
+        self.infra.clock()
     }
 }

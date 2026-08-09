@@ -1,6 +1,7 @@
 //! A fábrica de loggers sobre o `tracing`.
 
-use crate::logging::{Logger, LoggerFactory};
+use crate::logging::interno::tracing_logger::TracingLogger;
+use crate::logging::LoggerFactory;
 
 /// A fábrica de loggers sobre `tracing`.
 #[derive(Debug, Clone, Default)]
@@ -14,7 +15,9 @@ impl TracingLoggerFactory {
 }
 
 impl LoggerFactory for TracingLoggerFactory {
-    fn create(&self, name: &str) -> Logger {
-        Logger::new(name)
+    type Instance = TracingLogger;
+
+    fn create(&self, name: &str) -> Self::Instance {
+        TracingLogger::new(name)
     }
 }
