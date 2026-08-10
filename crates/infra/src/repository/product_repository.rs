@@ -1,6 +1,6 @@
 //! O contrato de persistência de product.
 
-use portmaster_domain::models::Product;
+use portmaster_domain::domain::Product;
 
 /// Persistência de produtos.
 #[trait_variant::make(Send)]

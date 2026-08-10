@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-description = "Adaptadores de I/O do PortMaster: MariaDB, UnitOfWork, cache, logging."
+description = "Adaptadores de I/O do PortMaster: MariaDB, escopo da tarefa, cache, logging."
 
 # Depende só do domain, e só para mapear os traits de objeto nos seus entities.
 # Não conhece jsonwebtoken: JWT é assunto exclusivo do api-http.
@@ -13,16 +13,17 @@ portmaster-domain = { path = "../domain" }
 
 sqlx = { workspace = true }
 moka = { workspace = true }
+bincode = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 anyhow = { workspace = true }
 chrono = { workspace = true }
+unicode-normalization = { workspace = true }
 base62 = { workspace = true }
 base64 = { workspace = true }
-xid = { workspace = true }
-nanoid = { workspace = true }
 tokio = { workspace = true }
 trait-variant = { workspace = true }
+linkme = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 secrecy = { workspace = true }

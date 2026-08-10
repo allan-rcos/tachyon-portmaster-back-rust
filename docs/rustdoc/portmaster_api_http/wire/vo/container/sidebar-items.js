@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["cargo_manifest_item_x","container_create_x_request","container_list_x_response","container_summary_list_x_response","container_summary_x_response","container_update_x_request","container_x_response","telemetry_log_item_x"]};

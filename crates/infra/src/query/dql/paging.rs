@@ -1,16 +1,7 @@
-//! Os descritores de consulta.
-//!
-//! Um por leitura que a API oferece. Cada um carrega os próprios parâmetros,
-//! monta o próprio SQL e hidrata a própria View — o que deixa o
-//! [`QueryRepository`](crate::query::query_repository::QueryRepository) sem nada específico a saber.
-//!
-//! Todos são `pub(crate)`. O `app` os alcança pela
-//! [`QueryFactory`](crate::query::query_factory::QueryFactory), que devolve `impl SqlDql<View = …>`:
-//! executável, mas opaco. É o que mantém a montagem de consulta desta camada
-//! para dentro.
+//! As decisões que toda listagem repete.
 
 use crate::query::DEFAULT_LIMIT;
-use crate::text::search_key::SearchKey;
+use crate::search_key::SearchKey;
 
 /// As decisões de paginação e busca que todo DQL de listagem repete.
 ///
@@ -40,5 +31,18 @@ impl Paging {
     /// O termo como o `LIKE` o quer.
     pub fn like(term: &str) -> String {
         format!("%{term}%")
+    }
+
+    /// Quantas linhas pular. Página ausente ou zero é a primeira.
+    ///
+    /// O `page` vem da query string, então é um `u32` arbitrário que o cliente
+    /// escolhe. Multiplicá-lo pelo limite estoura o `u32` a partir de ~86
+    /// milhões de páginas — em release isso daria a volta e devolveria a página
+    /// errada em silêncio. Saturar é o comportamento certo: pedir uma página
+    /// além do fim é uma lista vazia, não um resultado sorteado.
+    pub fn offset(page: Option<u32>, limit: u32) -> u32 {
+        let page = page.filter(|value| *value > 0).unwrap_or(1);
+
+        page.saturating_sub(1).saturating_mul(limit)
     }
 }

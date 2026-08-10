@@ -1,10 +1,10 @@
 //! O VO de `MetricsResponse`.
 
+use crate::wire::convert::Convert;
 use crate::wire::dto::json::metrics::metrics_response_json::MetricsResponseJson;
 use crate::wire::tables as fbs;
 use crate::wire::vo::metrics::occupancy_division_x::OccupancyDivisionX;
 use crate::wire::x::response_x::ResponseX;
-use crate::wire::convert::Convert;
 use portmaster_app::views::MetricsView;
 
 /// O que a rota de `MetricsResponse` responde.

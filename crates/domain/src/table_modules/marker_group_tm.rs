@@ -1,7 +1,7 @@
 //! As regras de grupo de marcador.
 
+use crate::domain::MarkerGroup;
 use crate::error::MetadataError;
-use crate::models::MarkerGroup;
 
 /// Constrói grupos de marcador.
 pub trait MarkerGroupTM {

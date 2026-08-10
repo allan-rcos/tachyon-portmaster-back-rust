@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["container_list_params","list_params","summary_list_params","user_list_params"]};

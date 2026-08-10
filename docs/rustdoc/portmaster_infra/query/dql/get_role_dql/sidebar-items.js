@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["COLUMNS","USER_COUNT"],"struct":["GetRoleDql"]};

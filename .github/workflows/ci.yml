@@ -47,7 +47,7 @@ jobs:
       - name: Lint exports
         run: cargo run --package xtask --locked -- lint-exports --github
 
-      # --document-private-items because the `interno/` implementations are the
+      # --document-private-items because the `intern/` implementations are the
       # bulk of what is written here, and without the flag rustdoc renders the
       # contracts and silently drops the classes behind them — along with every
       # implementation note on them. -D warnings turns a broken `[`Item`]` link

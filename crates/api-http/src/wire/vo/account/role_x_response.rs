@@ -1,9 +1,9 @@
 //! O VO de `RoleResponse`.
 
+use crate::wire::convert::Convert;
 use crate::wire::dto::json::account::role_response_json::RoleResponseJson;
 use crate::wire::tables as fbs;
 use crate::wire::x::response_x::ResponseX;
-use crate::wire::convert::Convert;
 use portmaster_app::views::RoleViewItem;
 
 /// O que a rota de `RoleResponse` responde.

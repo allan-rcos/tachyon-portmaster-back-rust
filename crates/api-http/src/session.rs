@@ -79,6 +79,7 @@ impl Session {
             Err(_) => {
                 SystemLogger::get().error(
                     "o middleware de token não executou: a ordem dos layers do router está errada",
+                    [],
                 );
 
                 Err(ApiError::new(

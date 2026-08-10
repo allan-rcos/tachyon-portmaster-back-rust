@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["account","admin","auth","container","manifest","metadata","metrics","product","server"]};
+window.SIDEBAR_ITEMS = {"mod":["json"]};

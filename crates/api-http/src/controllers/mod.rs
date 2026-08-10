@@ -16,13 +16,13 @@
 //! ## Cada recurso são três arquivos
 //!
 //! O **trait** declara os handlers em termos de VOs — sem axum, sem status, sem
-//! negociação. A **impl** em `interno` é genérica sobre os casos de uso que o
+//! negociação. A **impl** em `intern` é genérica sobre os casos de uso que o
 //! `AppProvider` entrega, cujos tipos são innomeáveis. E o módulo de **rotas**
 //! liga os dois ao axum, guardando ali todo o encanamento de extractor que o
 //! router de cima não precisa ver.
 //!
 //! É a trait que torna os handlers chamáveis de um teste sem subir servidor, e é
-//! ela que o [`ApiProvider`](crate::provider::ApiProvider) devolve — por RPITIT,
+//! ela que o [`ApiProvider`](crate::bootstrap::provider::ApiProvider) devolve — por RPITIT,
 //! como todo o resto do grafo.
 
 pub(crate) mod params;
@@ -48,4 +48,4 @@ pub(crate) mod server_routes;
 pub(crate) mod user_controller;
 pub(crate) mod user_routes;
 
-pub(crate) mod interno;
+pub(crate) mod intern;

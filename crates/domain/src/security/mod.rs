@@ -16,7 +16,7 @@
 pub mod index_hasher;
 pub mod password_hasher;
 
-pub(crate) mod interno;
+pub(crate) mod intern;
 
 pub use index_hasher::IndexHasher;
 pub use password_hasher::PasswordHasher;

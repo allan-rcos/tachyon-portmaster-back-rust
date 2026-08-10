@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["container","manifest_cargo","manifest_change","marker","marker_group","permission","product","role","user"]};

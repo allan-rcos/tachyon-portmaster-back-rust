@@ -1,13 +1,12 @@
 //! Persistência de usuários sobre `MariaDB`.
 
 use anyhow::Context;
-use portmaster_domain::models::User;
+use portmaster_domain::domain::User;
 
-use crate::database::interno::mariadb_unit_of_work::MariadbUnitOfWork;
 use crate::entity::codec::Codec;
 use crate::entity::user_entity::UserEntity;
-use crate::entity::user_row::UserRow;
 use crate::repository::{RoleRepository, UserRepository};
+use crate::scope::database::mysql_transaction::MySqlTransaction;
 
 /// `LIMIT 1` e não `COUNT(*)`: a pergunta é "existe algum", e contar todos para
 /// descobrir isso varre a tabela inteira à toa.
@@ -47,15 +46,20 @@ const LINK_ROLE: &str = "INSERT INTO `user_roles` (user_id, role_id) VALUES (?, 
 /// sem eles: os papéis decidem o que ele pode fazer, e devolvê-lo sem papéis
 /// faria toda verificação de autorização falhar em silêncio.
 #[derive(Clone)]
-pub struct UserMariadbRepository<R> {
+pub struct UserMariadbRepository<R, T> {
     /// De onde os papéis do usuário são lidos, na mesma leitura.
     roles: R,
+    /// De onde a transação da tarefa vem.
+    transactions: T,
 }
 
-impl<R: RoleRepository> UserMariadbRepository<R> {
+impl<R: RoleRepository, T> UserMariadbRepository<R, T> {
     /// Monta o repositório sobre o de papéis.
-    pub(crate) const fn new(roles: R) -> Self {
-        Self { roles }
+    pub(crate) const fn new(roles: R, transactions: T) -> Self {
+        Self {
+            roles,
+            transactions,
+        }
     }
 
     /// Completa a entity buscando os papéis do usuário.
@@ -63,19 +67,20 @@ impl<R: RoleRepository> UserMariadbRepository<R> {
     /// A busca dos papéis acontece **depois** de soltar o empréstimo da
     /// transação: as duas consultas usam a mesma conexão, e segurá-la durante a
     /// segunda travaria a si mesma.
-    async fn hydrate(&self, row: UserRow) -> anyhow::Result<UserEntity> {
-        let id = Codec::encode_id(row.id);
-        let roles = self.roles.find_by_user_id(&id).await?;
-        Ok(UserEntity::from_row(row, roles))
+    async fn hydrate(&self, entity: UserEntity) -> anyhow::Result<UserEntity> {
+        let roles = self.roles.find_by_user_id(entity.id()).await?;
+        Ok(entity.with_roles(roles))
     }
 }
 
-impl<R: RoleRepository + Send + Sync> UserRepository for UserMariadbRepository<R> {
+impl<R: RoleRepository + Send + Sync, T: MySqlTransaction + Send + Sync> UserRepository
+    for UserMariadbRepository<R, T>
+{
     async fn has_any(&self) -> anyhow::Result<bool> {
-        let mut transaction = MariadbUnitOfWork::current().await?;
+        let mut transaction = self.transactions.transaction().await?;
 
         let found: Option<(i64,)> = sqlx::query_as(HAS_ANY)
-            .fetch_optional(&mut **transaction.as_mut())
+            .fetch_optional(&mut **transaction)
             .await
             .context("falha ao verificar se há algum usuário")?;
 
@@ -85,47 +90,47 @@ impl<R: RoleRepository + Send + Sync> UserRepository for UserMariadbRepository<R
     async fn find_by_id(&self, id: &str) -> anyhow::Result<Option<Box<dyn User>>> {
         let raw_id = Codec::decode_id(id)?;
 
-        let row: Option<UserRow> = {
-            let mut transaction = MariadbUnitOfWork::current().await?;
+        let entity: Option<UserEntity> = {
+            let mut transaction = self.transactions.transaction().await?;
             sqlx::query_as(FIND_BY_ID)
                 .bind(raw_id)
-                .fetch_optional(&mut **transaction.as_mut())
+                .fetch_optional(&mut **transaction)
                 .await
                 .with_context(|| format!("falha ao buscar o usuário {id}"))?
         };
 
-        match row {
-            Some(row) => Ok(Some(Box::new(self.hydrate(row).await?))),
+        match entity {
+            Some(entity) => Ok(Some(Box::new(self.hydrate(entity).await?))),
             None => Ok(None),
         }
     }
 
     async fn find_by_email(&self, email: &str) -> anyhow::Result<Option<Box<dyn User>>> {
-        let row: Option<UserRow> = {
-            let mut transaction = MariadbUnitOfWork::current().await?;
+        let entity: Option<UserEntity> = {
+            let mut transaction = self.transactions.transaction().await?;
             sqlx::query_as(FIND_BY_EMAIL)
                 .bind(email)
-                .fetch_optional(&mut **transaction.as_mut())
+                .fetch_optional(&mut **transaction)
                 .await
                 .context("falha ao buscar usuário por e-mail")?
         };
 
-        match row {
-            Some(row) => Ok(Some(Box::new(self.hydrate(row).await?))),
+        match entity {
+            Some(entity) => Ok(Some(Box::new(self.hydrate(entity).await?))),
             None => Ok(None),
         }
     }
 
     async fn insert(&self, user: &dyn User) -> anyhow::Result<()> {
         let entity = UserEntity::from_domain(user)?;
-        let mut transaction = MariadbUnitOfWork::current().await?;
+        let mut transaction = self.transactions.transaction().await?;
 
         sqlx::query(INSERT)
             .bind(entity.raw_id())
             .bind(entity.name())
             .bind(entity.email())
             .bind(entity.password_hash())
-            .execute(&mut **transaction.as_mut())
+            .execute(&mut **transaction)
             .await
             .with_context(|| format!("falha ao gravar o usuário {}", user.id()))?;
 
@@ -134,14 +139,14 @@ impl<R: RoleRepository + Send + Sync> UserRepository for UserMariadbRepository<R
 
     async fn update(&self, user: &dyn User) -> anyhow::Result<()> {
         let entity = UserEntity::from_domain(user)?;
-        let mut transaction = MariadbUnitOfWork::current().await?;
+        let mut transaction = self.transactions.transaction().await?;
 
         sqlx::query(UPDATE)
             .bind(entity.name())
             .bind(entity.email())
             .bind(entity.password_hash())
             .bind(entity.raw_id())
-            .execute(&mut **transaction.as_mut())
+            .execute(&mut **transaction)
             .await
             .with_context(|| format!("falha ao atualizar o usuário {}", user.id()))?;
 
@@ -150,11 +155,11 @@ impl<R: RoleRepository + Send + Sync> UserRepository for UserMariadbRepository<R
 
     async fn delete(&self, id: &str) -> anyhow::Result<()> {
         let raw_id = Codec::decode_id(id)?;
-        let mut transaction = MariadbUnitOfWork::current().await?;
+        let mut transaction = self.transactions.transaction().await?;
 
         sqlx::query(SOFT_DELETE)
             .bind(raw_id)
-            .execute(&mut **transaction.as_mut())
+            .execute(&mut **transaction)
             .await
             .with_context(|| format!("falha ao remover o usuário {id}"))?;
 
@@ -173,11 +178,11 @@ impl<R: RoleRepository + Send + Sync> UserRepository for UserMariadbRepository<R
             .map(|id| Codec::decode_id(id))
             .collect::<anyhow::Result<_>>()?;
 
-        let mut transaction = MariadbUnitOfWork::current().await?;
+        let mut transaction = self.transactions.transaction().await?;
 
         sqlx::query(CLEAR_ROLES)
             .bind(raw_user)
-            .execute(&mut **transaction.as_mut())
+            .execute(&mut **transaction)
             .await
             .with_context(|| format!("falha ao limpar os papéis do usuário {user_id}"))?;
 
@@ -185,7 +190,7 @@ impl<R: RoleRepository + Send + Sync> UserRepository for UserMariadbRepository<R
             sqlx::query(LINK_ROLE)
                 .bind(raw_user)
                 .bind(role_id)
-                .execute(&mut **transaction.as_mut())
+                .execute(&mut **transaction)
                 .await
                 .with_context(|| format!("falha ao vincular papel ao usuário {user_id}"))?;
         }

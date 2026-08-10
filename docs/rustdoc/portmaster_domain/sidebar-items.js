@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["config","enums","error","id","interno","models","provider","register","security","table_modules"]};
+window.SIDEBAR_ITEMS = {"mod":["bootstrap","config","domain","enums","error","id","security","table_modules"]};

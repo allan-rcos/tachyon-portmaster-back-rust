@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["project_info_x"]};

@@ -1,8 +1,8 @@
 //! As regras de produto.
 
+use crate::domain::Product;
 use crate::enums::RiskClass;
 use crate::error::ProductError;
-use crate::models::Product;
 
 /// Constrói e altera produtos.
 pub trait ProductTM {

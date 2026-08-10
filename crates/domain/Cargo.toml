@@ -8,6 +8,10 @@ description = "Núcleo do PortMaster: traits de objeto de domínio, models, Tabl
 
 # O domain é o núcleo: não depende de nenhum outro crate, não toca banco, rede ou
 # I/O, e não serializa nada (por isso nutype entra SEM a feature serde).
+#
+# Os três geradores de id moram aqui — emitir identidade é contrato do domínio,
+# como em src/Domain/ID do PHP —, e é por isso que nanoid e xid aparecem num
+# crate que não faz I/O: eles não fazem I/O nenhum, só produzem string.
 [dependencies]
 thiserror = { workspace = true }
 nutype = { workspace = true }
@@ -15,7 +19,9 @@ argon2 = { workspace = true }
 base62 = { workspace = true }
 chrono = { workspace = true }
 xxhash-rust = { workspace = true }
-rs-snowflake = { workspace = true, optional = true }
+nanoid = { workspace = true }
+xid = { workspace = true }
+snowflaked = { workspace = true, optional = true }
 
 [dev-dependencies]
 pretty_assertions = { workspace = true }
@@ -26,7 +32,7 @@ fake = { workspace = true }
 # server_id) continuam sendo segredo de runtime, em DomainSecrets.
 [features]
 default = ["id-snowflake"]
-id-snowflake = ["dep:rs-snowflake"]
+id-snowflake = ["dep:snowflaked"]
 
 [lints]
 workspace = true

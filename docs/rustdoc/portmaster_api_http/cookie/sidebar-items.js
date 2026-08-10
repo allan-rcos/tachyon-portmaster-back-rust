@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["read_cookie"],"struct":["AuthCookie"]};
+window.SIDEBAR_ITEMS = {"mod":["auth_cookie","intern"]};

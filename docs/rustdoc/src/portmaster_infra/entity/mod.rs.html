@@ -8,16 +8,19 @@
 <a href=#8 id=8 data-nosnippet>8</a>//! Como o trait de domínio é somente-leitura, uma entity **não consegue editar**
 <a href=#9 id=9 data-nosnippet>9</a>//! um objeto vindo de outra camada: ela o **recria** a partir do trait, por um
 <a href=#10 id=10 data-nosnippet>10</a>//! `from_domain`. A ausência de setters não é inconveniente, é a garantia.
-<a href=#11 id=11 data-nosnippet>11</a>
-<a href=#12 id=12 data-nosnippet>12</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>codec;
-<a href=#13 id=13 data-nosnippet>13</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>container_entity;
-<a href=#14 id=14 data-nosnippet>14</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>container_row;
-<a href=#15 id=15 data-nosnippet>15</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>manifest_cargo_entity;
-<a href=#16 id=16 data-nosnippet>16</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>manifest_cargo_row;
-<a href=#17 id=17 data-nosnippet>17</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>product_entity;
-<a href=#18 id=18 data-nosnippet>18</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>product_row;
-<a href=#19 id=19 data-nosnippet>19</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>role_entity;
-<a href=#20 id=20 data-nosnippet>20</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>role_row;
-<a href=#21 id=21 data-nosnippet>21</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>user_entity;
-<a href=#22 id=22 data-nosnippet>22</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>user_row;
+<a href=#11 id=11 data-nosnippet>11</a>//!
+<a href=#12 id=12 data-nosnippet>12</a>//! ## A linha crua não tem struct própria
+<a href=#13 id=13 data-nosnippet>13</a>//!
+<a href=#14 id=14 data-nosnippet>14</a>//! Cada entity implementa `sqlx::FromRow` à mão, e é ali que a linha vira
+<a href=#15 id=15 data-nosnippet>15</a>//! entity. Antes havia um `*_row.rs` por agregado: a mesma lista de colunas
+<a href=#16 id=16 data-nosnippet>16</a>//! escrita duas vezes, sem comportamento nenhum, existindo só para ser
+<a href=#17 id=17 data-nosnippet>17</a>//! convertida na entity logo em seguida — e uma coluna nova exigia tocar os
+<a href=#18 id=18 data-nosnippet>18</a>//! dois arquivos, com a chance de o segundo ficar para trás.
+<a href=#19 id=19 data-nosnippet>19</a>
+<a href=#20 id=20 data-nosnippet>20</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>codec;
+<a href=#21 id=21 data-nosnippet>21</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>container_entity;
+<a href=#22 id=22 data-nosnippet>22</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>manifest_cargo_entity;
+<a href=#23 id=23 data-nosnippet>23</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>product_entity;
+<a href=#24 id=24 data-nosnippet>24</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>role_entity;
+<a href=#25 id=25 data-nosnippet>25</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>user_entity;
 </code></pre></div></section></main></body></html>

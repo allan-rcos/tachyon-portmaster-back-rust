@@ -35,18 +35,16 @@ async fn main() -> anyhow::Result<()> {
     let address = format!("{}:{}", secrets.api.host, secrets.api.port);
 
     let app = portmaster_app::register(secrets.app).await?;
-    let routes = router(app, secrets.api);
+    let routes = router(app, secrets.api).await?;
 
     let listener = TcpListener::bind(&address).await?;
-    SystemLogger::get()
-        .with_field("address", address)
-        .info("servidor no ar");
+    SystemLogger::get().info("servidor no ar", [("address", &address)]);
 
     axum::serve(listener, routes)
         .with_graceful_shutdown(shutdown())
         .await?;
 
-    SystemLogger::get().info("servidor encerrado");
+    SystemLogger::get().info("servidor encerrado", []);
 
     Ok(())
 }
@@ -63,9 +61,7 @@ async fn main() -> anyhow::Result<()> {
 /// depois que ele já foi baixado, não deixaria rastro nenhum.
 fn install_panic_hook() {
     std::panic::set_hook(Box::new(|info| {
-        SystemLogger::get()
-            .with_field("panic", info.to_string())
-            .error("pânico não capturado");
+        SystemLogger::get().error("pânico não capturado", [("panic", &info.to_string())]);
 
         #[allow(
             clippy::print_stderr,
@@ -80,13 +76,15 @@ fn install_panic_hook() {
 
 /// Liga o log estruturado do processo.
 ///
-/// É o **sink** por trás da abstração de logging, e o único ponto do binário que
-/// menciona o `tracing`: nada acima da `infra` fala com ele diretamente, mas
-/// alguém precisa dizer para onde as linhas vão, e esse alguém é o processo.
+/// É o **sink** por trás da abstração de logging: nada acima da `infra` emite
+/// evento, mas alguém precisa dizer para onde as linhas vão, e esse alguém é o
+/// processo.
 ///
 /// JSON porque o destino é um coletor, não um humano com um terminal: o
-/// `request_id` que o middleware carimba só serve para correlacionar se puder
-/// ser consultado como campo.
+/// `request_id` do span da requisição só serve para correlacionar se puder ser
+/// consultado como campo. O formatador serializa os campos do span corrente por
+/// padrão, e é isso que faz o id aparecer em toda linha da requisição — inclusive
+/// nas que o `app` e a `infra` emitem lá no fundo.
 fn logging() {
     let filter = tracing_subscriber::EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"));
@@ -117,9 +115,10 @@ async fn shutdown() {
                 stream.recv().await;
             }
             Err(error) => {
-                SystemLogger::get()
-                    .with_field("error", error.to_string())
-                    .warn("não foi possível ouvir SIGTERM");
+                SystemLogger::get().warn(
+                    "não foi possível ouvir SIGTERM",
+                    [("error", &error.to_string())],
+                );
                 std::future::pending::<()>().await;
             }
         }
@@ -133,5 +132,8 @@ async fn shutdown() {
         () = terminate => {}
     }
 
-    SystemLogger::get().info("sinal de parada recebido; encerrando as requisições em andamento");
+    SystemLogger::get().info(
+        "sinal de parada recebido; encerrando as requisições em andamento",
+        [],
+    );
 }

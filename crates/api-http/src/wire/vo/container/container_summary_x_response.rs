@@ -45,8 +45,16 @@ impl ContainerSummaryXResponse {
     pub(crate) fn of(source: ContainerSummaryViewItem) -> Self {
         Self {
             container: ContainerXResponse::of(source.container),
-            manifest: source.manifest.into_iter().map(CargoManifestItemX::of).collect(),
-            recent_logs: source.recent_logs.into_iter().map(TelemetryLogItemX::of).collect(),
+            manifest: source
+                .manifest
+                .into_iter()
+                .map(CargoManifestItemX::of)
+                .collect(),
+            recent_logs: source
+                .recent_logs
+                .into_iter()
+                .map(TelemetryLogItemX::of)
+                .collect(),
         }
     }
 }

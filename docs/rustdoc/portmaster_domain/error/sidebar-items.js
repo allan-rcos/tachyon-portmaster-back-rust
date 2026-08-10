@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["auth_error","container_error","field_error","interno","manifest_error","marker_error","metadata_error","product_error","role_error","user_error"]};
+window.SIDEBAR_ITEMS = {"mod":["auth_error","container_error","field_error","manifest_error","marker_error","metadata_error","product_error","role_error","user_error"]};

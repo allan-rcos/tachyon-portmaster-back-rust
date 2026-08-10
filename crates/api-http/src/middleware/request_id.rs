@@ -6,7 +6,7 @@ use axum::extract::Request;
 use axum::http::HeaderValue;
 use axum::response::Response;
 use futures::future::BoxFuture;
-use portmaster_app::SortableIdGenerator;
+use portmaster_app::SequentialIdGenerator;
 use tower::Service;
 
 use super::request_id_header::REQUEST_ID_HEADER;
@@ -37,7 +37,7 @@ impl<S, G> Service<Request> for RequestId<S, G>
 where
     S: Service<Request, Response = Response> + Clone + Send + 'static,
     S::Future: Send + 'static,
-    G: SortableIdGenerator + Clone + Send + 'static,
+    G: SequentialIdGenerator + Clone + Send + 'static,
 {
     type Response = Response;
     type Error = S::Error;

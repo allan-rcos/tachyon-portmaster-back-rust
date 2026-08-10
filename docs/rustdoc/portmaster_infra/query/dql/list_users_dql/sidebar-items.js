@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["COLUMNS","JOIN_ROLES"],"struct":["ListUsersDql"]};

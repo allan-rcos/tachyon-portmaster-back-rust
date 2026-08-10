@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["product_create_x_request","product_list_x_response","product_update_x_request","product_x_response"]};

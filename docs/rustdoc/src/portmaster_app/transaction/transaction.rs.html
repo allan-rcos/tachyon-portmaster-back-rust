@@ -111,12 +111,12 @@
 <a href=#111 id=111 data-nosnippet>111</a>        <span class="kw">let </span>uow = SpyUnitOfWork::default();
 <a href=#112 id=112 data-nosnippet>112</a>
 <a href=#113 id=113 data-nosnippet>113</a>        <span class="kw">let </span>error = Transaction::run(<span class="kw-2">&amp;</span>uow, <span class="kw">async </span>{
-<a href=#114 id=114 data-nosnippet>114</a>            Err::&lt;(), <span class="kw">_</span>&gt;(AppError::Conflict(<span class="string">"não deu"</span>.into()))
+<a href=#114 id=114 data-nosnippet>114</a>            Err::&lt;(), <span class="kw">_</span>&gt;(AppError::RuleViolation(<span class="string">"não deu"</span>.into()))
 <a href=#115 id=115 data-nosnippet>115</a>        })
 <a href=#116 id=116 data-nosnippet>116</a>        .<span class="kw">await
 <a href=#117 id=117 data-nosnippet>117</a>        </span>.expect_err(<span class="string">"o corpo falhou"</span>);
 <a href=#118 id=118 data-nosnippet>118</a>
-<a href=#119 id=119 data-nosnippet>119</a>        <span class="macro">assert!</span>(<span class="macro">matches!</span>(error, AppError::Conflict(<span class="kw">_</span>)));
+<a href=#119 id=119 data-nosnippet>119</a>        <span class="macro">assert!</span>(<span class="macro">matches!</span>(error, AppError::RuleViolation(<span class="kw">_</span>)));
 <a href=#120 id=120 data-nosnippet>120</a>        <span class="macro">assert_eq!</span>(uow.rolled_back.load(Ordering::SeqCst), <span class="number">1</span>);
 <a href=#121 id=121 data-nosnippet>121</a>        <span class="macro">assert_eq!</span>(
 <a href=#122 id=122 data-nosnippet>122</a>            uow.committed.load(Ordering::SeqCst),
@@ -132,12 +132,12 @@
 <a href=#132 id=132 data-nosnippet>132</a>        <span class="kw">let </span>uow = SpyUnitOfWork::default();
 <a href=#133 id=133 data-nosnippet>133</a>
 <a href=#134 id=134 data-nosnippet>134</a>        <span class="kw">let </span>error = Transaction::run(<span class="kw-2">&amp;</span>uow, <span class="kw">async </span>{
-<a href=#135 id=135 data-nosnippet>135</a>            Err::&lt;(), <span class="kw">_</span>&gt;(AppError::not_found(<span class="string">"produto"</span>, <span class="string">"abc"</span>))
+<a href=#135 id=135 data-nosnippet>135</a>            Err::&lt;(), <span class="kw">_</span>&gt;(AppError::missing(<span class="string">"produto"</span>, <span class="string">"abc"</span>))
 <a href=#136 id=136 data-nosnippet>136</a>        })
 <a href=#137 id=137 data-nosnippet>137</a>        .<span class="kw">await
 <a href=#138 id=138 data-nosnippet>138</a>        </span>.expect_err(<span class="string">"o corpo falhou"</span>);
 <a href=#139 id=139 data-nosnippet>139</a>
-<a href=#140 id=140 data-nosnippet>140</a>        <span class="macro">assert!</span>(<span class="macro">matches!</span>(error, AppError::NotFound { id, .. } <span class="kw">if </span>id == <span class="string">"abc"</span>));
+<a href=#140 id=140 data-nosnippet>140</a>        <span class="macro">assert!</span>(<span class="macro">matches!</span>(error, AppError::Missing { id, .. } <span class="kw">if </span>id == <span class="string">"abc"</span>));
 <a href=#141 id=141 data-nosnippet>141</a>    }
 <a href=#142 id=142 data-nosnippet>142</a>
 <a href=#143 id=143 data-nosnippet>143</a>    <span class="doccomment">/// Sem o escopo aberto, os repositórios não encontrariam a transação

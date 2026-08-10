@@ -1,10 +1,10 @@
 //! O VO de `RoleListResponse`.
 
+use crate::wire::convert::Convert;
 use crate::wire::dto::json::admin::role_list_response_json::RoleListResponseJson;
 use crate::wire::tables as fbs;
 use crate::wire::vo::account::role_x_response::RoleXResponse;
 use crate::wire::x::response_x::ResponseX;
-use crate::wire::convert::Convert;
 use portmaster_app::views::RoleListView;
 
 /// O que a rota de `RoleListResponse` responde.

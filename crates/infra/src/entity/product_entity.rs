@@ -1,12 +1,19 @@
 //! A entity de produto.
 
-use crate::entity::codec::Codec;
-use crate::entity::product_row::ProductRow;
 use chrono::{DateTime, Utc};
+use portmaster_domain::domain::Product;
 use portmaster_domain::enums::RiskClass;
-use portmaster_domain::models::Product;
+use sqlx::mysql::MySqlRow;
+use sqlx::{FromRow, Row as _};
+
+use crate::entity::codec::Codec;
 
 /// A entity, com o id já traduzido para base62.
+///
+/// É ela quem implementa [`FromRow`]: a linha crua não vira uma struct própria
+/// antes de virar entity, porque essa struct não tinha comportamento nenhum —
+/// era a mesma lista de colunas escrita duas vezes, e a segunda existia só para
+/// ser convertida na primeira.
 pub struct ProductEntity {
     /// Identidade em base62.
     id: String,
@@ -30,20 +37,6 @@ pub struct ProductEntity {
 }
 
 impl ProductEntity {
-    /// Reconstrói a entity a partir de uma linha lida.
-    pub(crate) fn from_row(row: ProductRow) -> anyhow::Result<Self> {
-        Ok(Self {
-            id: Codec::encode_id(row.id),
-            raw_id: row.id,
-            name: row.name,
-            density: row.density,
-            risk_class: Codec::decode_enum(row.risk_class, RiskClass::from_i32, "RiskClass")?,
-            created_at: row.created_at,
-            updated_at: row.updated_at,
-            deleted_at: row.deleted_at,
-        })
-    }
-
     /// Recria a entity a partir de qualquer [`Product`], para gravá-la.
     pub(crate) fn from_domain(source: &dyn Product) -> anyhow::Result<Self> {
         Ok(Self {
@@ -61,6 +54,34 @@ impl ProductEntity {
     /// O id como o banco o guarda.
     pub(crate) const fn raw_id(&self) -> i64 {
         self.raw_id
+    }
+}
+
+impl FromRow<'_, MySqlRow> for ProductEntity {
+    /// Uma linha de `products` como a entity a quer.
+    ///
+    /// O índice do enum é validado aqui, na leitura: um valor que não
+    /// corresponde a variante nenhuma é uma linha que o schema não deveria
+    /// admitir, e escolher uma variante por aproximação afirmaria uma classe de
+    /// risco que o banco não guardou.
+    fn from_row(row: &MySqlRow) -> sqlx::Result<Self> {
+        let raw_id: i64 = row.try_get("id")?;
+        let risk_class: i32 = row.try_get("risk_class")?;
+
+        Ok(Self {
+            id: Codec::encode_id(raw_id),
+            raw_id,
+            name: row.try_get("name")?,
+            density: row.try_get("density")?,
+            risk_class: RiskClass::from_i32(risk_class).ok_or_else(|| {
+                sqlx::Error::Decode(
+                    format!("{risk_class} não corresponde a variante nenhuma de RiskClass").into(),
+                )
+            })?,
+            created_at: row.try_get("created_at")?,
+            updated_at: row.try_get("updated_at")?,
+            deleted_at: row.try_get("deleted_at")?,
+        })
     }
 }
 

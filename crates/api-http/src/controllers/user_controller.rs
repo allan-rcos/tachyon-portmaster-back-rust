@@ -29,8 +29,7 @@ pub(crate) trait UserController: Clone + Sync + 'static {
     ) -> Result<UserAdminXResponse, ApiError>;
 
     /// `GET /users/{id}`
-    async fn get(&self, context: UserContext, id: String)
-        -> Result<UserAdminXResponse, ApiError>;
+    async fn get(&self, context: UserContext, id: String) -> Result<UserAdminXResponse, ApiError>;
 
     /// `PUT /users/{id}`
     async fn update(

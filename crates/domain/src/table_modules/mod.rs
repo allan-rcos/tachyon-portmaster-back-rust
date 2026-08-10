@@ -3,7 +3,7 @@
 //! Um `TableModule` recebe **valores soltos** — nunca um `Command`, que é
 //! vocabulário do `app` — valida-os, e devolve um objeto de domínio pronto ou o
 //! erro tipado que explica por que não deu. É o único lugar do sistema que
-//! constrói um model, e é por isso que os models não saem de `interno`.
+//! constrói um model, e é por isso que os models não saem de `intern`.
 
 pub mod auth_tm;
 pub mod container_tm;
@@ -15,7 +15,7 @@ pub mod product_tm;
 pub mod role_tm;
 pub mod user_tm;
 
-pub(crate) mod interno;
+pub(crate) mod intern;
 
 pub use auth_tm::AuthTM;
 pub use container_tm::ContainerTM;

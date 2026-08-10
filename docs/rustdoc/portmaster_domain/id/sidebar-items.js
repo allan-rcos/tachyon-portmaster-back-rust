@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["base62","base62_error","int_id_generator","interno"]};
+window.SIDEBAR_ITEMS = {"mod":["database_id_generator","intern","random_id_generator","sequential_id_generator"]};

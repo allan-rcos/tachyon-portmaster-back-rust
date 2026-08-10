@@ -1,10 +1,10 @@
 //! O VO de `ContainerListResponse`.
 
+use crate::wire::convert::Convert;
 use crate::wire::dto::json::container::container_list_response_json::ContainerListResponseJson;
 use crate::wire::tables as fbs;
 use crate::wire::vo::container::container_x_response::ContainerXResponse;
 use crate::wire::x::response_x::ResponseX;
-use crate::wire::convert::Convert;
 use portmaster_app::views::ContainerListView;
 
 /// O que a rota de `ContainerListResponse` responde.
@@ -43,7 +43,11 @@ impl ContainerListXResponse {
     /// A página de contêineres.
     pub(crate) fn of(source: ContainerListView) -> Self {
         Self {
-            data: source.items.into_iter().map(ContainerXResponse::of).collect(),
+            data: source
+                .items
+                .into_iter()
+                .map(ContainerXResponse::of)
+                .collect(),
             next_cursor: source.next_cursor,
             total: Convert::count(source.total),
         }

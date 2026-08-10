@@ -1,7 +1,7 @@
 //! As regras de autenticação.
 
+use crate::domain::User;
 use crate::error::AuthError;
-use crate::models::User;
 
 /// Confere credenciais.
 pub trait AuthTM {

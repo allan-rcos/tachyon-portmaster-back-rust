@@ -28,10 +28,18 @@ allow-dbg-in-tests = true
 # ban de `std::sync::Mutex` logo abaixo, o caminho para o erro está fechado.
 await-holding-invalid-types = []
 
-# (E) Métodos proibidos: força relógio/ids INJETADOS (providers), nunca ad-hoc
+# (E) Métodos proibidos: ids INJETADOS (providers) e um relógio só no sistema
+#
+# A hora vem de `chrono::Utc::now()`, e não de uma trait `Clock` atravessando os
+# três providers: o `exp` de um JWT é conferido pela lib contra o relógio de
+# parede, e a latência de uma requisição é medida entre dois pontos do mesmo
+# processo. Um relógio injetável nesses dois pontos era trocável na emissão e
+# fixo na conferência — dava a impressão de tornar o tempo testável sem tornar.
+# O que continua proibido é o relógio errado: `SystemTime` e `Instant` não são
+# UTC, e `Local` lê o fuso de quem roda o processo.
 disallowed-methods = [
-  { path = "std::time::SystemTime::now", reason = "use o clock injetado pelo provider (testável, ver ids.md/config.md)" },
-  { path = "std::time::Instant::now", reason = "use o clock injetado pelo provider" },
+  { path = "std::time::SystemTime::now", reason = "o sistema é UTC de ponta a ponta: use chrono::Utc::now()" },
+  { path = "std::time::Instant::now", reason = "o sistema é UTC de ponta a ponta: use chrono::Utc::now()" },
   { path = "uuid::Uuid::new_v4", reason = "ids são Snowflake/NanoID via id-gen do provider (ids.md)" },
 
   # O sistema é UTC de ponta a ponta: os modelos carregam `DateTime<Utc>`, a

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["roles_of"],"mod":["account_profile_response_factory","account_update_request","account_update_request_factory","password_change_request","password_change_request_factory","role_response_factory"]};

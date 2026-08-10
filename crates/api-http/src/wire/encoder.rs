@@ -103,12 +103,9 @@ impl Encoder {
         };
 
         let mut response = match encoded {
-            Ok(bytes) => (
-                status,
-                [(header::CONTENT_TYPE, self.content_type())],
-                bytes,
-            )
-                .into_response(),
+            Ok(bytes) => {
+                (status, [(header::CONTENT_TYPE, self.content_type())], bytes).into_response()
+            }
             Err(error) => error.into_response(),
         };
 

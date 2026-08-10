@@ -8,6 +8,7 @@ pub mod account;
 pub mod container;
 pub mod manifest;
 pub mod marker;
+pub mod metadata;
 pub mod product;
 pub mod role;
 pub mod session;

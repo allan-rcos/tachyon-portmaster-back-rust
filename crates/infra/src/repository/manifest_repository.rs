@@ -1,7 +1,7 @@
 //! O contrato de persistência de manifest.
 
+use portmaster_domain::domain::ManifestCargo;
 use portmaster_domain::enums::TelemetryEvent;
-use portmaster_domain::models::ManifestCargo;
 
 /// Persistência de carga e telemetria.
 #[trait_variant::make(Send)]

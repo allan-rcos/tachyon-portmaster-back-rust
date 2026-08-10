@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["metrics_response_json","occupancy_division_json"]};

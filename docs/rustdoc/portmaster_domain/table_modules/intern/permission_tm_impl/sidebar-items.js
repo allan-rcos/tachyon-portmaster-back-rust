@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["is_domain_action","refused"],"struct":["PermissionTMImpl"]};

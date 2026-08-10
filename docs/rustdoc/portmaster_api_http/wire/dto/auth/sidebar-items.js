@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["login_request","login_request_factory","login_response_factory","setup_request","setup_request_factory","user_response_factory"]};

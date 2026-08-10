@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["refresh_token","token_service"]};
+window.SIDEBAR_ITEMS = {"mod":["intern","refresh_token","token_service"]};

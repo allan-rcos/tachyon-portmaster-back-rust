@@ -1,6 +1,6 @@
 //! O logger de sistema, alcançável de onde não há provider.
 
-use crate::logging::interno::tracing_logger::TracingLogger;
+use crate::logging::intern::tracing_logger::TracingLogger;
 use crate::logging::Logger;
 use std::sync::OnceLock;
 

@@ -1,6 +1,6 @@
 //! O contrato de persistência de permission.
 
-use portmaster_domain::models::Permission;
+use portmaster_domain::domain::Permission;
 
 /// Registro de permissões.
 ///

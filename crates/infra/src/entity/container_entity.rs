@@ -1,10 +1,12 @@
 //! A entity de contêiner.
 
+use sqlx::mysql::MySqlRow;
+use sqlx::{FromRow, Row as _};
+
 use crate::entity::codec::Codec;
-use crate::entity::container_row::ContainerRow;
 use chrono::{DateTime, Utc};
+use portmaster_domain::domain::Container;
 use portmaster_domain::enums::ContainerStatus;
-use portmaster_domain::models::Container;
 
 /// A entity, com o id já traduzido para base62.
 pub struct ContainerEntity {
@@ -31,22 +33,37 @@ pub struct ContainerEntity {
     deleted_at: Option<DateTime<Utc>>,
 }
 
-impl ContainerEntity {
-    /// Reconstrói a entity a partir de uma linha lida.
-    pub(crate) fn from_row(row: ContainerRow) -> anyhow::Result<Self> {
+impl FromRow<'_, MySqlRow> for ContainerEntity {
+    /// Uma linha de `containers` como a entity a quer.
+    ///
+    /// O índice do enum é validado aqui, na leitura: um valor que não
+    /// corresponde a variante nenhuma é uma linha que o schema não deveria
+    /// admitir, e escolher uma variante por aproximação afirmaria um estado que
+    /// o banco não guardou.
+    fn from_row(row: &MySqlRow) -> sqlx::Result<Self> {
+        let raw_id: i64 = row.try_get("id")?;
+        let status: i32 = row.try_get("status")?;
+
         Ok(Self {
-            id: Codec::encode_id(row.id),
-            raw_id: row.id,
-            code: row.code,
-            current_weight: row.current_weight,
-            max_capacity: row.max_capacity,
-            status: Codec::decode_enum(row.status, ContainerStatus::from_i32, "ContainerStatus")?,
-            created_at: row.created_at,
-            updated_at: row.updated_at,
-            deleted_at: row.deleted_at,
+            id: Codec::encode_id(raw_id),
+            raw_id,
+            code: row.try_get("code")?,
+            current_weight: row.try_get("current_weight")?,
+            max_capacity: row.try_get("max_capacity")?,
+            status: ContainerStatus::from_i32(status).ok_or_else(|| {
+                sqlx::Error::Decode(
+                    format!("{status} não corresponde a variante nenhuma de ContainerStatus")
+                        .into(),
+                )
+            })?,
+            created_at: row.try_get("created_at")?,
+            updated_at: row.try_get("updated_at")?,
+            deleted_at: row.try_get("deleted_at")?,
         })
     }
+}
 
+impl ContainerEntity {
     /// Recria a entity a partir de qualquer [`Container`], para gravá-la.
     pub(crate) fn from_domain(source: &dyn Container) -> anyhow::Result<Self> {
         Ok(Self {

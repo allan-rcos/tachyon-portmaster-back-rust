@@ -4,9 +4,10 @@
 //! banco, rede ou I/O.
 //!
 //! Exporta **apenas traits** — os traits de objeto de domínio (read-only), os
-//! `TableModules`, a trait [`DomainProvider`] e [`register()`]. Models,
-//! implementações de `TableModule` e helpers internos (gerador de id, hashers) são
-//! privados ao crate e servidos pelos factories do provider.
+//! `TableModules`, os geradores de id de borda, a trait [`DomainProvider`] e
+//! [`register()`]. Models, implementações de `TableModule` e helpers internos
+//! (o gerador de identidade, os hashers) são privados ao crate e servidos pelos
+//! factories do provider.
 //!
 //! Essa reserva não é cerimônia. Se o `app` alcançasse o hasher de senha, ele
 //! conseguiria gravar um usuário direto na `infra`, pulando a validação do
@@ -15,10 +16,11 @@
 //!
 //! ## Ids
 //!
-//! Saem daqui como `String` base62. O `TableModule` gera o Snowflake `i64` e o
-//! compacta antes de expor, porque escolher a identidade de uma entidade é regra
-//! de negócio — não é o repositório que decide quem ela é. Só a `infra` volta a
-//! ver o inteiro, ao tocar o `BIGINT`.
+//! Os três geradores moram aqui, porque emitir identidade é contrato de negócio
+//! — não é o repositório que decide quem uma entidade é. O id de banco sai como
+//! `String` base62: o `TableModule` gera o Snowflake e o compacta antes de
+//! expor, e só a `infra` volta a ver o inteiro, ao tocar o `BIGINT`. Ver
+//! [`id`].
 //!
 //! ## Erros
 //!
@@ -43,18 +45,15 @@
     )
 )]
 
+pub mod bootstrap;
 pub mod config;
+pub mod domain;
 pub mod enums;
 pub mod error;
 pub mod id;
-pub mod models;
-pub mod provider;
-pub mod register;
 pub mod security;
 pub mod table_modules;
 
-pub(crate) mod interno;
-
+pub use bootstrap::provider::DomainProvider;
+pub use bootstrap::register::register;
 pub use config::DomainSecrets;
-pub use provider::DomainProvider;
-pub use register::register;

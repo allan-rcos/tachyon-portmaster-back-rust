@@ -1,0 +1,36 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/app/src/error/app_error_kind.rs`."><title>app_error_kind.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="portmaster_app" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0 (ac68faa20 2026-05-25)" data-channel="1.96.0" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">portmaster_app/error/</div>app_error_kind.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! A natureza de uma falha comum, sem falar de transporte.
+<a href=#2 id=2 data-nosnippet>2</a>
+<a href=#3 id=3 data-nosnippet>3</a>/// De que tipo é a recusa que o [`AppError`] carrega.
+<a href=#4 id=4 data-nosnippet>4</a>///
+<a href=#5 id=5 data-nosnippet>5</a>/// Existe para que quem consome o erro comum não precise casar variante por
+<a href=#6 id=6 data-nosnippet>6</a>/// variante só para decidir o que fazer com ele. O agrupamento é por **natureza
+<a href=#7 id=7 data-nosnippet>7</a>/// da falha** — a validação do domínio é validação, venha ela de um usuário, de
+<a href=#8 id=8 data-nosnippet>8</a>/// um papel ou de um manifesto — e deliberadamente **não** por intenção de
+<a href=#9 id=9 data-nosnippet>9</a>/// protocolo: quem traduz isto para um status HTTP é a camada de API, e ela é a
+<a href=#10 id=10 data-nosnippet>10</a>/// única que pode, porque é a única que sabe que existe HTTP.
+<a href=#11 id=11 data-nosnippet>11</a>///
+<a href=#12 id=12 data-nosnippet>12</a>/// A diferença importa quando aparecer uma segunda apresentação. Um CLI não tem
+<a href=#13 id=13 data-nosnippet>13</a>/// 422; tem código de saída. Um consumidor de fila não tem 403; tem
+<a href=#14 id=14 data-nosnippet>14</a>/// *dead letter*. Os dois conseguem decidir a partir daqui, e nenhum precisa
+<a href=#15 id=15 data-nosnippet>15</a>/// desfazer uma tradução que o `app` já tivesse feito.
+<a href=#16 id=16 data-nosnippet>16</a>///
+<a href=#17 id=17 data-nosnippet>17</a>/// As recusas **próprias de um serviço** não passam por aqui: elas são poucas,
+<a href=#18 id=18 data-nosnippet>18</a>/// específicas, e o controller que chamou aquele caso de uso as casa uma a uma —
+<a href=#19 id=19 data-nosnippet>19</a>/// é o que faz `GET /products/{id}` responder 404 com o id que faltou em vez de
+<a href=#20 id=20 data-nosnippet>20</a>/// um "ausência" genérico.
+<a href=#21 id=21 data-nosnippet>21</a>///
+<a href=#22 id=22 data-nosnippet>22</a>/// [`AppError`]: crate::error::AppError
+<a href=#23 id=23 data-nosnippet>23</a></span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+<a href=#24 id=24 data-nosnippet>24</a></span><span class="kw">pub enum </span>AppErrorKind {
+<a href=#25 id=25 data-nosnippet>25</a>    <span class="doccomment">/// O dado que chegou não passa pelas regras de forma do domínio.
+<a href=#26 id=26 data-nosnippet>26</a>    ///
+<a href=#27 id=27 data-nosnippet>27</a>    /// Sempre em lote: quem preencheu o formulário corrige tudo de uma vez.
+<a href=#28 id=28 data-nosnippet>28</a>    </span>Validation,
+<a href=#29 id=29 data-nosnippet>29</a>
+<a href=#30 id=30 data-nosnippet>30</a>    <span class="doccomment">/// Quem está pedindo é conhecido, mas não tem a permissão exigida.
+<a href=#31 id=31 data-nosnippet>31</a>    </span>Authorization,
+<a href=#32 id=32 data-nosnippet>32</a>
+<a href=#33 id=33 data-nosnippet>33</a>    <span class="doccomment">/// Falhou algo que não é do domínio nem do pedido — o banco, a rede, o disco.
+<a href=#34 id=34 data-nosnippet>34</a>    </span>Internal,
+<a href=#35 id=35 data-nosnippet>35</a>}
+</code></pre></div></section></main></body></html>

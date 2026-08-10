@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["interno","random_id_generator","sortable_id_generator"]};

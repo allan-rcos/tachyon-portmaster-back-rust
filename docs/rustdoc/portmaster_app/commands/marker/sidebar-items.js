@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["set_marker_command"]};
+window.SIDEBAR_ITEMS = {"mod":["register_marker_group_command","set_marker_command"]};

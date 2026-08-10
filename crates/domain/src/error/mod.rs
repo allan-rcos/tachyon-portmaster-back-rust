@@ -19,8 +19,6 @@ pub mod product_error;
 pub mod role_error;
 pub mod user_error;
 
-pub(crate) mod interno;
-
 pub use auth_error::AuthError;
 pub use container_error::ContainerError;
 pub use field_error::FieldError;
@@ -30,5 +28,3 @@ pub use metadata_error::MetadataError;
 pub use product_error::ProductError;
 pub use role_error::RoleError;
 pub use user_error::UserError;
-
-pub(crate) use interno::validation::Validation;

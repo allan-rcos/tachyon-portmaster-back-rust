@@ -1,7 +1,7 @@
 //! As regras de contêiner.
 
+use crate::domain::Container;
 use crate::error::ContainerError;
-use crate::models::Container;
 
 /// Constrói contêineres e é dono de todas as suas transições de status.
 pub trait ContainerTM {

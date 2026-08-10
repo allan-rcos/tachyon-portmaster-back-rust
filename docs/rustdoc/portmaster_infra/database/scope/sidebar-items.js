@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"static":["CURRENT"],"struct":["TransactionScope"]};

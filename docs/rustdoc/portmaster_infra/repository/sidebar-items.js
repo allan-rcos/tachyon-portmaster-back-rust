@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["container_repository","manifest_repository","mariadb","marker_group_repository","marker_repository","permission_repository","product_repository","role_repository","user_repository"]};
+window.SIDEBAR_ITEMS = {"mod":["container_repository","manifest_repository","mariadb","marker_group_repository","marker_repository","memory","permission_repository","product_repository","role_repository","user_repository","view_cache_repository"]};

@@ -10,4 +10,4 @@
 
 pub(crate) mod auth_cookie;
 
-pub(crate) mod interno;
+pub(crate) mod intern;

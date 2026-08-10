@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["bind","select","sql_query"]};

@@ -1,6 +1,6 @@
 //! O contrato de persistência de user.
 
-use portmaster_domain::models::User;
+use portmaster_domain::domain::User;
 
 /// Persistência de usuários.
 #[trait_variant::make(Send)]

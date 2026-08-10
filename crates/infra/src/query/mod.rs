@@ -4,25 +4,25 @@
 //! objeto de domínio. Um DQL descreve **o que** consultar, o `QueryRepository`
 //! sabe **executar**, e o resultado é uma `View` — struct POD, por valor,
 //! monomorfizada. Nenhum `dyn` neste caminho.
+//!
+//! ## Como o `app` pede uma consulta
+//!
+//! Chamando a função dela em [`dql`], que devolve `impl SqlDql<View = …>`. Não
+//! há factory: o `app` não recebe um objeto de onde escolher, recebe a função
+//! que ele importou. Uma consulta nova é um arquivo novo, e nada mais.
 
 pub mod default_limit;
+pub mod dql;
 pub mod dql_trait;
-pub mod params;
-pub mod query_factory;
 pub mod query_repository;
 pub mod views;
 
 pub(crate) mod cursor;
-pub(crate) mod dql;
-pub(crate) mod interno;
-pub(crate) mod row;
-pub(crate) mod sql;
+pub(crate) mod intern;
 pub(crate) mod sql_dql;
 
 pub use default_limit::DEFAULT_LIMIT;
 pub use dql_trait::Dql;
-pub use query_factory::QueryFactory;
 pub use query_repository::QueryRepository;
-pub use sql::SqlQuery;
 
 pub(crate) use sql_dql::SqlDql;

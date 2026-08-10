@@ -51,7 +51,11 @@ pub(crate) fn routes<C: AuthController>(controller: C) -> Router {
                 refresh
                     .refresh(headers)
                     .await
-                    .map(|cookies| cookies.into_iter().fold(NoContent::new(), NoContent::with_cookie))
+                    .map(|cookies| {
+                        cookies
+                            .into_iter()
+                            .fold(NoContent::new(), NoContent::with_cookie)
+                    })
                     .map_err(|error: ApiError| error.with_encoder(encoder))
             }),
         )

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["account_password_change_x_request","account_profile_x_response","account_update_x_request","role_x_response"]};

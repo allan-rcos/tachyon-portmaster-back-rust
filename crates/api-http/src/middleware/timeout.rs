@@ -49,8 +49,10 @@ where
 
                 () = tokio::time::sleep(limit) => {
                     SystemLogger::get()
-                        .with_field("limit_ms", limit.as_millis().to_string())
-                        .warn("requisição excedeu o teto de tempo");
+                        .warn(
+                            "requisição excedeu o teto de tempo",
+                            [("limit_ms", &limit.as_millis().to_string())],
+                        );
 
                     let (status, problem, cookies) = ApiError::new(
                         StatusCode::GATEWAY_TIMEOUT,

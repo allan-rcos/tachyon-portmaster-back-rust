@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["product_create_request","product_create_request_factory","product_list_response_factory","product_response_factory","product_update_request","product_update_request_factory"]};

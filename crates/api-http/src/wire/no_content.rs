@@ -56,7 +56,11 @@ mod tests {
     fn a_resposta_vazia_ainda_carrega_cookies() {
         // É o caso do logout: nada a dizer, mas há cookies a limpar.
         let response = NoContent::new()
-            .with_cookie(Cookie::build(("auth_token", "")).max_age(cookie::time::Duration::ZERO).build())
+            .with_cookie(
+                Cookie::build(("auth_token", ""))
+                    .max_age(cookie::time::Duration::ZERO)
+                    .build(),
+            )
             .into_response();
 
         assert_eq!(response.status(), StatusCode::NO_CONTENT);

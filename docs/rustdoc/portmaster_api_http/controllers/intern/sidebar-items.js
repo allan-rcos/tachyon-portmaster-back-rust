@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["account_controller_impl","auth_controller_impl","container_controller_impl","manifest_controller_impl","metadata_controller_impl","metrics_controller_impl","product_controller_impl","role_controller_impl","server_controller_impl","user_controller_impl"]};

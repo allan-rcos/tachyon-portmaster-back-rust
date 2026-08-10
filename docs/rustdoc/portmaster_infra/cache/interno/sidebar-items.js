@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["marker_cache","marker_group_cache","moka_marker_group_repository","moka_marker_repository","moka_permission_repository","moka_read_cache","permission_cache","read_cache_store","slug_cache"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["container_status_x","problem_x","risk_class_x","telemetry_event_x"]};

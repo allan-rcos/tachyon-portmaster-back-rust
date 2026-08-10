@@ -1,9 +1,11 @@
 //! A entity de carga do manifesto.
 
+use sqlx::mysql::MySqlRow;
+use sqlx::{FromRow, Row as _};
+
 use crate::entity::codec::Codec;
-use crate::entity::manifest_cargo_row::ManifestCargoRow;
 use chrono::{DateTime, Utc};
-use portmaster_domain::models::ManifestCargo;
+use portmaster_domain::domain::ManifestCargo;
 
 /// A entity, com os ids já traduzidos para base62.
 pub struct ManifestCargoEntity {
@@ -23,24 +25,25 @@ pub struct ManifestCargoEntity {
     created_at: DateTime<Utc>,
 }
 
-impl ManifestCargoEntity {
-    /// Reconstrói a entity a partir de uma linha lida.
-    #[allow(
-        clippy::needless_pass_by_value,
-        reason = "consumir a Row é o contrato: ela existe só para virar esta entity, e passá-la por referência convidaria a reusá-la depois"
-    )]
-    pub(crate) fn from_row(row: ManifestCargoRow) -> Self {
-        Self {
-            container_id: Codec::encode_id(row.container_id),
-            product_id: Codec::encode_id(row.product_id),
-            raw_container_id: row.container_id,
-            raw_product_id: row.product_id,
-            quantity: row.quantity,
-            weight: row.weight,
-            created_at: row.created_at,
-        }
-    }
+impl FromRow<'_, MySqlRow> for ManifestCargoEntity {
+    /// Uma linha de `container_items` como a entity a quer.
+    fn from_row(row: &MySqlRow) -> sqlx::Result<Self> {
+        let raw_container_id: i64 = row.try_get("container_id")?;
+        let raw_product_id: i64 = row.try_get("product_id")?;
 
+        Ok(Self {
+            container_id: Codec::encode_id(raw_container_id),
+            product_id: Codec::encode_id(raw_product_id),
+            raw_container_id,
+            raw_product_id,
+            quantity: row.try_get("quantity")?,
+            weight: row.try_get("weight")?,
+            created_at: row.try_get("created_at")?,
+        })
+    }
+}
+
+impl ManifestCargoEntity {
     /// Recria a entity a partir de qualquer [`ManifestCargo`], para gravá-la.
     pub(crate) fn from_domain(source: &dyn ManifestCargo) -> anyhow::Result<Self> {
         Ok(Self {

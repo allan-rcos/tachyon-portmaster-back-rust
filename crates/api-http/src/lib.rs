@@ -46,10 +46,7 @@ pub(crate) mod middleware;
 
 pub(crate) mod controllers;
 
-pub(crate) mod provider;
-pub(crate) mod register;
-
-pub(crate) mod interno;
+pub(crate) mod bootstrap;
 
 mod router;
 

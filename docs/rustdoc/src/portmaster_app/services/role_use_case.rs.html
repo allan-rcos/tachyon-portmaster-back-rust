@@ -2,28 +2,41 @@
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a></span><span class="kw">use </span><span class="kw">crate</span>::commands::role::CreateRoleCommand;
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span><span class="kw">crate</span>::commands::role::UpdateRolePermissionsCommand;
-<a href=#5 id=5 data-nosnippet>5</a><span class="kw">use </span><span class="kw">crate</span>::error::AppError;
+<a href=#5 id=5 data-nosnippet>5</a><span class="kw">use </span><span class="kw">crate</span>::error::RoleError;
 <a href=#6 id=6 data-nosnippet>6</a><span class="kw">use </span><span class="kw">crate</span>::queries::role::GetRoleQuery;
 <a href=#7 id=7 data-nosnippet>7</a><span class="kw">use </span><span class="kw">crate</span>::queries::role::ListRolesQuery;
-<a href=#8 id=8 data-nosnippet>8</a><span class="kw">use </span>portmaster_domain::models::Role;
-<a href=#9 id=9 data-nosnippet>9</a><span class="kw">use </span>portmaster_infra::query::views::{RoleListView, RoleViewItem};
-<a href=#10 id=10 data-nosnippet>10</a>
-<a href=#11 id=11 data-nosnippet>11</a><span class="doccomment">/// O que a apresentação pode pedir sobre papéis.
-<a href=#12 id=12 data-nosnippet>12</a></span><span class="attr">#[trait_variant::make(Send)]
-<a href=#13 id=13 data-nosnippet>13</a></span><span class="kw">pub trait </span>RoleUseCase {
-<a href=#14 id=14 data-nosnippet>14</a>    <span class="doccomment">/// Cria e devolve o papel.
-<a href=#15 id=15 data-nosnippet>15</a>    </span><span class="kw">async fn </span>create(<span class="kw-2">&amp;</span><span class="self">self</span>, command: CreateRoleCommand) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>Role&gt;, AppError&gt;;
-<a href=#16 id=16 data-nosnippet>16</a>
-<a href=#17 id=17 data-nosnippet>17</a>    <span class="doccomment">/// Substitui as permissões e devolve o papel atualizado.
-<a href=#18 id=18 data-nosnippet>18</a>    </span><span class="kw">async fn </span>update_permissions(
-<a href=#19 id=19 data-nosnippet>19</a>        <span class="kw-2">&amp;</span><span class="self">self</span>,
-<a href=#20 id=20 data-nosnippet>20</a>        command: UpdateRolePermissionsCommand,
-<a href=#21 id=21 data-nosnippet>21</a>    ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>Role&gt;, AppError&gt;;
-<a href=#22 id=22 data-nosnippet>22</a>
-<a href=#23 id=23 data-nosnippet>23</a>    <span class="doccomment">/// Lê um papel.
-<a href=#24 id=24 data-nosnippet>24</a>    </span><span class="kw">async fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, query: GetRoleQuery) -&gt; <span class="prelude-ty">Result</span>&lt;RoleViewItem, AppError&gt;;
-<a href=#25 id=25 data-nosnippet>25</a>
-<a href=#26 id=26 data-nosnippet>26</a>    <span class="doccomment">/// Lista papéis.
-<a href=#27 id=27 data-nosnippet>27</a>    </span><span class="kw">async fn </span>list(<span class="kw-2">&amp;</span><span class="self">self</span>, query: ListRolesQuery) -&gt; <span class="prelude-ty">Result</span>&lt;RoleListView, AppError&gt;;
-<a href=#28 id=28 data-nosnippet>28</a>}
+<a href=#8 id=8 data-nosnippet>8</a><span class="kw">use </span><span class="kw">crate</span>::services::MetadataUseCase;
+<a href=#9 id=9 data-nosnippet>9</a><span class="kw">use </span>portmaster_domain::domain::Role;
+<a href=#10 id=10 data-nosnippet>10</a><span class="kw">use </span>portmaster_infra::query::views::{RoleListView, RoleViewItem};
+<a href=#11 id=11 data-nosnippet>11</a>
+<a href=#12 id=12 data-nosnippet>12</a><span class="doccomment">/// O que a apresentação pode pedir sobre papéis.
+<a href=#13 id=13 data-nosnippet>13</a></span><span class="attr">#[trait_variant::make(Send)]
+<a href=#14 id=14 data-nosnippet>14</a></span><span class="kw">pub trait </span>RoleUseCase {
+<a href=#15 id=15 data-nosnippet>15</a>    <span class="doccomment">/// Registra, no boot, as permissões que este serviço exige.
+<a href=#16 id=16 data-nosnippet>16</a>    ///
+<a href=#17 id=17 data-nosnippet>17</a>    /// Os slugs são `const` privadas da implementação e **não** saem dela: quem
+<a href=#18 id=18 data-nosnippet>18</a>    /// os compara com o `UserContext` é o próprio caso de uso, e não há segundo
+<a href=#19 id=19 data-nosnippet>19</a>    /// lugar no sistema que precise vê-los. O que atravessa esta fronteira é a
+<a href=#20 id=20 data-nosnippet>20</a>    /// ação de registrar, nunca a lista — é o molde do `declarePermission` do
+<a href=#21 id=21 data-nosnippet>21</a>    /// PHP, onde a permissão pertence a exatamente um caso de uso.
+<a href=#22 id=22 data-nosnippet>22</a>    </span><span class="kw">async fn </span>declare_permissions&lt;M: MetadataUseCase + Send + Sync&gt;(
+<a href=#23 id=23 data-nosnippet>23</a>        <span class="kw-2">&amp;</span><span class="self">self</span>,
+<a href=#24 id=24 data-nosnippet>24</a>        registrar: <span class="kw-2">&amp;</span>M,
+<a href=#25 id=25 data-nosnippet>25</a>    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), RoleError&gt;;
+<a href=#26 id=26 data-nosnippet>26</a>
+<a href=#27 id=27 data-nosnippet>27</a>    <span class="doccomment">/// Cria e devolve o papel.
+<a href=#28 id=28 data-nosnippet>28</a>    </span><span class="kw">async fn </span>create(<span class="kw-2">&amp;</span><span class="self">self</span>, command: CreateRoleCommand) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>Role&gt;, RoleError&gt;;
+<a href=#29 id=29 data-nosnippet>29</a>
+<a href=#30 id=30 data-nosnippet>30</a>    <span class="doccomment">/// Substitui as permissões e devolve o papel atualizado.
+<a href=#31 id=31 data-nosnippet>31</a>    </span><span class="kw">async fn </span>update_permissions(
+<a href=#32 id=32 data-nosnippet>32</a>        <span class="kw-2">&amp;</span><span class="self">self</span>,
+<a href=#33 id=33 data-nosnippet>33</a>        command: UpdateRolePermissionsCommand,
+<a href=#34 id=34 data-nosnippet>34</a>    ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>Role&gt;, RoleError&gt;;
+<a href=#35 id=35 data-nosnippet>35</a>
+<a href=#36 id=36 data-nosnippet>36</a>    <span class="doccomment">/// Lê um papel.
+<a href=#37 id=37 data-nosnippet>37</a>    </span><span class="kw">async fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, query: GetRoleQuery) -&gt; <span class="prelude-ty">Result</span>&lt;RoleViewItem, RoleError&gt;;
+<a href=#38 id=38 data-nosnippet>38</a>
+<a href=#39 id=39 data-nosnippet>39</a>    <span class="doccomment">/// Lista papéis.
+<a href=#40 id=40 data-nosnippet>40</a>    </span><span class="kw">async fn </span>list(<span class="kw-2">&amp;</span><span class="self">self</span>, query: ListRolesQuery) -&gt; <span class="prelude-ty">Result</span>&lt;RoleListView, RoleError&gt;;
+<a href=#41 id=41 data-nosnippet>41</a>}
 </code></pre></div></section></main></body></html>

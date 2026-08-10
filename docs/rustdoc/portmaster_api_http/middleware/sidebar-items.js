@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["logging","logging_layer","negotiation","negotiation_layer","recover","recover_layer","request_id","request_id_header","request_id_layer","timeout","timeout_layer","token","token_layer"]};
+window.SIDEBAR_ITEMS = {"mod":["logging","logging_layer","recover","recover_layer","request_id","request_id_header","request_id_layer","timeout","timeout_layer","token","token_layer"]};

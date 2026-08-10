@@ -1,6 +1,6 @@
 //! O contrato de persistência de container.
 
-use portmaster_domain::models::Container;
+use portmaster_domain::domain::Container;
 
 /// Persistência de contêineres.
 #[trait_variant::make(Send)]

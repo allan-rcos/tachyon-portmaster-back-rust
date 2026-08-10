@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["risk_class_of","to_api"],"struct":["ProductControllerImpl"]};

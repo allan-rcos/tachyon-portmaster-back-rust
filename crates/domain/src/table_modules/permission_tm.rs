@@ -1,7 +1,7 @@
 //! As regras de permissão.
 
+use crate::domain::Permission;
 use crate::error::MetadataError;
-use crate::models::Permission;
 
 /// Constrói permissões, recusando slug fora do formato.
 pub trait PermissionTM {

@@ -1,14 +1,13 @@
 //! Persistência de contêineres sobre `MariaDB`.
 
 use anyhow::Context;
-use portmaster_domain::models::Container;
+use portmaster_domain::domain::Container;
 
-use crate::database::interno::mariadb_unit_of_work::MariadbUnitOfWork;
 use crate::entity::codec::Codec;
 use crate::entity::container_entity::ContainerEntity;
-use crate::entity::container_row::ContainerRow;
 use crate::repository::ContainerRepository;
-use crate::text::search_key::SearchKey;
+use crate::scope::database::mysql_transaction::MySqlTransaction;
+use crate::search_key::SearchKey;
 
 /// Busca por id, já filtrando o soft-delete.
 const FIND_BY_ID: &str =
@@ -33,34 +32,35 @@ const SOFT_DELETE: &str =
 
 /// O repositório de contêineres.
 #[derive(Clone)]
-pub struct ContainerMariadbRepository;
+pub struct ContainerMariadbRepository<T> {
+    /// De onde a transação da tarefa vem.
+    transactions: T,
+}
 
-impl ContainerMariadbRepository {
+impl<T> ContainerMariadbRepository<T> {
     /// Monta o repositório.
-    pub(crate) const fn new() -> Self {
-        Self
+    pub(crate) const fn new(transactions: T) -> Self {
+        Self { transactions }
     }
 }
 
-impl ContainerRepository for ContainerMariadbRepository {
+impl<T: MySqlTransaction + Send + Sync> ContainerRepository for ContainerMariadbRepository<T> {
     async fn find_by_id(&self, id: &str) -> anyhow::Result<Option<Box<dyn Container>>> {
         let raw_id = Codec::decode_id(id)?;
-        let mut transaction = MariadbUnitOfWork::current().await?;
+        let mut transaction = self.transactions.transaction().await?;
 
-        let row: Option<ContainerRow> = sqlx::query_as(FIND_BY_ID)
+        let entity: Option<ContainerEntity> = sqlx::query_as(FIND_BY_ID)
             .bind(raw_id)
-            .fetch_optional(&mut **transaction.as_mut())
+            .fetch_optional(&mut **transaction)
             .await
             .with_context(|| format!("falha ao buscar o contêiner {id}"))?;
 
-        row.map(ContainerEntity::from_row)
-            .transpose()
-            .map(|entity| entity.map(|e| Box::new(e) as Box<dyn Container>))
+        Ok(entity.map(|entity| Box::new(entity) as Box<dyn Container>))
     }
 
     async fn insert(&self, container: &dyn Container) -> anyhow::Result<()> {
         let entity = ContainerEntity::from_domain(container)?;
-        let mut transaction = MariadbUnitOfWork::current().await?;
+        let mut transaction = self.transactions.transaction().await?;
 
         sqlx::query(INSERT)
             .bind(entity.raw_id())
@@ -69,7 +69,7 @@ impl ContainerRepository for ContainerMariadbRepository {
             .bind(entity.max_capacity())
             .bind(entity.status().as_i32())
             .bind(SearchKey::of(entity.code()))
-            .execute(&mut **transaction.as_mut())
+            .execute(&mut **transaction)
             .await
             .with_context(|| format!("falha ao gravar o contêiner {}", container.id()))?;
 
@@ -78,7 +78,7 @@ impl ContainerRepository for ContainerMariadbRepository {
 
     async fn update(&self, container: &dyn Container) -> anyhow::Result<()> {
         let entity = ContainerEntity::from_domain(container)?;
-        let mut transaction = MariadbUnitOfWork::current().await?;
+        let mut transaction = self.transactions.transaction().await?;
 
         sqlx::query(UPDATE)
             .bind(entity.code())
@@ -87,7 +87,7 @@ impl ContainerRepository for ContainerMariadbRepository {
             .bind(entity.status().as_i32())
             .bind(SearchKey::of(entity.code()))
             .bind(entity.raw_id())
-            .execute(&mut **transaction.as_mut())
+            .execute(&mut **transaction)
             .await
             .with_context(|| format!("falha ao atualizar o contêiner {}", container.id()))?;
 
@@ -96,11 +96,11 @@ impl ContainerRepository for ContainerMariadbRepository {
 
     async fn delete(&self, id: &str) -> anyhow::Result<()> {
         let raw_id = Codec::decode_id(id)?;
-        let mut transaction = MariadbUnitOfWork::current().await?;
+        let mut transaction = self.transactions.transaction().await?;
 
         sqlx::query(SOFT_DELETE)
             .bind(raw_id)
-            .execute(&mut **transaction.as_mut())
+            .execute(&mut **transaction)
             .await
             .with_context(|| format!("falha ao remover o contêiner {id}"))?;
 

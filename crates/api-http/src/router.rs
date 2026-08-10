@@ -4,6 +4,9 @@ use axum::http::{HeaderValue, Method};
 use axum::Router;
 use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 
+use crate::bootstrap::provider::ApiProvider;
+use crate::config::api_config::ApiConfig;
+use crate::controllers::auth_controller::AuthController;
 use crate::controllers::{
     account_routes, auth_routes, container_routes, manifest_routes, metadata_routes,
     metrics_routes, product_routes, role_routes, server_routes, user_routes,
@@ -13,8 +16,6 @@ use crate::middleware::recover_layer::RecoverLayer;
 use crate::middleware::request_id_layer::RequestIdLayer;
 use crate::middleware::timeout_layer::TimeoutLayer;
 use crate::middleware::token_layer::TokenLayer;
-use crate::config::api_config::ApiConfig;
-use crate::provider::ApiProvider;
 use portmaster_app::AppProvider;
 
 /// Por quanto tempo um preflight de CORS pode ser reaproveitado.
@@ -32,11 +33,27 @@ const CORS_MAX_AGE_SECONDS: u64 = 3600;
 /// `Arc` do provider clonado duas vezes por chamada. Agora os controllers vêm
 /// prontos do `ApiProvider`, são construídos **uma vez** aqui, e cada rota
 /// clona o seu — um punhado de handles.
-pub fn router<P: AppProvider>(app: P, config: ApiConfig) -> Router {
-    routes(&crate::register::register(app, config))
+pub async fn router<P: AppProvider>(app: P, config: ApiConfig) -> anyhow::Result<Router> {
+    let provider = crate::bootstrap::register::register(app, config);
+
+    // O grupo de marcador da sessão precisa existir antes da primeira
+    // requisição, e quem sabe o nome dele é o controller que o usa.
+    provider
+        .auth_controller()
+        .register_marker_group()
+        .await
+        .map_err(|error| anyhow::anyhow!("{error:?}"))?;
+
+    Ok(routes(&provider))
 }
 
 /// Junta as rotas de cada recurso e aplica a pilha.
+///
+/// A pilha é aplicada de dentro para fora: o último `.layer` é o mais externo.
+/// Por isso o `RequestId` vem por último — ele precisa carimbar o id antes de o
+/// `Logging` procurá-lo —, e por isso o `Logging` vem antes de todos os demais:
+/// o span que ele abre alcança só o que estiver **dentro** dele, e o que está
+/// dentro é o resto da pilha e o handler inteiro.
 fn routes<P: ApiProvider>(provider: &P) -> Router {
     Router::new()
         .merge(server_routes::routes(provider.server_controller()))
@@ -49,9 +66,7 @@ fn routes<P: ApiProvider>(provider: &P) -> Router {
         .merge(user_routes::routes(provider.user_controller()))
         .merge(metadata_routes::routes(provider.metadata_controller()))
         .merge(metrics_routes::routes(provider.metrics_controller()))
-        // A pilha é aplicada de dentro para fora: o último `.layer` é o mais
-        // externo, e por isso o `RequestId` vem por último — ele precisa
-        // carimbar o id antes de o `Logging` procurá-lo.
+        // De dentro para fora: o último `.layer` é o mais externo.
         .layer(TokenLayer::new(
             provider.token_service(),
             provider.auth_cookie(),
@@ -59,11 +74,8 @@ fn routes<P: ApiProvider>(provider: &P) -> Router {
         .layer(cors_layer(provider.cors_origins()))
         .layer(TimeoutLayer::new(provider.request_timeout()))
         .layer(RecoverLayer::new())
-        .layer(LoggingLayer::new(
-            provider.logger_factory(),
-            provider.clock(),
-        ))
-        .layer(RequestIdLayer::new(provider.sortable_id_generator()))
+        .layer(LoggingLayer::new(provider.logger_factory()))
+        .layer(RequestIdLayer::new(provider.sequential_id_generator()))
 }
 
 /// A política de CORS.

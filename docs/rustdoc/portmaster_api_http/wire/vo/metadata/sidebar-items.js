@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["metadata_item_x_response","permission_list_x_response"]};

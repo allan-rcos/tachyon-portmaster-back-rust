@@ -49,53 +49,56 @@
 <a href=#49 id=49 data-nosnippet>49</a>    }
 <a href=#50 id=50 data-nosnippet>50</a>
 <a href=#51 id=51 data-nosnippet>51</a>    <span class="doccomment">/// O valor de `Content-Type` a devolver.
-<a href=#52 id=52 data-nosnippet>52</a>    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const fn </span>header_value(<span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
-<a href=#53 id=53 data-nosnippet>53</a>        <span class="kw">match </span><span class="self">self </span>{
-<a href=#54 id=54 data-nosnippet>54</a>            <span class="self">Self</span>::Json =&gt; JSON,
-<a href=#55 id=55 data-nosnippet>55</a>            <span class="self">Self</span>::FlatBuffers =&gt; FLATBUFFERS,
-<a href=#56 id=56 data-nosnippet>56</a>        }
-<a href=#57 id=57 data-nosnippet>57</a>    }
-<a href=#58 id=58 data-nosnippet>58</a>}
-<a href=#59 id=59 data-nosnippet>59</a>
-<a href=#60 id=60 data-nosnippet>60</a><span class="attr">#[cfg(test)]
-<a href=#61 id=61 data-nosnippet>61</a></span><span class="kw">mod </span>tests {
-<a href=#62 id=62 data-nosnippet>62</a>    <span class="kw">use </span>super::<span class="kw-2">*</span>;
-<a href=#63 id=63 data-nosnippet>63</a>    <span class="kw">use </span>pretty_assertions::assert_eq;
-<a href=#64 id=64 data-nosnippet>64</a>
-<a href=#65 id=65 data-nosnippet>65</a>    <span class="attr">#[test]
-<a href=#66 id=66 data-nosnippet>66</a>    </span><span class="kw">fn </span>sem_content_type_o_corpo_e_binario() {
-<a href=#67 id=67 data-nosnippet>67</a>        <span class="macro">assert_eq!</span>(MediaType::of_request(<span class="prelude-val">None</span>), MediaType::FlatBuffers);
-<a href=#68 id=68 data-nosnippet>68</a>        <span class="macro">assert_eq!</span>(
-<a href=#69 id=69 data-nosnippet>69</a>            MediaType::of_request(<span class="prelude-val">Some</span>(FLATBUFFERS)),
-<a href=#70 id=70 data-nosnippet>70</a>            MediaType::FlatBuffers
-<a href=#71 id=71 data-nosnippet>71</a>        );
-<a href=#72 id=72 data-nosnippet>72</a>        <span class="macro">assert_eq!</span>(MediaType::of_request(<span class="prelude-val">Some</span>(JSON)), MediaType::Json);
-<a href=#73 id=73 data-nosnippet>73</a>    }
-<a href=#74 id=74 data-nosnippet>74</a>
-<a href=#75 id=75 data-nosnippet>75</a>    <span class="attr">#[test]
-<a href=#76 id=76 data-nosnippet>76</a>    </span><span class="doccomment">/// `application/octet-stream` conta como binário: é o que um cliente
-<a href=#77 id=77 data-nosnippet>77</a>    /// genérico manda quando só sabe que o corpo não é texto.
-<a href=#78 id=78 data-nosnippet>78</a>    </span><span class="attr">#[allow(clippy::missing_const_for_fn, reason = <span class="string">"asserção de teste"</span>)]
-<a href=#79 id=79 data-nosnippet>79</a>    </span><span class="kw">fn </span>sem_accept_a_resposta_e_legivel() {
-<a href=#80 id=80 data-nosnippet>80</a>        <span class="macro">assert_eq!</span>(MediaType::of_response(<span class="prelude-val">None</span>), MediaType::Json);
-<a href=#81 id=81 data-nosnippet>81</a>        <span class="macro">assert_eq!</span>(MediaType::of_response(<span class="prelude-val">Some</span>(<span class="string">"*/*"</span>)), MediaType::Json);
-<a href=#82 id=82 data-nosnippet>82</a>        <span class="macro">assert_eq!</span>(
-<a href=#83 id=83 data-nosnippet>83</a>            MediaType::of_response(<span class="prelude-val">Some</span>(FLATBUFFERS)),
-<a href=#84 id=84 data-nosnippet>84</a>            MediaType::FlatBuffers
-<a href=#85 id=85 data-nosnippet>85</a>        );
-<a href=#86 id=86 data-nosnippet>86</a>        <span class="macro">assert_eq!</span>(
-<a href=#87 id=87 data-nosnippet>87</a>            MediaType::of_response(<span class="prelude-val">Some</span>(<span class="string">"application/octet-stream"</span>)),
-<a href=#88 id=88 data-nosnippet>88</a>            MediaType::FlatBuffers
-<a href=#89 id=89 data-nosnippet>89</a>        );
-<a href=#90 id=90 data-nosnippet>90</a>    }
-<a href=#91 id=91 data-nosnippet>91</a>
-<a href=#92 id=92 data-nosnippet>92</a>    <span class="attr">#[test]
-<a href=#93 id=93 data-nosnippet>93</a>    </span><span class="kw">fn </span>o_accept_com_qualidade_e_lista_ainda_e_entendido() {
-<a href=#94 id=94 data-nosnippet>94</a>        <span class="comment">// Um navegador manda algo como `text/html,application/json;q=0.9,*/*`.
-<a href=#95 id=95 data-nosnippet>95</a>        </span><span class="macro">assert_eq!</span>(
-<a href=#96 id=96 data-nosnippet>96</a>            MediaType::of_response(<span class="prelude-val">Some</span>(<span class="string">"text/html,application/json;q=0.9,*/*;q=0.8"</span>)),
-<a href=#97 id=97 data-nosnippet>97</a>            MediaType::Json
-<a href=#98 id=98 data-nosnippet>98</a>        );
-<a href=#99 id=99 data-nosnippet>99</a>    }
-<a href=#100 id=100 data-nosnippet>100</a>}
+<a href=#52 id=52 data-nosnippet>52</a>    ///
+<a href=#53 id=53 data-nosnippet>53</a>    /// `pub(super)`: só o [`Encoder`](crate::wire::encoder::Encoder) carimba
+<a href=#54 id=54 data-nosnippet>54</a>    /// cabeçalho, e é ele quem sabe o que escolheu.
+<a href=#55 id=55 data-nosnippet>55</a>    </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">const fn </span>header_value(<span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
+<a href=#56 id=56 data-nosnippet>56</a>        <span class="kw">match </span><span class="self">self </span>{
+<a href=#57 id=57 data-nosnippet>57</a>            <span class="self">Self</span>::Json =&gt; JSON,
+<a href=#58 id=58 data-nosnippet>58</a>            <span class="self">Self</span>::FlatBuffers =&gt; FLATBUFFERS,
+<a href=#59 id=59 data-nosnippet>59</a>        }
+<a href=#60 id=60 data-nosnippet>60</a>    }
+<a href=#61 id=61 data-nosnippet>61</a>}
+<a href=#62 id=62 data-nosnippet>62</a>
+<a href=#63 id=63 data-nosnippet>63</a><span class="attr">#[cfg(test)]
+<a href=#64 id=64 data-nosnippet>64</a></span><span class="kw">mod </span>tests {
+<a href=#65 id=65 data-nosnippet>65</a>    <span class="kw">use </span>super::<span class="kw-2">*</span>;
+<a href=#66 id=66 data-nosnippet>66</a>    <span class="kw">use </span>pretty_assertions::assert_eq;
+<a href=#67 id=67 data-nosnippet>67</a>
+<a href=#68 id=68 data-nosnippet>68</a>    <span class="attr">#[test]
+<a href=#69 id=69 data-nosnippet>69</a>    </span><span class="kw">fn </span>sem_content_type_o_corpo_e_binario() {
+<a href=#70 id=70 data-nosnippet>70</a>        <span class="macro">assert_eq!</span>(MediaType::of_request(<span class="prelude-val">None</span>), MediaType::FlatBuffers);
+<a href=#71 id=71 data-nosnippet>71</a>        <span class="macro">assert_eq!</span>(
+<a href=#72 id=72 data-nosnippet>72</a>            MediaType::of_request(<span class="prelude-val">Some</span>(FLATBUFFERS)),
+<a href=#73 id=73 data-nosnippet>73</a>            MediaType::FlatBuffers
+<a href=#74 id=74 data-nosnippet>74</a>        );
+<a href=#75 id=75 data-nosnippet>75</a>        <span class="macro">assert_eq!</span>(MediaType::of_request(<span class="prelude-val">Some</span>(JSON)), MediaType::Json);
+<a href=#76 id=76 data-nosnippet>76</a>    }
+<a href=#77 id=77 data-nosnippet>77</a>
+<a href=#78 id=78 data-nosnippet>78</a>    <span class="attr">#[test]
+<a href=#79 id=79 data-nosnippet>79</a>    </span><span class="doccomment">/// `application/octet-stream` conta como binário: é o que um cliente
+<a href=#80 id=80 data-nosnippet>80</a>    /// genérico manda quando só sabe que o corpo não é texto.
+<a href=#81 id=81 data-nosnippet>81</a>    </span><span class="attr">#[allow(clippy::missing_const_for_fn, reason = <span class="string">"asserção de teste"</span>)]
+<a href=#82 id=82 data-nosnippet>82</a>    </span><span class="kw">fn </span>sem_accept_a_resposta_e_legivel() {
+<a href=#83 id=83 data-nosnippet>83</a>        <span class="macro">assert_eq!</span>(MediaType::of_response(<span class="prelude-val">None</span>), MediaType::Json);
+<a href=#84 id=84 data-nosnippet>84</a>        <span class="macro">assert_eq!</span>(MediaType::of_response(<span class="prelude-val">Some</span>(<span class="string">"*/*"</span>)), MediaType::Json);
+<a href=#85 id=85 data-nosnippet>85</a>        <span class="macro">assert_eq!</span>(
+<a href=#86 id=86 data-nosnippet>86</a>            MediaType::of_response(<span class="prelude-val">Some</span>(FLATBUFFERS)),
+<a href=#87 id=87 data-nosnippet>87</a>            MediaType::FlatBuffers
+<a href=#88 id=88 data-nosnippet>88</a>        );
+<a href=#89 id=89 data-nosnippet>89</a>        <span class="macro">assert_eq!</span>(
+<a href=#90 id=90 data-nosnippet>90</a>            MediaType::of_response(<span class="prelude-val">Some</span>(<span class="string">"application/octet-stream"</span>)),
+<a href=#91 id=91 data-nosnippet>91</a>            MediaType::FlatBuffers
+<a href=#92 id=92 data-nosnippet>92</a>        );
+<a href=#93 id=93 data-nosnippet>93</a>    }
+<a href=#94 id=94 data-nosnippet>94</a>
+<a href=#95 id=95 data-nosnippet>95</a>    <span class="attr">#[test]
+<a href=#96 id=96 data-nosnippet>96</a>    </span><span class="kw">fn </span>o_accept_com_qualidade_e_lista_ainda_e_entendido() {
+<a href=#97 id=97 data-nosnippet>97</a>        <span class="comment">// Um navegador manda algo como `text/html,application/json;q=0.9,*/*`.
+<a href=#98 id=98 data-nosnippet>98</a>        </span><span class="macro">assert_eq!</span>(
+<a href=#99 id=99 data-nosnippet>99</a>            MediaType::of_response(<span class="prelude-val">Some</span>(<span class="string">"text/html,application/json;q=0.9,*/*;q=0.8"</span>)),
+<a href=#100 id=100 data-nosnippet>100</a>            MediaType::Json
+<a href=#101 id=101 data-nosnippet>101</a>        );
+<a href=#102 id=102 data-nosnippet>102</a>    }
+<a href=#103 id=103 data-nosnippet>103</a>}
 </code></pre></div></section></main></body></html>

@@ -1,19 +1,23 @@
 //! O contrato de uma consulta de leitura que fala SQL.
 
-use sqlx::mysql::MySqlRow;
-
-use crate::query::{Dql, SqlQuery};
+use sqlx::mysql::{MySql, MySqlRow};
+use sqlx::QueryBuilder;
 
 /// A face SQL de uma consulta — a que vale hoje.
 ///
 /// Um backend novo ganha a sua própria face (`MongoDql`, com `filter`/`options`)
 /// e o repositório correspondente passa a consumi-la. Nada disso alcança a View.
-pub trait SqlDql: Dql + Send {
+pub trait SqlDql: super::Dql + Send {
     /// Compila a consulta.
     ///
     /// Chamado uma vez por execução, então o DQL monta o SQL a partir dos
     /// filtros que recebeu em vez de guardar um texto pronto.
-    fn build(&self) -> SqlQuery;
+    ///
+    /// O construtor é o do próprio `sqlx`: `push` para texto literal,
+    /// `push_bind` para valor. Não há construtor de `SELECT` nosso no caminho —
+    /// ele era uma segunda linguagem para manter, e o `push_bind` já é o que
+    /// impedia a interpolação de valor que ele existia para impedir.
+    fn build(&self) -> QueryBuilder<MySql>;
 
     /// Transforma as linhas na View.
     ///

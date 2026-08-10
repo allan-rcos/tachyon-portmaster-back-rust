@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["role_create_request_json","role_ids_request_json","role_list_response_json","role_permissions_update_request_json","user_admin_password_reset_request_json","user_admin_response_json","user_create_request_json","user_list_response_json","user_update_request_json"]};

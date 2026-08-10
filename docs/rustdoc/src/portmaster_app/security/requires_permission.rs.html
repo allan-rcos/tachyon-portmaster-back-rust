@@ -30,7 +30,7 @@
 <a href=#30 id=30 data-nosnippet>30</a>            <span class="kw">return </span><span class="prelude-val">Ok</span>(());
 <a href=#31 id=31 data-nosnippet>31</a>        }
 <a href=#32 id=32 data-nosnippet>32</a>
-<a href=#33 id=33 data-nosnippet>33</a>        <span class="prelude-val">Err</span>(AppError::Forbidden {
+<a href=#33 id=33 data-nosnippet>33</a>        <span class="prelude-val">Err</span>(AppError::PermissionDenied {
 <a href=#34 id=34 data-nosnippet>34</a>            permission: <span class="self">self</span>.slug.to_owned(),
 <a href=#35 id=35 data-nosnippet>35</a>        })
 <a href=#36 id=36 data-nosnippet>36</a>    }
@@ -113,7 +113,7 @@
 <a href=#113 id=113 data-nosnippet>113</a>
 <a href=#114 id=114 data-nosnippet>114</a>        <span class="macro">assert!</span>(<span class="macro">matches!</span>(
 <a href=#115 id=115 data-nosnippet>115</a>            error,
-<a href=#116 id=116 data-nosnippet>116</a>            AppError::Forbidden { <span class="kw-2">ref </span>permission } <span class="kw">if </span>permission == PermissionSlug::PRODUCT_CREATE
+<a href=#116 id=116 data-nosnippet>116</a>            AppError::PermissionDenied { <span class="kw-2">ref </span>permission } <span class="kw">if </span>permission == PermissionSlug::PRODUCT_CREATE
 <a href=#117 id=117 data-nosnippet>117</a>        ));
 <a href=#118 id=118 data-nosnippet>118</a>    }
 <a href=#119 id=119 data-nosnippet>119</a>}

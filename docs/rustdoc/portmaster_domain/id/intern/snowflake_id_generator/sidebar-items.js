@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["EPOCH_MS","NODE_COUNT","NODE_MAX"],"fn":["instance_of"],"struct":["SnowflakeIdGenerator"]};

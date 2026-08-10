@@ -1,6 +1,6 @@
 //! O contrato de persistência de role.
 
-use portmaster_domain::models::Role;
+use portmaster_domain::domain::Role;
 
 /// Persistência de papéis.
 #[trait_variant::make(Send)]

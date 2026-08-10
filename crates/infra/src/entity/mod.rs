@@ -8,15 +8,18 @@
 //! Como o trait de domínio é somente-leitura, uma entity **não consegue editar**
 //! um objeto vindo de outra camada: ela o **recria** a partir do trait, por um
 //! `from_domain`. A ausência de setters não é inconveniente, é a garantia.
+//!
+//! ## A linha crua não tem struct própria
+//!
+//! Cada entity implementa `sqlx::FromRow` à mão, e é ali que a linha vira
+//! entity. Antes havia um `*_row.rs` por agregado: a mesma lista de colunas
+//! escrita duas vezes, sem comportamento nenhum, existindo só para ser
+//! convertida na entity logo em seguida — e uma coluna nova exigia tocar os
+//! dois arquivos, com a chance de o segundo ficar para trás.
 
 pub(crate) mod codec;
 pub(crate) mod container_entity;
-pub(crate) mod container_row;
 pub(crate) mod manifest_cargo_entity;
-pub(crate) mod manifest_cargo_row;
 pub(crate) mod product_entity;
-pub(crate) mod product_row;
 pub(crate) mod role_entity;
-pub(crate) mod role_row;
 pub(crate) mod user_entity;
-pub(crate) mod user_row;

@@ -137,13 +137,13 @@ impl ApiError {
         (self.status, problem, self.cookies)
     }
 
-    /// Traduz o erro do `app` para o status que o cliente recebe.
+    /// Traduz o erro **comum** do `app` para o status que o cliente recebe.
     ///
-    /// É o **único** ponto de tradução do sistema, e ele traduz o
-    /// [`AppErrorKind`] — não a variante. O `app` agrupa suas falhas por
-    /// natureza; aqui cada natureza tem exatamente um status, e uma variante
-    /// nova entra no agrupamento certo lá em cima em vez de precisar de uma
-    /// linha nova aqui. A variante só é consultada para compor o texto.
+    /// São as três recusas que qualquer caso de uso pode devolver, e a tradução
+    /// delas mora num lugar só. As recusas próprias de um serviço — "produto não
+    /// encontrado", "esse contêiner não está selado" — são casadas pelo
+    /// controller que chamou aquele caso de uso, que é quem sabe o que cada uma
+    /// significa na rota dele.
     ///
     /// ## Validação vem em lote
     ///
@@ -166,10 +166,7 @@ impl ApiError {
     pub fn of_app(error: AppError) -> Self {
         let status = match error.kind() {
             AppErrorKind::Validation => StatusCode::UNPROCESSABLE_ENTITY,
-            AppErrorKind::Authentication => StatusCode::UNAUTHORIZED,
             AppErrorKind::Authorization => StatusCode::FORBIDDEN,
-            AppErrorKind::Absence => StatusCode::NOT_FOUND,
-            AppErrorKind::Rule => StatusCode::CONFLICT,
             AppErrorKind::Internal => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
@@ -177,22 +174,22 @@ impl ApiError {
             AppError::Validation(fields) => describe_fields(&fields),
 
             AppError::PermissionDenied { permission } => {
-                SystemLogger::get()
-                    .with_field("permission", permission)
-                    .info("acesso negado por falta de permissão");
+                SystemLogger::get().info(
+                    "acesso negado por falta de permissão",
+                    [("permission", permission)],
+                );
 
                 "You do not have permission to perform this action.".to_owned()
             }
 
             AppError::Infra(cause) => {
-                SystemLogger::get()
-                    .with_field("error", format!("{cause:?}"))
-                    .error("falha de infraestrutura");
+                SystemLogger::get().error(
+                    "falha de infraestrutura",
+                    [("error", &format!("{cause:?}"))],
+                );
 
                 "An unexpected error occurred.".to_owned()
             }
-
-            other => other.to_string(),
         };
 
         Self::new(status, detail)
@@ -238,7 +235,7 @@ mod tests {
     #[test]
     fn a_permissao_negada_nao_vaza_o_slug_no_corpo() {
         let error = ApiError::of_app(AppError::PermissionDenied {
-            permission: "container:seal".into(),
+            permission: "container:seal",
         });
 
         assert_eq!(error.status(), StatusCode::FORBIDDEN);
@@ -277,14 +274,16 @@ mod tests {
         assert!(error.detail.contains("password"));
     }
 
+    /// O slug negado não aparece no corpo, mas o 403 aparece.
     #[test]
-    fn a_regra_de_negocio_violada_e_conflito() {
-        // O pedido estava bem escrito; o que não podia era o estado do contêiner.
-        let error = ApiError::of_app(AppError::RuleViolation(
-            "Only a sealed container can be dispatched.".into(),
-        ));
+    fn a_permissao_que_falta_e_proibido() {
+        let error = ApiError::of_app(AppError::permission_denied("container:dispatch"));
 
-        assert_eq!(error.status(), StatusCode::CONFLICT);
+        assert_eq!(error.status(), StatusCode::FORBIDDEN);
+        assert!(
+            !error.detail.contains("container:dispatch"),
+            "o slug descreve o mapa de autorização para quem acabou de ser recusado"
+        );
     }
 
     /// Sem requisição de onde negociar, vale o padrão — e o padrão é JSON.

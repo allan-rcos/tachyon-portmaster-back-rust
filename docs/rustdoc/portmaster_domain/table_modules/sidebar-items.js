@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["auth_tm","container_tm","interno","manifest_tm","marker_group_tm","marker_tm","permission_tm","product_tm","role_tm","user_tm"]};
+window.SIDEBAR_ITEMS = {"mod":["auth_tm","container_tm","intern","manifest_tm","marker_group_tm","marker_tm","permission_tm","product_tm","role_tm","user_tm"]};

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["risk_class_of"],"struct":["ProductHandlers"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["http_auth_cookie"]};

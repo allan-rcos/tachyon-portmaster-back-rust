@@ -1,7 +1,7 @@
 //! As regras de marcador.
 
+use crate::domain::Marker;
 use crate::error::MarkerError;
-use crate::models::Marker;
 
 /// Constrói marcadores, reduzindo o valor em claro a um digest.
 pub trait MarkerTM {

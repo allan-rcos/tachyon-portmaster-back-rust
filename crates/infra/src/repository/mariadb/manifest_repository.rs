@@ -1,14 +1,13 @@
 //! Persistência de carga e telemetria sobre `MariaDB`.
 
 use anyhow::Context;
+use portmaster_domain::domain::ManifestCargo;
 use portmaster_domain::enums::TelemetryEvent;
-use portmaster_domain::models::ManifestCargo;
 
-use crate::database::interno::mariadb_unit_of_work::MariadbUnitOfWork;
 use crate::entity::codec::Codec;
 use crate::entity::manifest_cargo_entity::ManifestCargoEntity;
-use crate::entity::manifest_cargo_row::ManifestCargoRow;
 use crate::repository::ManifestRepository;
+use crate::scope::database::mysql_transaction::MySqlTransaction;
 
 /// A linha de manifesto de um produto num contêiner.
 const FIND_CARGO: &str = "SELECT container_id, product_id, quantity, weight, created_at \
@@ -34,8 +33,8 @@ const CLEAR_MANIFEST: &str = "DELETE FROM `container_items` WHERE container_id =
 ///
 /// Usa `UTC_TIMESTAMP()` e não `NOW()`: o `NOW()` devolve o fuso da **sessão**,
 /// e um horário de telemetria que depende de como a conexão foi aberta não é um
-/// horário. A sessão do pool já é fixada em `+00:00` (ver
-/// [`pool`](crate::database::pool)), o que faria os dois coincidirem — mas
+/// horário. A sessão do pool já é fixada em `+00:00` quando ele é aberto, o que
+/// faria os dois coincidirem — mas
 /// escrever o que se quer dizer é o que mantém a linha correta se alguém um dia
 /// rodar este SQL por outro caminho.
 const INSERT_TELEMETRY: &str =
@@ -44,16 +43,19 @@ const INSERT_TELEMETRY: &str =
 
 /// O repositório de manifesto.
 #[derive(Clone)]
-pub struct ManifestMariadbRepository;
+pub struct ManifestMariadbRepository<T> {
+    /// De onde a transação da tarefa vem.
+    transactions: T,
+}
 
-impl ManifestMariadbRepository {
+impl<T> ManifestMariadbRepository<T> {
     /// Monta o repositório.
-    pub(crate) const fn new() -> Self {
-        Self
+    pub(crate) const fn new(transactions: T) -> Self {
+        Self { transactions }
     }
 }
 
-impl ManifestRepository for ManifestMariadbRepository {
+impl<T: MySqlTransaction + Send + Sync> ManifestRepository for ManifestMariadbRepository<T> {
     async fn find_cargo(
         &self,
         container_id: &str,
@@ -61,32 +63,30 @@ impl ManifestRepository for ManifestMariadbRepository {
     ) -> anyhow::Result<Option<Box<dyn ManifestCargo>>> {
         let raw_container = Codec::decode_id(container_id)?;
         let raw_product = Codec::decode_id(product_id)?;
-        let mut transaction = MariadbUnitOfWork::current().await?;
+        let mut transaction = self.transactions.transaction().await?;
 
-        let row: Option<ManifestCargoRow> = sqlx::query_as(FIND_CARGO)
+        let entity: Option<ManifestCargoEntity> = sqlx::query_as(FIND_CARGO)
             .bind(raw_container)
             .bind(raw_product)
-            .fetch_optional(&mut **transaction.as_mut())
+            .fetch_optional(&mut **transaction)
             .await
             .with_context(|| {
                 format!("falha ao buscar a carga de {product_id} no contêiner {container_id}")
             })?;
 
-        Ok(row
-            .map(ManifestCargoEntity::from_row)
-            .map(|entity| Box::new(entity) as Box<dyn ManifestCargo>))
+        Ok(entity.map(|entity| Box::new(entity) as Box<dyn ManifestCargo>))
     }
 
     async fn upsert_cargo(&self, cargo: &dyn ManifestCargo) -> anyhow::Result<()> {
         let entity = ManifestCargoEntity::from_domain(cargo)?;
-        let mut transaction = MariadbUnitOfWork::current().await?;
+        let mut transaction = self.transactions.transaction().await?;
 
         sqlx::query(UPSERT_CARGO)
             .bind(entity.raw_container_id())
             .bind(entity.raw_product_id())
             .bind(entity.quantity())
             .bind(entity.weight())
-            .execute(&mut **transaction.as_mut())
+            .execute(&mut **transaction)
             .await
             .context("falha ao gravar a linha do manifesto")?;
 
@@ -96,12 +96,12 @@ impl ManifestRepository for ManifestMariadbRepository {
     async fn delete_cargo(&self, container_id: &str, product_id: &str) -> anyhow::Result<()> {
         let raw_container = Codec::decode_id(container_id)?;
         let raw_product = Codec::decode_id(product_id)?;
-        let mut transaction = MariadbUnitOfWork::current().await?;
+        let mut transaction = self.transactions.transaction().await?;
 
         sqlx::query(DELETE_CARGO)
             .bind(raw_container)
             .bind(raw_product)
-            .execute(&mut **transaction.as_mut())
+            .execute(&mut **transaction)
             .await
             .context("falha ao remover a linha do manifesto")?;
 
@@ -110,11 +110,11 @@ impl ManifestRepository for ManifestMariadbRepository {
 
     async fn clear_manifest(&self, container_id: &str) -> anyhow::Result<()> {
         let raw_container = Codec::decode_id(container_id)?;
-        let mut transaction = MariadbUnitOfWork::current().await?;
+        let mut transaction = self.transactions.transaction().await?;
 
         sqlx::query(CLEAR_MANIFEST)
             .bind(raw_container)
-            .execute(&mut **transaction.as_mut())
+            .execute(&mut **transaction)
             .await
             .with_context(|| format!("falha ao limpar o manifesto do contêiner {container_id}"))?;
 
@@ -128,13 +128,13 @@ impl ManifestRepository for ManifestMariadbRepository {
         description: Option<&str>,
     ) -> anyhow::Result<()> {
         let raw_container = Codec::decode_id(container_id)?;
-        let mut transaction = MariadbUnitOfWork::current().await?;
+        let mut transaction = self.transactions.transaction().await?;
 
         sqlx::query(INSERT_TELEMETRY)
             .bind(raw_container)
             .bind(event.as_i32())
             .bind(description)
-            .execute(&mut **transaction.as_mut())
+            .execute(&mut **transaction)
             .await
             .with_context(|| {
                 format!("falha ao registrar telemetria do contêiner {container_id}")

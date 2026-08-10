@@ -12,8 +12,10 @@ pub mod permission_repository;
 pub mod product_repository;
 pub mod role_repository;
 pub mod user_repository;
+pub mod view_cache_repository;
 
 pub(crate) mod mariadb;
+pub(crate) mod memory;
 
 pub use container_repository::ContainerRepository;
 pub use manifest_repository::ManifestRepository;
@@ -23,3 +25,4 @@ pub use permission_repository::PermissionRepository;
 pub use product_repository::ProductRepository;
 pub use role_repository::RoleRepository;
 pub use user_repository::UserRepository;
+pub use view_cache_repository::ViewCacheRepository;

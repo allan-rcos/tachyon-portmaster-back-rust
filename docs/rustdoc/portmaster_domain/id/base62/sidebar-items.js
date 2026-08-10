@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["ALPHABET"],"struct":["Base62"]};

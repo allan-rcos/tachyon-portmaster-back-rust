@@ -1,7 +1,7 @@
 //! As regras de manifesto.
 
+use crate::domain::{Container, ManifestCargo, ManifestChange, Product};
 use crate::error::ManifestError;
-use crate::models::{Container, ManifestCargo, ManifestChange, Product};
 
 /// Movimenta carga, produzindo o efeito completo sobre contêiner e manifesto.
 pub trait ManifestTM {

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["TOKEN_TYPE"],"fn":["refused"],"struct":["AuthHandlers"]};

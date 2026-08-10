@@ -52,9 +52,10 @@ where
             Ok(match outcome {
                 Ok(response) => response?,
                 Err(panic) => {
-                    SystemLogger::get()
-                        .with_field("panic", describe(&panic))
-                        .error("pânico capturado no controller");
+                    SystemLogger::get().error(
+                        "pânico capturado no controller",
+                        [("panic", &describe(&panic))],
+                    );
 
                     let (status, problem, cookies) = ApiError::new(
                         StatusCode::INTERNAL_SERVER_ERROR,

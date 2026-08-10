@@ -1,6 +1,6 @@
 //! O contrato de persistência de marker.
 
-use portmaster_domain::models::Marker;
+use portmaster_domain::domain::Marker;
 
 /// Marcadores booleanos com prazo.
 ///

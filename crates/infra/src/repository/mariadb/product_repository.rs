@@ -1,14 +1,13 @@
 //! Persistência de produtos sobre `MariaDB`.
 
 use anyhow::Context;
-use portmaster_domain::models::Product;
+use portmaster_domain::domain::Product;
 
-use crate::database::interno::mariadb_unit_of_work::MariadbUnitOfWork;
 use crate::entity::codec::Codec;
 use crate::entity::product_entity::ProductEntity;
-use crate::entity::product_row::ProductRow;
 use crate::repository::ProductRepository;
-use crate::text::search_key::SearchKey;
+use crate::scope::database::mysql_transaction::MySqlTransaction;
+use crate::search_key::SearchKey;
 
 /// Toda leitura filtra `deleted_at IS NULL` — sem isso, um produto removido
 /// reapareceria nas consultas.
@@ -33,38 +32,39 @@ const SOFT_DELETE: &str =
 
 /// O repositório de produtos.
 #[derive(Clone)]
-pub struct ProductMariadbRepository;
+pub struct ProductMariadbRepository<T> {
+    /// De onde a transação da tarefa vem.
+    transactions: T,
+}
 
-impl ProductMariadbRepository {
+impl<T> ProductMariadbRepository<T> {
     /// Monta o repositório.
     ///
     /// Não guarda estado: a transação vem do escopo da requisição, não de um
     /// campo — o que permite ao provider reconstruí-lo a cada chamada por custo
     /// praticamente zero.
-    pub(crate) const fn new() -> Self {
-        Self
+    pub(crate) const fn new(transactions: T) -> Self {
+        Self { transactions }
     }
 }
 
-impl ProductRepository for ProductMariadbRepository {
+impl<T: MySqlTransaction + Send + Sync> ProductRepository for ProductMariadbRepository<T> {
     async fn find_by_id(&self, id: &str) -> anyhow::Result<Option<Box<dyn Product>>> {
         let raw_id = Codec::decode_id(id)?;
-        let mut transaction = MariadbUnitOfWork::current().await?;
+        let mut transaction = self.transactions.transaction().await?;
 
-        let row: Option<ProductRow> = sqlx::query_as(FIND_BY_ID)
+        let entity: Option<ProductEntity> = sqlx::query_as(FIND_BY_ID)
             .bind(raw_id)
-            .fetch_optional(&mut **transaction.as_mut())
+            .fetch_optional(&mut **transaction)
             .await
             .with_context(|| format!("falha ao buscar o produto {id}"))?;
 
-        row.map(ProductEntity::from_row)
-            .transpose()
-            .map(|entity| entity.map(|e| Box::new(e) as Box<dyn Product>))
+        Ok(entity.map(|entity| Box::new(entity) as Box<dyn Product>))
     }
 
     async fn insert(&self, product: &dyn Product) -> anyhow::Result<()> {
         let entity = ProductEntity::from_domain(product)?;
-        let mut transaction = MariadbUnitOfWork::current().await?;
+        let mut transaction = self.transactions.transaction().await?;
 
         sqlx::query(INSERT)
             .bind(entity.raw_id())
@@ -72,7 +72,7 @@ impl ProductRepository for ProductMariadbRepository {
             .bind(entity.density())
             .bind(entity.risk_class().as_i32())
             .bind(SearchKey::of(entity.name()))
-            .execute(&mut **transaction.as_mut())
+            .execute(&mut **transaction)
             .await
             .with_context(|| format!("falha ao gravar o produto {}", product.id()))?;
 
@@ -81,7 +81,7 @@ impl ProductRepository for ProductMariadbRepository {
 
     async fn update(&self, product: &dyn Product) -> anyhow::Result<()> {
         let entity = ProductEntity::from_domain(product)?;
-        let mut transaction = MariadbUnitOfWork::current().await?;
+        let mut transaction = self.transactions.transaction().await?;
 
         sqlx::query(UPDATE)
             .bind(entity.name())
@@ -89,7 +89,7 @@ impl ProductRepository for ProductMariadbRepository {
             .bind(entity.risk_class().as_i32())
             .bind(SearchKey::of(entity.name()))
             .bind(entity.raw_id())
-            .execute(&mut **transaction.as_mut())
+            .execute(&mut **transaction)
             .await
             .with_context(|| format!("falha ao atualizar o produto {}", product.id()))?;
 
@@ -98,11 +98,11 @@ impl ProductRepository for ProductMariadbRepository {
 
     async fn delete(&self, id: &str) -> anyhow::Result<()> {
         let raw_id = Codec::decode_id(id)?;
-        let mut transaction = MariadbUnitOfWork::current().await?;
+        let mut transaction = self.transactions.transaction().await?;
 
         sqlx::query(SOFT_DELETE)
             .bind(raw_id)
-            .execute(&mut **transaction.as_mut())
+            .execute(&mut **transaction)
             .await
             .with_context(|| format!("falha ao remover o produto {id}"))?;
 

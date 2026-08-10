@@ -1,10 +1,10 @@
 //! O VO de `PermissionListResponse`.
 
+use crate::wire::convert::Convert;
 use crate::wire::dto::json::metadata::permission_list_response_json::PermissionListResponseJson;
 use crate::wire::tables as fbs;
 use crate::wire::vo::metadata::metadata_item_x_response::MetadataItemXResponse;
 use crate::wire::x::response_x::ResponseX;
-use crate::wire::convert::Convert;
 
 /// O que a rota de `PermissionListResponse` responde.
 #[derive(Debug, Clone)]

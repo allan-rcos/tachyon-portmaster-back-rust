@@ -1,10 +1,12 @@
 //! A entity de usuário.
 
-use crate::entity::codec::Codec;
-use crate::entity::user_row::UserRow;
 use chrono::{DateTime, Utc};
-use portmaster_domain::models::Role;
-use portmaster_domain::models::User;
+use portmaster_domain::domain::Role;
+use portmaster_domain::domain::User;
+use sqlx::mysql::MySqlRow;
+use sqlx::{FromRow, Row as _};
+
+use crate::entity::codec::Codec;
 
 /// A entity, com o id já traduzido para base62.
 ///
@@ -34,20 +36,35 @@ pub struct UserEntity {
     deleted_at: Option<DateTime<Utc>>,
 }
 
+impl FromRow<'_, MySqlRow> for UserEntity {
+    /// Uma linha de `users` como a entity a quer, **sem papéis**.
+    ///
+    /// Os papéis vêm de `user_roles`, numa segunda consulta, e são anexados por
+    /// [`with_roles`](Self::with_roles). Um usuário sem eles não está completo —
+    /// é o repositório que fecha isso, porque é ele quem sabe consultar.
+    fn from_row(row: &MySqlRow) -> sqlx::Result<Self> {
+        let raw_id: i64 = row.try_get("id")?;
+
+        Ok(Self {
+            id: Codec::encode_id(raw_id),
+            raw_id,
+            name: row.try_get("name")?,
+            email: row.try_get("email")?,
+            password_hash: row.try_get("password_hash")?,
+            roles: Vec::new(),
+            created_at: row.try_get("created_at")?,
+            updated_at: row.try_get("updated_at")?,
+            deleted_at: row.try_get("deleted_at")?,
+        })
+    }
+}
+
 impl UserEntity {
-    /// Reconstrói a entity a partir de uma linha lida e dos papéis já buscados.
-    pub(crate) fn from_row(row: UserRow, roles: Vec<Box<dyn Role>>) -> Self {
-        Self {
-            id: Codec::encode_id(row.id),
-            raw_id: row.id,
-            name: row.name,
-            email: row.email,
-            password_hash: row.password_hash,
-            roles,
-            created_at: row.created_at,
-            updated_at: row.updated_at,
-            deleted_at: row.deleted_at,
-        }
+    /// Anexa os papéis que o repositório buscou.
+    #[must_use]
+    pub(crate) fn with_roles(mut self, roles: Vec<Box<dyn Role>>) -> Self {
+        self.roles = roles;
+        self
     }
 
     /// Recria a entity a partir de qualquer [`User`], para gravá-la.

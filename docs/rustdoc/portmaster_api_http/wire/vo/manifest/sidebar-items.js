@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["load_item_x_request","manifest_x_response","unload_item_x_request"]};

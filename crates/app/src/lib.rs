@@ -1,7 +1,7 @@
 //! # portmaster-app
 //!
 //! Orquestração. Depende de `domain` (`TableModules`, traits de objeto) e de
-//! `infra` (repositories, `UnitOfWork`, cache).
+//! `infra` (repositories, escopo da tarefa, cache).
 //!
 //! Dono dos **Command DTOs**, dos **Query DTOs** e dos traits de `UseCase` — que
 //! são exatamente os ports de que a apresentação precisa, e por isso são
@@ -10,7 +10,9 @@
 //! É aqui que a autorização acontece. Cada `UseCase` protegido declara no
 //! construtor a permissão que exige e a confere na primeira linha, contra o
 //! `UserContext` que veio no Command — o contexto chega por argumento, nunca de
-//! um estado global. É também o único lugar que abre e fecha transação.
+//! um estado global. É também o único lugar que abre o escopo da tarefa: o
+//! `MasterScope::run` marca onde a unidade de trabalho começa e termina, e a
+//! camada não sabe o que a `infra` carrega dentro dele.
 //!
 //! ## O que esta camada reexporta, e por quê
 //!
@@ -36,23 +38,17 @@
     )
 )]
 
+pub mod bootstrap;
 pub mod commands;
 pub mod config;
 pub mod context;
 pub mod error;
-pub mod provider;
 pub mod queries;
-pub mod register;
-pub mod security;
 pub mod services;
 
-pub(crate) mod cache;
-pub(crate) mod interno;
-pub(crate) mod transaction;
-
+pub use bootstrap::provider::AppProvider;
+pub use bootstrap::register::register;
 pub use config::AppSecrets;
-pub use provider::AppProvider;
-pub use register::register;
 
 // --- Reexports para a apresentação -----------------------------------------
 
@@ -61,13 +57,13 @@ pub use register::register;
 /// Read-only e mapeados imediatamente para o fio — é a exceção de borda que a
 /// DI estática admite, e a única razão de haver `Box<dyn>` no sistema.
 pub mod domain {
+    pub use portmaster_domain::domain::Container;
+    pub use portmaster_domain::domain::Product;
+    pub use portmaster_domain::domain::Role;
+    pub use portmaster_domain::domain::User;
+    pub use portmaster_domain::domain::{ManifestCargo, ManifestChange};
     pub use portmaster_domain::enums::{ContainerStatus, RiskClass, TelemetryEvent};
     pub use portmaster_domain::error::FieldError;
-    pub use portmaster_domain::models::Container;
-    pub use portmaster_domain::models::Product;
-    pub use portmaster_domain::models::Role;
-    pub use portmaster_domain::models::User;
-    pub use portmaster_domain::models::{ManifestCargo, ManifestChange};
 }
 
 /// Os read models do lado de leitura.
@@ -78,14 +74,13 @@ pub use portmaster_infra::query::views;
 /// O [`SystemLogger`] é o global, para os pontos sem construtor onde injetar.
 pub use portmaster_infra::logging::{Logger, LoggerFactory, SystemLogger};
 
-/// A hora corrente, injetada.
-pub use portmaster_infra::clock::Clock;
-
 /// Os geradores de id que não são identidade de entidade.
 ///
-/// Vivem na `infra` e passam por aqui: o refresh token opaco e o `request_id`
-/// são da apresentação, não do domínio.
-pub use portmaster_infra::id::{RandomIdGenerator, SortableIdGenerator};
+/// Nascem no `domain` — emitir id é contrato de negócio — e passam por aqui
+/// porque quem os usa é a apresentação: o refresh token opaco e o `request_id`.
+/// O gerador de identidade de entidade **não** atravessa: com ele nas mãos, o
+/// `api-http` conseguiria nomear uma linha sem passar pelo `TableModule`.
+pub use portmaster_domain::id::{RandomIdGenerator, SequentialIdGenerator};
 
 /// Os segredos das camadas de baixo.
 ///
@@ -106,7 +101,7 @@ pub use portmaster_infra::config::SecretString;
 mod tests {
     use super::*;
     use crate::commands::session::LoginCommand;
-    use crate::error::AppError;
+    use crate::error::{ProductError, SessionError};
     use crate::queries::product::ListProductsQuery;
     use crate::services::{ProductUseCase, SessionUseCase};
     use std::sync::Arc;
@@ -126,7 +121,7 @@ mod tests {
     /// O `tokio::spawn` no corpo é o que prova o ponto: ele exige
     /// `Send + 'static`, ou seja, que o futuro do caso de uso atravesse uma
     /// fronteira de execução como atravessaria num handler.
-    async fn o_provider_serve_um_handler_do_axum<P>(provider: Arc<P>) -> Result<(), AppError>
+    async fn o_provider_serve_um_handler_do_axum<P>(provider: Arc<P>) -> Result<(), ProductError>
     where
         P: AppProvider + Send + Sync + 'static,
     {
@@ -159,7 +154,7 @@ mod tests {
     /// A exceção de borda do `dyn` não pode custar a `Send`-ness do retorno,
     /// senão o objeto de domínio não atravessaria até a apresentação.
     #[allow(dead_code, reason = "o teste é a compilação: nunca é chamado")]
-    async fn a_escrita_tambem_atravessa_uma_tarefa<P>(provider: Arc<P>) -> Result<(), AppError>
+    async fn a_escrita_tambem_atravessa_uma_tarefa<P>(provider: Arc<P>) -> Result<(), SessionError>
     where
         P: AppProvider + Send + Sync + 'static,
     {

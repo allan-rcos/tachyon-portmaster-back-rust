@@ -1,7 +1,7 @@
 //! As regras de papel.
 
+use crate::domain::Role;
 use crate::error::RoleError;
-use crate::models::Role;
 
 /// Constrói e altera papéis.
 pub trait RoleTM {

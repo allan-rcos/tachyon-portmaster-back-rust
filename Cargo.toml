@@ -52,6 +52,10 @@ serde_json = "1"
 # --- persistência / cache ---------------------------------------------------
 sqlx = { version = "0.9", features = ["runtime-tokio", "tls-rustls", "mysql", "chrono"] }
 moka = { version = "0.12", features = ["future"] }
+# O cache de view guarda a View, não JSON: o formato é interno ao processo e
+# ninguém o lê de fora. bincode é menor e mais rápido, e uma entrada de formato
+# anterior é tratada como ausência — o mesmo que já se fazia com o JSON.
+bincode = { version = "2", features = ["serde"] }
 
 # --- domínio ----------------------------------------------------------------
 # nutype SEM a feature serde: o domain valida, não serializa.
@@ -59,8 +63,12 @@ nutype = "0.5"
 argon2 = { version = "0.5", features = ["std"] }
 base62 = "2"
 base64 = "0.22"            # token de cursor keyset (base64url, sem padding)
-rs-snowflake = "0.6"           # dep OPCIONAL da feature `id-snowflake` (default)
-nanoid = "0.5"                 # refresh token opaco
+# Gerador thread-safe: o estado mora num AtomicU64 e `generate` toma `&self`.
+# A alternativa (rs-snowflake) exige `&mut self`, o que obrigava a embrulhar o
+# gerador num std::sync::Mutex — tipo banido em .clippy.toml — e a justificar o
+# desvio com quatro `#[allow]`.
+snowflaked = { version = "1", features = ["sync"] }   # dep OPCIONAL da feature `id-snowflake`
+nanoid = "0.5"                 # id opaco: refresh token, filename de imagem
 xxhash-rust = { version = "0.8", features = ["xxh64"] }   # chave de marker
 xid = "1"                      # id ordenável fora do banco (request_id)
 
@@ -74,11 +82,16 @@ config = "0.15"
 secrecy = { version = "0.10", features = ["serde"] }
 
 # --- transversais -----------------------------------------------------------
+# Registro em tempo de link: cada contexto por tarefa se declara no próprio
+# arquivo, e o dono do escopo não importa nenhum deles. Sem isso, o `scope/`
+# ganharia uma linha e um nível de aninhamento por contexto novo.
+linkme = "0.3"
 anyhow = "1"
 thiserror = "2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
 chrono = { version = "0.4", features = ["serde"] }
+unicode-normalization = "0.1"
 
 # --- teste ------------------------------------------------------------------
 mockall = "0.15"
@@ -129,7 +142,7 @@ must_use_candidate = "allow"
 type_complexity = "allow"
 
 # O `missing_docs` do rustc só enxerga item **público**, e a maior parte do que
-# se escreve aqui não é: são 69 arquivos em `interno/` e o `api-http` inteiro,
+# se escreve aqui não é: são 69 arquivos em `intern/` e o `api-http` inteiro,
 # que é `pub(crate)`. Sem este lint, nada no compilador cobre a camada de
 # apresentação nem uma única implementação — foram 352 itens sem doc quando a
 # passada começou, e o compilador não tinha uma palavra a dizer sobre nenhum.
@@ -175,12 +188,12 @@ option_if_let_else = "allow"
 
 # Este entra em conflito direto com o Single Export Pattern, e o padrão ganha.
 #
-# O lint reclama de `pub(crate) struct X` dentro de um `pub(crate) mod interno`:
+# O lint reclama de `pub(crate) struct X` dentro de um `pub(crate) mod intern`:
 # como o módulo já limita o alcance, o `pub(crate)` do item seria redundante e
 # ele pede um item privado. Mas é justamente esse `pub(crate)` que **declara**
 # qual é o item exportado do arquivo — é o que o `cargo xtask lint-exports`
 # conta, e é o que diz a quem lê "isto atravessa a fronteira do módulo, o resto
-# não". Removê-lo deixaria todo arquivo de `interno/` com zero export declarado,
+# não". Removê-lo deixaria todo arquivo de `intern/` com zero export declarado,
 # e a regra do repositório perderia o que ela mede.
 redundant_pub_crate = "allow"
 

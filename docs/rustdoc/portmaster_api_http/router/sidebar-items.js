@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["cors_layer","router"],"macro":["auth_route","route"],"struct":["AuthParts"]};
+window.SIDEBAR_ITEMS = {"constant":["CORS_MAX_AGE_SECONDS"],"fn":["cors_layer","router","routes"]};

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["load_item_request","load_item_request_factory","manifest_response_factory","unload_item_request","unload_item_request_factory"]};

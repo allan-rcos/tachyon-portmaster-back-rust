@@ -35,14 +35,16 @@ pub(crate) fn routes<C: RoleController>(controller: C) -> Router {
                     create.create(context, request).await,
                 ))
             })
-            .get(move |encoder: Encoder, Query(params): Query<PageParams>| async move {
-                let context = Session::require_user()?;
+            .get(
+                move |encoder: Encoder, Query(params): Query<PageParams>| async move {
+                    let context = Session::require_user()?;
 
-                Ok::<_, crate::error::api_error::ApiError>(ApiResponse::ok(
-                    encoder,
-                    list.list(context, params).await,
-                ))
-            }),
+                    Ok::<_, crate::error::api_error::ApiError>(ApiResponse::ok(
+                        encoder,
+                        list.list(context, params).await,
+                    ))
+                },
+            ),
         )
         .route(
             "/roles/{id}/permissions",

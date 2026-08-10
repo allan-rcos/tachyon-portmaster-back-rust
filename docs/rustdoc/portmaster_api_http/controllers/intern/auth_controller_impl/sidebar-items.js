@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["REFRESH_TOKEN_GROUP","TOKEN_TYPE"],"fn":["mark_refused","refused","session_refused"],"struct":["AuthControllerImpl"]};

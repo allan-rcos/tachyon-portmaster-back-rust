@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["MAX_EMAIL_LENGTH","MAX_NAME_LENGTH","MIN_PASSWORD_LENGTH"],"fn":["is_plausible_email"],"struct":["UserTMImpl"]};

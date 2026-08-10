@@ -13,7 +13,7 @@
 # fallback.
 #
 # --document-private-items is a default here rather than a flag a caller has to
-# remember. Every implementation under `interno/` is private by design — the
+# remember. Every implementation under `intern/` is private by design — the
 # contracts are the published surface and the types behind them are not — and
 # without the flag rustdoc renders the contracts and silently drops ~120
 # implementations, along with every note written on them. Drop it for the

@@ -3,9 +3,9 @@
 use portmaster_app::context::UserContext;
 
 use crate::error::api_error::ApiError;
+use crate::wire::vo::account::account_password_change_x_request::AccountPasswordChangeXRequest;
 use crate::wire::vo::account::account_profile_x_response::AccountProfileXResponse;
 use crate::wire::vo::account::account_update_x_request::AccountUpdateXRequest;
-use crate::wire::vo::account::account_password_change_x_request::AccountPasswordChangeXRequest;
 
 /// Os handlers da conta de quem está na sessão.
 #[trait_variant::make(Send)]

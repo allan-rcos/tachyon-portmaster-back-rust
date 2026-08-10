@@ -34,7 +34,11 @@ impl UserListXResponse {
     /// A página de usuários.
     pub(crate) fn of(source: UserListView) -> Self {
         Self {
-            data: source.items.into_iter().map(UserAdminXResponse::of).collect(),
+            data: source
+                .items
+                .into_iter()
+                .map(UserAdminXResponse::of)
+                .collect(),
         }
     }
 }

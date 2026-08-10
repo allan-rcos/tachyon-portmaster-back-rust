@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["container","interno","manifest_cargo","manifest_change","marker","marker_group","permission","product","role","user"]};

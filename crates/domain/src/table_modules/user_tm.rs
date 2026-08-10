@@ -1,7 +1,7 @@
 //! As regras de usuário.
 
+use crate::domain::{Role, User};
 use crate::error::UserError;
-use crate::models::{Role, User};
 
 /// Constrói e altera usuários, recusando-se a produzir um inválido.
 ///

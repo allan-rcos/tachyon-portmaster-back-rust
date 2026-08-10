@@ -1,6 +1,6 @@
 //! O contrato de persistência de marker group.
 
-use portmaster_domain::models::MarkerGroup;
+use portmaster_domain::domain::MarkerGroup;
 
 /// Registro de grupos de marcador.
 #[trait_variant::make(Send)]

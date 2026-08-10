@@ -1,9 +1,9 @@
 //! O VO de `OccupancyDivision`.
 
+use crate::wire::convert::Convert;
 use crate::wire::dto::json::metrics::occupancy_division_json::OccupancyDivisionJson;
 use crate::wire::tables as fbs;
 use crate::wire::x::response_x::ResponseX;
-use crate::wire::convert::Convert;
 use portmaster_app::views::OccupancyView;
 
 /// O que a rota de `OccupancyDivision` responde.

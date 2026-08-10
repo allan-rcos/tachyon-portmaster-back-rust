@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["product_create_request_json","product_list_response_json","product_response_json","product_update_request_json"]};

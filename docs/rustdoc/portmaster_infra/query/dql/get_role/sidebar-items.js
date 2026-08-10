@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["COLUMNS","USER_COUNT"],"fn":["get_role"],"struct":["GetRole"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["marker_group_repository","marker_repository","permission_repository","view_cache_repository"]};

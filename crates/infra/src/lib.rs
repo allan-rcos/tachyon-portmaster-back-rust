@@ -3,7 +3,7 @@
 //! Adaptadores de I/O. Depende só do `domain`, e só para pegar os traits de
 //! objeto de domínio e implementá-los nos seus entities.
 //!
-//! É dona dos **ports de I/O** — repositórios, `UnitOfWork`, cache, `Logger`.
+//! É dona dos **ports de I/O** — repositórios, escopo da tarefa, `Logger`.
 //! Eles ficam aqui e não no `domain` porque quem os consome é o `app`, que
 //! conhece esta camada; o `domain` não sabe que existe banco.
 //!
@@ -36,20 +36,15 @@
     )
 )]
 
-pub mod cache;
-pub mod clock;
+pub mod bootstrap;
 pub mod config;
-pub mod database;
-pub mod id;
 pub mod logging;
-pub mod provider;
 pub mod query;
-pub mod register;
 pub mod repository;
+pub mod scope;
 
 pub(crate) mod entity;
-pub(crate) mod interno;
-pub(crate) mod text;
+pub(crate) mod search_key;
 
-pub use provider::InfraProvider;
-pub use register::register;
+pub use bootstrap::provider::InfraProvider;
+pub use bootstrap::register::register;

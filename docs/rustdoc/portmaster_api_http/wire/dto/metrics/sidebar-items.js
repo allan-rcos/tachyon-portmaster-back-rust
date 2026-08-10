@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["metrics_response_factory","occupancy_division_factory"]};

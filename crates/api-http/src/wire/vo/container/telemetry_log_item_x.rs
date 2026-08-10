@@ -1,10 +1,10 @@
 //! O VO de `TelemetryLogItem`.
 
+use crate::wire::convert::Convert;
 use crate::wire::dto::json::container::telemetry_log_item_json::TelemetryLogItemJson;
 use crate::wire::tables as fbs;
 use crate::wire::vo::common::telemetry_event_x::TelemetryEventX;
 use crate::wire::x::response_x::ResponseX;
-use crate::wire::convert::Convert;
 use portmaster_app::views::TelemetryLogView;
 
 /// O que a rota de `TelemetryLogItem` responde.
