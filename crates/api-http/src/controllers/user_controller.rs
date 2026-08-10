@@ -4,11 +4,11 @@ use portmaster_app::context::UserContext;
 
 use crate::controllers::params::user_page_params::UserPageParams;
 use crate::error::api_error::ApiError;
-use crate::wire::vo::admin::role_ids_x_request::RoleIdsXRequest;
 use crate::wire::vo::admin::user_admin_password_reset_x_request::UserAdminPasswordResetXRequest;
 use crate::wire::vo::admin::user_admin_x_response::UserAdminXResponse;
 use crate::wire::vo::admin::user_create_x_request::UserCreateXRequest;
 use crate::wire::vo::admin::user_list_x_response::UserListXResponse;
+use crate::wire::vo::admin::user_roles_update_x_request::UserRolesUpdateXRequest;
 use crate::wire::vo::admin::user_update_x_request::UserUpdateXRequest;
 
 /// Os handlers de usuário.
@@ -44,7 +44,7 @@ pub(crate) trait UserController: Clone + Sync + 'static {
         &self,
         context: UserContext,
         id: String,
-        request: RoleIdsXRequest,
+        request: UserRolesUpdateXRequest,
     ) -> Result<UserAdminXResponse, ApiError>;
 
     /// `PUT /users/{id}/password`

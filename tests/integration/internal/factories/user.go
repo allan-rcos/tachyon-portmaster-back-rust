@@ -1,8 +1,6 @@
 package factories
 
 import (
-	"encoding/json"
-
 	"github.com/brianvoe/gofakeit/v7"
 	flatbuffers "github.com/google/flatbuffers/go"
 
@@ -102,16 +100,30 @@ func PasswordReset(newPassword string) []byte {
 
 // RoleIDs builds the body for PUT /users/{id}/roles.
 //
-// That endpoint is the one place the API still parses an inline JSON object
-// (`{"role_ids": [...]}`) instead of a FlatBuffers table — it has no schema in
-// the published contract. The factory mirrors that shape verbatim so the test
-// exercises the endpoint as it actually is, not as it ought to be.
+// This marshalled an inline JSON object until UserRolesUpdateRequest entered the
+// contract: the endpoint was the last body in the API with no table of its own.
+// Sending the format the rest of the suite negotiates got a 400 — and, worse,
+// whatever the hand-rolled parser could not read became an empty list, which the
+// use case reads as "revoke every role". The factory now speaks the same wire as
+// every other body here.
 func RoleIDs(ids ...string) []byte {
-	payload, err := json.Marshal(map[string][]string{"role_ids": ids})
-	if err != nil {
-		panic(err)
+	b := flatbuffers.NewBuilder(0)
+
+	roleOffsets := make([]flatbuffers.UOffsetT, len(ids))
+	for i, id := range ids {
+		roleOffsets[i] = b.CreateString(id)
 	}
-	return payload
+	fbs.UserRolesUpdateRequestStartRoleIdsVector(b, len(roleOffsets))
+	for i := len(roleOffsets) - 1; i >= 0; i-- {
+		b.PrependUOffsetT(roleOffsets[i])
+	}
+	rolesVec := b.EndVector(len(roleOffsets))
+
+	fbs.UserRolesUpdateRequestStart(b)
+	fbs.UserRolesUpdateRequestAddRoleIds(b, rolesVec)
+	b.Finish(fbs.UserRolesUpdateRequestEnd(b))
+
+	return b.FinishedBytes()
 }
 
 // UserWithEmail builds a POST /users body with a chosen e-mail and password, to
