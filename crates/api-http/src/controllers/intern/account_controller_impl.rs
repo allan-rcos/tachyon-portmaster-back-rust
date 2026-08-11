@@ -8,22 +8,27 @@ use portmaster_app::queries::account::GetAccountQuery;
 use portmaster_app::services::AccountUseCase;
 
 use crate::controllers::account_controller::AccountController;
+use crate::middleware::session_port::SessionPort;
 use crate::ports::error::api_error::ApiError;
+use crate::wire::api_response::ApiResponse;
+use crate::wire::body::Body;
 use crate::wire::vo::account::account_password_change_x_request::AccountPasswordChangeXRequest;
 use crate::wire::vo::account::account_profile_x_response::AccountProfileXResponse;
 use crate::wire::vo::account::account_update_x_request::AccountUpdateXRequest;
 
 /// Os handlers de conta, genéricos sobre o caso de uso.
 #[derive(Clone)]
-pub(crate) struct AccountControllerImpl<A> {
+pub(crate) struct AccountControllerImpl<A, S> {
     /// O caso de uso de conta.
     account: A,
+    /// Quem diz se há sessão, e quem a apresenta.
+    session: S,
 }
 
-impl<A: AccountUseCase> AccountControllerImpl<A> {
+impl<A: AccountUseCase, S: SessionPort> AccountControllerImpl<A, S> {
     /// Monta o controller.
-    pub(crate) const fn new(account: A) -> Self {
-        Self { account }
+    pub(crate) const fn new(account: A, session: S) -> Self {
+        Self { account, session }
     }
 
     /// O perfil pelo lado de leitura, já na forma do fio.
@@ -38,28 +43,41 @@ impl<A: AccountUseCase> AccountControllerImpl<A> {
     }
 }
 
-impl<A: AccountUseCase + Clone + Send + Sync + 'static> AccountController
-    for AccountControllerImpl<A>
+impl<A: AccountUseCase + Clone + Send + Sync + 'static, S: SessionPort> AccountController
+    for AccountControllerImpl<A, S>
 {
-    async fn get(&self, context: UserContext) -> Result<AccountProfileXResponse, ApiError> {
-        self.profile(context).await
+    async fn get(self) -> ApiResponse<AccountProfileXResponse> {
+        ApiResponse::ok(
+            async {
+                let context = self.session.require_user()?;
+
+                self.profile(context).await
+            }
+            .await,
+        )
     }
 
     async fn update(
-        &self,
-        context: UserContext,
-        request: AccountUpdateXRequest,
-    ) -> Result<AccountProfileXResponse, ApiError> {
-        self.account
-            .update(UpdateAccountCommand {
-                context: context.clone(),
-                name: request.name.unwrap_or_default(),
-                email: request.email.unwrap_or_default(),
-            })
-            .await
-            .map_err(to_api)?;
+        self,
+        Body(request): Body<AccountUpdateXRequest>,
+    ) -> ApiResponse<AccountProfileXResponse> {
+        ApiResponse::ok(
+            async {
+                let context = self.session.require_user()?;
 
-        self.profile(context).await
+                self.account
+                    .update(UpdateAccountCommand {
+                        context: context.clone(),
+                        name: request.name.unwrap_or_default(),
+                        email: request.email.unwrap_or_default(),
+                    })
+                    .await
+                    .map_err(to_api)?;
+
+                self.profile(context).await
+            }
+            .await,
+        )
     }
 
     /// Troca a senha da própria conta.
@@ -67,18 +85,24 @@ impl<A: AccountUseCase + Clone + Send + Sync + 'static> AccountController
     /// A senha atual vai junto e é conferida no `app`: um token roubado não deve
     /// bastar para trocar a senha e expulsar o dono.
     async fn change_password(
-        &self,
-        context: UserContext,
-        request: AccountPasswordChangeXRequest,
-    ) -> Result<(), ApiError> {
-        self.account
-            .change_password(ChangePasswordCommand {
-                context,
-                current_password: request.current_password.unwrap_or_default(),
-                new_password: request.new_password.unwrap_or_default(),
-            })
-            .await
-            .map_err(to_api)
+        self,
+        Body(request): Body<AccountPasswordChangeXRequest>,
+    ) -> ApiResponse {
+        ApiResponse::no_content(
+            async {
+                let context = self.session.require_user()?;
+
+                self.account
+                    .change_password(ChangePasswordCommand {
+                        context,
+                        current_password: request.current_password.unwrap_or_default(),
+                        new_password: request.new_password.unwrap_or_default(),
+                    })
+                    .await
+                    .map_err(to_api)
+            }
+            .await,
+        )
     }
 }
 

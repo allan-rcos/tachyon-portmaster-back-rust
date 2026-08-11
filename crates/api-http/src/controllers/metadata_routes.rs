@@ -1,27 +1,14 @@
 //! As rotas de metadado de sistema.
 
-use axum::extract::Query;
 use axum::routing::get;
 use axum::Router;
 
 use crate::controllers::metadata_controller::MetadataController;
-use crate::controllers::params::search_params::SearchParams;
-use crate::middleware::intern::session_context::SessionContext;
-use crate::middleware::session_port::SessionPort as _;
-use crate::wire::api_response::ApiResponse;
 
 /// Liga os handlers de metadado aos caminhos.
 pub(crate) fn routes<C: MetadataController>(controller: C) -> Router {
     Router::new().route(
         "/metadata/permissions",
-        get(move |Query(params): Query<SearchParams>| async move {
-            ApiResponse::ok(
-                async {
-                    let context = SessionContext.require_user()?;
-                    controller.list_permissions(context, params).await
-                }
-                .await,
-            )
-        }),
+        get(move |params| controller.clone().list_permissions(params)),
     )
 }

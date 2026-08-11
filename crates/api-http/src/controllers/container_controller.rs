@@ -1,57 +1,50 @@
 //! O contrato do controller de contêineres.
 
-use portmaster_app::context::UserContext;
-
 use crate::controllers::params::container_page_params::ContainerPageParams;
 use crate::controllers::params::summary_page_params::SummaryPageParams;
-use crate::ports::error::api_error::ApiError;
+use crate::wire::api_response::ApiResponse;
+use crate::wire::body::Body;
 use crate::wire::vo::container::container_create_x_request::ContainerCreateXRequest;
 use crate::wire::vo::container::container_list_x_response::ContainerListXResponse;
 use crate::wire::vo::container::container_summary_list_x_response::ContainerSummaryListXResponse;
 use crate::wire::vo::container::container_update_x_request::ContainerUpdateXRequest;
 use crate::wire::vo::container::container_x_response::ContainerXResponse;
+use axum::extract::{Path, Query};
 
 /// Os handlers de contêiner.
 #[trait_variant::make(Send)]
 pub(crate) trait ContainerController: Clone + Sync + 'static {
     /// `GET /containers`
-    async fn list(
-        &self,
-        context: UserContext,
-        params: ContainerPageParams,
-    ) -> Result<ContainerListXResponse, ApiError>;
+    async fn list(self, params: Query<ContainerPageParams>) -> ApiResponse<ContainerListXResponse>;
 
     /// `GET /containers/summary`
     async fn summary(
-        &self,
-        context: UserContext,
-        params: SummaryPageParams,
-    ) -> Result<ContainerSummaryListXResponse, ApiError>;
+        self,
+        params: Query<SummaryPageParams>,
+    ) -> ApiResponse<ContainerSummaryListXResponse>;
 
     /// `POST /containers`
     async fn create(
-        &self,
-        context: UserContext,
-        request: ContainerCreateXRequest,
-    ) -> Result<ContainerXResponse, ApiError>;
+        self,
+        request: Body<ContainerCreateXRequest>,
+    ) -> ApiResponse<ContainerXResponse>;
 
     /// `GET /containers/{id}`
-    async fn get(&self, context: UserContext, id: String) -> Result<ContainerXResponse, ApiError>;
+    async fn get(self, id: Path<String>) -> ApiResponse<ContainerXResponse>;
 
     /// `PUT /containers/{id}`
     async fn update(
-        &self,
-        context: UserContext,
-        id: String,
-        request: ContainerUpdateXRequest,
-    ) -> Result<ContainerXResponse, ApiError>;
+        self,
+        id: Path<String>,
+        request: Body<ContainerUpdateXRequest>,
+    ) -> ApiResponse<ContainerXResponse>;
 
     /// `DELETE /containers/{id}`
-    async fn delete(&self, context: UserContext, id: String) -> Result<(), ApiError>;
+    async fn delete(self, id: Path<String>) -> ApiResponse;
 
     /// `POST /containers/{id}/seal`
-    async fn seal(&self, context: UserContext, id: String) -> Result<(), ApiError>;
+    async fn seal(self, id: Path<String>) -> ApiResponse;
 
     /// `POST /containers/{id}/dispatch`
-    async fn dispatch(&self, context: UserContext, id: String) -> Result<(), ApiError>;
+    async fn dispatch(self, id: Path<String>) -> ApiResponse;
 }

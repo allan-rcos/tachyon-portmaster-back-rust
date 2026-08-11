@@ -30,10 +30,10 @@ pub(crate) fn routes<C: AuthController>(controller: C) -> Router {
         )
         .route(
             "/auth/refresh",
-            post(move || async move { refresh.refresh().await.map(|()| ApiResponse::no_content()) }),
+            post(move || async move { ApiResponse::no_content(refresh.refresh().await) }),
         )
         .route(
             "/auth/logout",
-            post(move || async move { controller.logout().await.map(|()| ApiResponse::no_content()) }),
+            post(move || async move { ApiResponse::no_content(controller.logout().await) }),
         )
 }

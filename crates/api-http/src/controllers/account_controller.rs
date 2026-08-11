@@ -1,8 +1,7 @@
 //! O contrato do controller da própria conta.
 
-use portmaster_app::context::UserContext;
-
-use crate::ports::error::api_error::ApiError;
+use crate::wire::api_response::ApiResponse;
+use crate::wire::body::Body;
 use crate::wire::vo::account::account_password_change_x_request::AccountPasswordChangeXRequest;
 use crate::wire::vo::account::account_profile_x_response::AccountProfileXResponse;
 use crate::wire::vo::account::account_update_x_request::AccountUpdateXRequest;
@@ -11,19 +10,14 @@ use crate::wire::vo::account::account_update_x_request::AccountUpdateXRequest;
 #[trait_variant::make(Send)]
 pub(crate) trait AccountController: Clone + Sync + 'static {
     /// `GET /account`
-    async fn get(&self, context: UserContext) -> Result<AccountProfileXResponse, ApiError>;
+    async fn get(self) -> ApiResponse<AccountProfileXResponse>;
 
     /// `PUT /account`
     async fn update(
-        &self,
-        context: UserContext,
-        request: AccountUpdateXRequest,
-    ) -> Result<AccountProfileXResponse, ApiError>;
+        self,
+        request: Body<AccountUpdateXRequest>,
+    ) -> ApiResponse<AccountProfileXResponse>;
 
     /// `PUT /account/password`
-    async fn change_password(
-        &self,
-        context: UserContext,
-        request: AccountPasswordChangeXRequest,
-    ) -> Result<(), ApiError>;
+    async fn change_password(self, request: Body<AccountPasswordChangeXRequest>) -> ApiResponse;
 }

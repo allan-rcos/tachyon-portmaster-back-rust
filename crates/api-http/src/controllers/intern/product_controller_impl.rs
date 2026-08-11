@@ -4,7 +4,6 @@ use axum::http::StatusCode;
 use portmaster_app::commands::product::{
     CreateProductCommand, DeleteProductCommand, UpdateProductCommand,
 };
-use portmaster_app::context::UserContext;
 use portmaster_app::domain::RiskClass;
 use portmaster_app::error::ProductError;
 use portmaster_app::queries::product::{GetProductQuery, ListProductsQuery};
@@ -12,104 +11,139 @@ use portmaster_app::services::ProductUseCase;
 
 use crate::controllers::params::page_params::PageParams;
 use crate::controllers::product_controller::ProductController;
+use crate::middleware::session_port::SessionPort;
 use crate::ports::error::api_error::ApiError;
+use crate::wire::api_response::ApiResponse;
+use crate::wire::body::Body;
 use crate::wire::vo::common::risk_class_x::RiskClassX;
 use crate::wire::vo::product::product_create_x_request::ProductCreateXRequest;
 use crate::wire::vo::product::product_list_x_response::ProductListXResponse;
 use crate::wire::vo::product::product_update_x_request::ProductUpdateXRequest;
 use crate::wire::vo::product::product_x_response::ProductXResponse;
+use axum::extract::{Path, Query};
 
 /// Os handlers de produto, genéricos sobre o caso de uso.
 #[derive(Clone)]
-pub(crate) struct ProductControllerImpl<U> {
+pub(crate) struct ProductControllerImpl<U, S> {
     /// O caso de uso de produto.
     products: U,
+    /// Quem diz se há sessão, e quem a apresenta.
+    session: S,
 }
 
-impl<U: ProductUseCase> ProductControllerImpl<U> {
+impl<U: ProductUseCase, S: SessionPort> ProductControllerImpl<U, S> {
     /// Monta o controller.
-    pub(crate) const fn new(products: U) -> Self {
-        Self { products }
+    pub(crate) const fn new(products: U, session: S) -> Self {
+        Self { products, session }
     }
 }
 
-impl<U: ProductUseCase + Clone + Send + Sync + 'static> ProductController
-    for ProductControllerImpl<U>
+impl<U: ProductUseCase + Clone + Send + Sync + 'static, S: SessionPort> ProductController
+    for ProductControllerImpl<U, S>
 {
-    async fn list(
-        &self,
-        context: UserContext,
-        params: PageParams,
-    ) -> Result<ProductListXResponse, ApiError> {
-        let view = self
-            .products
-            .list(ListProductsQuery {
-                context,
-                cursor: params.cursor,
-                limit: params.limit,
-                search: params.search,
-            })
-            .await
-            .map_err(to_api)?;
+    async fn list(self, Query(params): Query<PageParams>) -> ApiResponse<ProductListXResponse> {
+        ApiResponse::ok(
+            async {
+                let context = self.session.require_user()?;
 
-        Ok(ProductListXResponse::of(view))
+                let view = self
+                    .products
+                    .list(ListProductsQuery {
+                        context,
+                        cursor: params.cursor,
+                        limit: params.limit,
+                        search: params.search,
+                    })
+                    .await
+                    .map_err(to_api)?;
+
+                Ok(ProductListXResponse::of(view))
+            }
+            .await,
+        )
     }
 
     async fn create(
-        &self,
-        context: UserContext,
-        request: ProductCreateXRequest,
-    ) -> Result<ProductXResponse, ApiError> {
-        let product = self
-            .products
-            .create(CreateProductCommand {
-                context,
-                name: request.name.unwrap_or_default(),
-                density: request.density.unwrap_or_default(),
-                risk_class: risk_class_of(request.risk_class),
-            })
-            .await
-            .map_err(to_api)?;
+        self,
+        Body(request): Body<ProductCreateXRequest>,
+    ) -> ApiResponse<ProductXResponse> {
+        ApiResponse::created(
+            async {
+                let context = self.session.require_user()?;
 
-        Ok(ProductXResponse::of_domain(product.as_ref()))
+                let product = self
+                    .products
+                    .create(CreateProductCommand {
+                        context,
+                        name: request.name.unwrap_or_default(),
+                        density: request.density.unwrap_or_default(),
+                        risk_class: risk_class_of(request.risk_class),
+                    })
+                    .await
+                    .map_err(to_api)?;
+
+                Ok(ProductXResponse::of_domain(product.as_ref()))
+            }
+            .await,
+        )
     }
 
-    async fn get(&self, context: UserContext, id: String) -> Result<ProductXResponse, ApiError> {
-        let view = self
-            .products
-            .get(GetProductQuery { context, id })
-            .await
-            .map_err(to_api)?;
+    async fn get(self, Path(id): Path<String>) -> ApiResponse<ProductXResponse> {
+        ApiResponse::ok(
+            async {
+                let context = self.session.require_user()?;
 
-        Ok(ProductXResponse::of(view))
+                let view = self
+                    .products
+                    .get(GetProductQuery { context, id })
+                    .await
+                    .map_err(to_api)?;
+
+                Ok(ProductXResponse::of(view))
+            }
+            .await,
+        )
     }
 
     async fn update(
-        &self,
-        context: UserContext,
-        id: String,
-        request: ProductUpdateXRequest,
-    ) -> Result<ProductXResponse, ApiError> {
-        let product = self
-            .products
-            .update(UpdateProductCommand {
-                context,
-                id,
-                name: request.name.unwrap_or_default(),
-                density: request.density.unwrap_or_default(),
-                risk_class: risk_class_of(request.risk_class),
-            })
-            .await
-            .map_err(to_api)?;
+        self,
+        Path(id): Path<String>,
+        Body(request): Body<ProductUpdateXRequest>,
+    ) -> ApiResponse<ProductXResponse> {
+        ApiResponse::ok(
+            async {
+                let context = self.session.require_user()?;
 
-        Ok(ProductXResponse::of_domain(product.as_ref()))
+                let product = self
+                    .products
+                    .update(UpdateProductCommand {
+                        context,
+                        id,
+                        name: request.name.unwrap_or_default(),
+                        density: request.density.unwrap_or_default(),
+                        risk_class: risk_class_of(request.risk_class),
+                    })
+                    .await
+                    .map_err(to_api)?;
+
+                Ok(ProductXResponse::of_domain(product.as_ref()))
+            }
+            .await,
+        )
     }
 
-    async fn delete(&self, context: UserContext, id: String) -> Result<(), ApiError> {
-        self.products
-            .delete(DeleteProductCommand { context, id })
-            .await
-            .map_err(to_api)
+    async fn delete(self, Path(id): Path<String>) -> ApiResponse {
+        ApiResponse::no_content(
+            async {
+                let context = self.session.require_user()?;
+
+                self.products
+                    .delete(DeleteProductCommand { context, id })
+                    .await
+                    .map_err(to_api)
+            }
+            .await,
+        )
     }
 }
 

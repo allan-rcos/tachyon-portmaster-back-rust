@@ -1,7 +1,7 @@
 //! O controller de estado do serviço. Não sai do módulo.
 
 use crate::controllers::server_controller::ServerController;
-use crate::ports::error::api_error::ApiError;
+use crate::wire::api_response::ApiResponse;
 use crate::wire::vo::server::project_info_x::ProjectInfoX;
 
 /// O nome com que o serviço se identifica.
@@ -29,14 +29,19 @@ impl ServerController for ServerControllerImpl {
         clippy::unused_async,
         reason = "assinatura de handler: as rotas são async mesmo quando não esperam nada"
     )]
-    async fn info(&self) -> Result<ProjectInfoX, ApiError> {
-        Ok(ProjectInfoX {
-            name: NAME.to_owned(),
-            version: env!("CARGO_PKG_VERSION").to_owned(),
-            environment: self.environment.clone(),
-            runtime: runtime(),
-            memory_usage_mb: resident_mib(),
-        })
+    async fn info(self) -> ApiResponse<ProjectInfoX> {
+        ApiResponse::ok(
+            async {
+                Ok(ProjectInfoX {
+                    name: NAME.to_owned(),
+                    version: env!("CARGO_PKG_VERSION").to_owned(),
+                    environment: self.environment.clone(),
+                    runtime: runtime(),
+                    memory_usage_mb: resident_mib(),
+                })
+            }
+            .await,
+        )
     }
 }
 

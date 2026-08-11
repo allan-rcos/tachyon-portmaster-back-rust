@@ -2,12 +2,14 @@
 
 use axum::http::StatusCode;
 use portmaster_app::commands::manifest::MoveItemCommand;
-use portmaster_app::context::UserContext;
 use portmaster_app::error::ManifestError;
 use portmaster_app::services::ManifestUseCase;
 
 use crate::controllers::manifest_controller::ManifestController;
+use crate::middleware::session_port::SessionPort;
 use crate::ports::error::api_error::ApiError;
+use crate::wire::api_response::ApiResponse;
+use crate::wire::body::Body;
 use crate::wire::vo::container::container_x_response::ContainerXResponse;
 use crate::wire::vo::manifest::load_item_x_request::LoadItemXRequest;
 use crate::wire::vo::manifest::manifest_x_response::ManifestXResponse;
@@ -21,63 +23,74 @@ const UNLOADED: &str = "Item unloaded successfully.";
 
 /// Os handlers de carga, genéricos sobre o caso de uso.
 #[derive(Clone)]
-pub(crate) struct ManifestControllerImpl<M> {
+pub(crate) struct ManifestControllerImpl<M, S> {
     /// O caso de uso de carga.
     manifest: M,
+    /// Quem diz se há sessão, e quem a apresenta.
+    session: S,
 }
 
-impl<M: ManifestUseCase> ManifestControllerImpl<M> {
+impl<M: ManifestUseCase, S: SessionPort> ManifestControllerImpl<M, S> {
     /// Monta o controller.
-    pub(crate) const fn new(manifest: M) -> Self {
-        Self { manifest }
+    pub(crate) const fn new(manifest: M, session: S) -> Self {
+        Self { manifest, session }
     }
 }
 
-impl<M: ManifestUseCase + Clone + Send + Sync + 'static> ManifestController
-    for ManifestControllerImpl<M>
+impl<M: ManifestUseCase + Clone + Send + Sync + 'static, S: SessionPort> ManifestController
+    for ManifestControllerImpl<M, S>
 {
-    async fn load(
-        &self,
-        context: UserContext,
-        request: LoadItemXRequest,
-    ) -> Result<ManifestXResponse, ApiError> {
-        let container = self
-            .manifest
-            .load(MoveItemCommand {
-                context,
-                container_id: request.container_id.unwrap_or_default(),
-                product_id: request.product_id.unwrap_or_default(),
-                quantity: request.quantity.unwrap_or_default(),
-            })
-            .await
-            .map_err(to_api)?;
+    async fn load(self, Body(request): Body<LoadItemXRequest>) -> ApiResponse<ManifestXResponse> {
+        ApiResponse::ok(
+            async {
+                let context = self.session.require_user()?;
 
-        Ok(ManifestXResponse {
-            message: LOADED.to_owned(),
-            container: ContainerXResponse::of_domain(container.as_ref()),
-        })
+                let container = self
+                    .manifest
+                    .load(MoveItemCommand {
+                        context,
+                        container_id: request.container_id.unwrap_or_default(),
+                        product_id: request.product_id.unwrap_or_default(),
+                        quantity: request.quantity.unwrap_or_default(),
+                    })
+                    .await
+                    .map_err(to_api)?;
+
+                Ok(ManifestXResponse {
+                    message: LOADED.to_owned(),
+                    container: ContainerXResponse::of_domain(container.as_ref()),
+                })
+            }
+            .await,
+        )
     }
 
     async fn unload(
-        &self,
-        context: UserContext,
-        request: UnloadItemXRequest,
-    ) -> Result<ManifestXResponse, ApiError> {
-        let container = self
-            .manifest
-            .unload(MoveItemCommand {
-                context,
-                container_id: request.container_id.unwrap_or_default(),
-                product_id: request.product_id.unwrap_or_default(),
-                quantity: request.quantity.unwrap_or_default(),
-            })
-            .await
-            .map_err(to_api)?;
+        self,
+        Body(request): Body<UnloadItemXRequest>,
+    ) -> ApiResponse<ManifestXResponse> {
+        ApiResponse::ok(
+            async {
+                let context = self.session.require_user()?;
 
-        Ok(ManifestXResponse {
-            message: UNLOADED.to_owned(),
-            container: ContainerXResponse::of_domain(container.as_ref()),
-        })
+                let container = self
+                    .manifest
+                    .unload(MoveItemCommand {
+                        context,
+                        container_id: request.container_id.unwrap_or_default(),
+                        product_id: request.product_id.unwrap_or_default(),
+                        quantity: request.quantity.unwrap_or_default(),
+                    })
+                    .await
+                    .map_err(to_api)?;
+
+                Ok(ManifestXResponse {
+                    message: UNLOADED.to_owned(),
+                    container: ContainerXResponse::of_domain(container.as_ref()),
+                })
+            }
+            .await,
+        )
     }
 }
 

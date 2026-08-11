@@ -1,6 +1,6 @@
 //! O contrato do controller de estado do serviço.
 
-use crate::ports::error::api_error::ApiError;
+use crate::wire::api_response::ApiResponse;
 use crate::wire::vo::server::project_info_x::ProjectInfoX;
 
 /// O handler que descreve o processo.
@@ -10,5 +10,5 @@ use crate::wire::vo::server::project_info_x::ProjectInfoX;
 #[trait_variant::make(Send)]
 pub(crate) trait ServerController: Clone + Sync + 'static {
     /// `GET /info`
-    async fn info(&self) -> Result<ProjectInfoX, ApiError>;
+    async fn info(self) -> ApiResponse<ProjectInfoX>;
 }

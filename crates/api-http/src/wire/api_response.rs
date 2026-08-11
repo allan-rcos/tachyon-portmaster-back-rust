@@ -65,18 +65,19 @@ impl<X: ResponseX> ApiResponse<X> {
 impl ApiResponse<ProblemX> {
     /// Um `204` para a operação cujo resultado é o próprio estado ter mudado.
     ///
-    /// É o que o PHP devolvia em refresh, logout e afins. Sem corpo não há o que
-    /// negociar, mas ainda pode haver cookie a carimbar — e é por isso que ela
-    /// mora aqui e não num tipo separado.
+    /// É o que o PHP devolvia em refresh, logout e nas operações sem retorno.
+    /// Recebe um `Result` como as outras duas, e pela mesma razão: a falha
+    /// precisa sair pelo mesmo caminho do acerto, com o status que o erro
+    /// carrega.
     ///
     /// Fixada em `ProblemX` porque uma resposta sem corpo não tem VO nenhum, e o
     /// parâmetro precisa de algum: o `ProblemX` é o que ela usaria de qualquer
-    /// forma se o `Result` desse errado. Fixá-la aqui é também o que faz
-    /// `ApiResponse::no_content()` resolver sem turbofish.
-    pub(crate) const fn no_content() -> Self {
+    /// forma se o `Result` desse errado. Fixá-la aqui é também o que a faz
+    /// resolver sem turbofish.
+    pub(crate) fn no_content(body: Result<(), ApiError>) -> Self {
         Self {
             status: StatusCode::NO_CONTENT,
-            body: Ok(None),
+            body: body.map(|()| None),
         }
     }
 }

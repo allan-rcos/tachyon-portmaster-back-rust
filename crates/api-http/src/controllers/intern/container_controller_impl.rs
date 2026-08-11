@@ -4,7 +4,6 @@ use axum::http::StatusCode;
 use portmaster_app::commands::container::{
     ContainerCommand, CreateContainerCommand, UpdateContainerCommand,
 };
-use portmaster_app::context::UserContext;
 use portmaster_app::domain::ContainerStatus;
 use portmaster_app::error::ContainerError;
 use portmaster_app::queries::container::{
@@ -15,140 +14,201 @@ use portmaster_app::services::ContainerUseCase;
 use crate::controllers::container_controller::ContainerController;
 use crate::controllers::params::container_page_params::ContainerPageParams;
 use crate::controllers::params::summary_page_params::SummaryPageParams;
+use crate::middleware::session_port::SessionPort;
 use crate::ports::error::api_error::ApiError;
+use crate::wire::api_response::ApiResponse;
+use crate::wire::body::Body;
 use crate::wire::vo::container::container_create_x_request::ContainerCreateXRequest;
 use crate::wire::vo::container::container_list_x_response::ContainerListXResponse;
 use crate::wire::vo::container::container_summary_list_x_response::ContainerSummaryListXResponse;
 use crate::wire::vo::container::container_update_x_request::ContainerUpdateXRequest;
 use crate::wire::vo::container::container_x_response::ContainerXResponse;
+use axum::extract::{Path, Query};
 
 /// Os handlers de contêiner, genéricos sobre o caso de uso.
 #[derive(Clone)]
-pub(crate) struct ContainerControllerImpl<C> {
+pub(crate) struct ContainerControllerImpl<C, S> {
     /// O caso de uso de contêiner.
     containers: C,
+    /// Quem diz se há sessão, e quem a apresenta.
+    session: S,
 }
 
-impl<C: ContainerUseCase> ContainerControllerImpl<C> {
+impl<C: ContainerUseCase, S: SessionPort> ContainerControllerImpl<C, S> {
     /// Monta o controller.
-    pub(crate) const fn new(containers: C) -> Self {
-        Self { containers }
+    pub(crate) const fn new(containers: C, session: S) -> Self {
+        Self {
+            containers,
+            session,
+        }
     }
 }
 
-impl<C: ContainerUseCase + Clone + Send + Sync + 'static> ContainerController
-    for ContainerControllerImpl<C>
+impl<C: ContainerUseCase + Clone + Send + Sync + 'static, S: SessionPort> ContainerController
+    for ContainerControllerImpl<C, S>
 {
     async fn list(
-        &self,
-        context: UserContext,
-        params: ContainerPageParams,
-    ) -> Result<ContainerListXResponse, ApiError> {
-        let view = self
-            .containers
-            .list(ListContainersQuery {
-                context,
-                cursor: params.cursor,
-                limit: params.limit,
-                search: params.search,
-                status: params.status.as_deref().and_then(status_of),
-                status_in: params
-                    .status_in
-                    .as_deref()
-                    .map(|list| list.split(',').filter_map(status_of).collect())
-                    .unwrap_or_default(),
-            })
-            .await
-            .map_err(to_api)?;
+        self,
+        Query(params): Query<ContainerPageParams>,
+    ) -> ApiResponse<ContainerListXResponse> {
+        ApiResponse::ok(
+            async {
+                let context = self.session.require_user()?;
 
-        Ok(ContainerListXResponse::of(view))
+                let view = self
+                    .containers
+                    .list(ListContainersQuery {
+                        context,
+                        cursor: params.cursor,
+                        limit: params.limit,
+                        search: params.search,
+                        status: params.status.as_deref().and_then(status_of),
+                        status_in: params
+                            .status_in
+                            .as_deref()
+                            .map(|list| list.split(',').filter_map(status_of).collect())
+                            .unwrap_or_default(),
+                    })
+                    .await
+                    .map_err(to_api)?;
+
+                Ok(ContainerListXResponse::of(view))
+            }
+            .await,
+        )
     }
 
     async fn summary(
-        &self,
-        context: UserContext,
-        params: SummaryPageParams,
-    ) -> Result<ContainerSummaryListXResponse, ApiError> {
-        let view = self
-            .containers
-            .list_summaries(ListContainerSummariesQuery {
-                context,
-                id: params.id.filter(|id| !id.is_empty()),
-                cursor: params.cursor,
-                limit: params.limit,
-            })
-            .await
-            .map_err(to_api)?;
+        self,
+        Query(params): Query<SummaryPageParams>,
+    ) -> ApiResponse<ContainerSummaryListXResponse> {
+        ApiResponse::ok(
+            async {
+                let context = self.session.require_user()?;
 
-        Ok(ContainerSummaryListXResponse::of(view))
+                let view = self
+                    .containers
+                    .list_summaries(ListContainerSummariesQuery {
+                        context,
+                        id: params.id.filter(|id| !id.is_empty()),
+                        cursor: params.cursor,
+                        limit: params.limit,
+                    })
+                    .await
+                    .map_err(to_api)?;
+
+                Ok(ContainerSummaryListXResponse::of(view))
+            }
+            .await,
+        )
     }
 
     async fn create(
-        &self,
-        context: UserContext,
-        request: ContainerCreateXRequest,
-    ) -> Result<ContainerXResponse, ApiError> {
-        let container = self
-            .containers
-            .create(CreateContainerCommand {
-                context,
-                code: request.code.unwrap_or_default(),
-                max_capacity: request.max_capacity.unwrap_or_default(),
-            })
-            .await
-            .map_err(to_api)?;
+        self,
+        Body(request): Body<ContainerCreateXRequest>,
+    ) -> ApiResponse<ContainerXResponse> {
+        ApiResponse::created(
+            async {
+                let context = self.session.require_user()?;
 
-        Ok(ContainerXResponse::of_domain(container.as_ref()))
+                let container = self
+                    .containers
+                    .create(CreateContainerCommand {
+                        context,
+                        code: request.code.unwrap_or_default(),
+                        max_capacity: request.max_capacity.unwrap_or_default(),
+                    })
+                    .await
+                    .map_err(to_api)?;
+
+                Ok(ContainerXResponse::of_domain(container.as_ref()))
+            }
+            .await,
+        )
     }
 
-    async fn get(&self, context: UserContext, id: String) -> Result<ContainerXResponse, ApiError> {
-        let view = self
-            .containers
-            .get(GetContainerQuery { context, id })
-            .await
-            .map_err(to_api)?;
+    async fn get(self, Path(id): Path<String>) -> ApiResponse<ContainerXResponse> {
+        ApiResponse::ok(
+            async {
+                let context = self.session.require_user()?;
 
-        Ok(ContainerXResponse::of(view))
+                let view = self
+                    .containers
+                    .get(GetContainerQuery { context, id })
+                    .await
+                    .map_err(to_api)?;
+
+                Ok(ContainerXResponse::of(view))
+            }
+            .await,
+        )
     }
 
     async fn update(
-        &self,
-        context: UserContext,
-        id: String,
-        request: ContainerUpdateXRequest,
-    ) -> Result<ContainerXResponse, ApiError> {
-        let container = self
-            .containers
-            .update(UpdateContainerCommand {
-                context,
-                id,
-                max_capacity: request.max_capacity.unwrap_or_default(),
-            })
-            .await
-            .map_err(to_api)?;
+        self,
+        Path(id): Path<String>,
+        Body(request): Body<ContainerUpdateXRequest>,
+    ) -> ApiResponse<ContainerXResponse> {
+        ApiResponse::ok(
+            async {
+                let context = self.session.require_user()?;
 
-        Ok(ContainerXResponse::of_domain(container.as_ref()))
+                let container = self
+                    .containers
+                    .update(UpdateContainerCommand {
+                        context,
+                        id,
+                        max_capacity: request.max_capacity.unwrap_or_default(),
+                    })
+                    .await
+                    .map_err(to_api)?;
+
+                Ok(ContainerXResponse::of_domain(container.as_ref()))
+            }
+            .await,
+        )
     }
 
-    async fn delete(&self, context: UserContext, id: String) -> Result<(), ApiError> {
-        self.containers
-            .delete(ContainerCommand { context, id })
-            .await
-            .map_err(to_api)
+    async fn delete(self, Path(id): Path<String>) -> ApiResponse {
+        ApiResponse::no_content(
+            async {
+                let context = self.session.require_user()?;
+
+                self.containers
+                    .delete(ContainerCommand { context, id })
+                    .await
+                    .map_err(to_api)
+            }
+            .await,
+        )
     }
 
-    async fn seal(&self, context: UserContext, id: String) -> Result<(), ApiError> {
-        self.containers
-            .seal(ContainerCommand { context, id })
-            .await
-            .map_err(to_api)
+    async fn seal(self, Path(id): Path<String>) -> ApiResponse {
+        ApiResponse::no_content(
+            async {
+                let context = self.session.require_user()?;
+
+                self.containers
+                    .seal(ContainerCommand { context, id })
+                    .await
+                    .map_err(to_api)
+            }
+            .await,
+        )
     }
 
-    async fn dispatch(&self, context: UserContext, id: String) -> Result<(), ApiError> {
-        self.containers
-            .dispatch(ContainerCommand { context, id })
-            .await
-            .map_err(to_api)
+    async fn dispatch(self, Path(id): Path<String>) -> ApiResponse {
+        ApiResponse::no_content(
+            async {
+                let context = self.session.require_user()?;
+
+                self.containers
+                    .dispatch(ContainerCommand { context, id })
+                    .await
+                    .map_err(to_api)
+            }
+            .await,
+        )
     }
 }
 

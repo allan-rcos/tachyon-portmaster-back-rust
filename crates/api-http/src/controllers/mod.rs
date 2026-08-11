@@ -7,6 +7,22 @@
 //! volta ao VO. Não há regra de negócio, orquestração nem transação aqui — se
 //! aparecer, está no lugar errado.
 //!
+//! ## O handler é o handler do axum
+//!
+//! O trait declara os extractors que cada rota consome e devolve um
+//! [`ApiResponse`](crate::wire::api_response::ApiResponse) pronto. É uma troca
+//! deliberada: o axum entra no contrato, e em compensação o módulo de rotas
+//! volta a ser só uma tabela.
+//!
+//! O que ele tinha antes eram as quatro coisas acima **espalhadas**. Conferir a
+//! sessão acontecia na rota, montar a resposta acontecia na rota, escolher o
+//! status acontecia na rota — e `POST /manifests/unload-item`, que tem um corpo
+//! e devolve um objeto, ocupava dez linhas de encanamento para chamar um método
+//! de uma linha. Hoje ocupa uma, e o que ela diz é o caminho e o método.
+//!
+//! O `self` é por valor porque um controller é um punhado de handles: a rota
+//! clona o dela por requisição, que é o que o axum faz com todo handler.
+//!
 //! ## O 401 é o único status que nasce aqui
 //!
 //! Falta de sessão é a única coisa que o `app` não tem como saber, porque só
@@ -15,15 +31,14 @@
 //!
 //! ## Cada recurso são três arquivos
 //!
-//! O **trait** declara os handlers em termos de VOs — sem axum, sem status, sem
-//! negociação. A **impl** em `intern` é genérica sobre os casos de uso que o
-//! `AppProvider` entrega, cujos tipos são innomeáveis. E o módulo de **rotas**
-//! liga os dois ao axum, guardando ali todo o encanamento de extractor que o
-//! router de cima não precisa ver.
+//! O **trait** declara os handlers: que extractors cada rota consome e o que ela
+//! responde. A **impl** em `intern` é genérica sobre os casos de uso que o
+//! `AppProvider` entrega, cujos tipos são innomeáveis, e sobre as portas de
+//! contexto que ela consome. E o módulo de **rotas** é a tabela: caminho, verbo,
+//! método.
 //!
-//! É a trait que torna os handlers chamáveis de um teste sem subir servidor, e é
-//! ela que o [`ApiProvider`](crate::bootstrap::provider::ApiProvider) devolve — por RPITIT,
-//! como todo o resto do grafo.
+//! É a trait que o [`ApiProvider`](crate::bootstrap::provider::ApiProvider)
+//! devolve — por RPITIT, como todo o resto do grafo.
 
 pub(crate) mod params;
 
