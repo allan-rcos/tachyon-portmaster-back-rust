@@ -7,6 +7,8 @@
 //! Nem todo layer tem contexto. `recover` e `timeout` não guardam nada da
 //! requisição; são middleware e só.
 
+pub(crate) mod cookie_context;
+pub(crate) mod cookie_layer;
 pub(crate) mod decode_context;
 pub(crate) mod decode_layer;
 pub(crate) mod encode_context;
@@ -15,5 +17,6 @@ pub(crate) mod logging_layer;
 pub(crate) mod recover_layer;
 pub(crate) mod request_id_context;
 pub(crate) mod request_id_layer;
+pub(crate) mod session_context;
 pub(crate) mod session_layer;
 pub(crate) mod timeout_layer;

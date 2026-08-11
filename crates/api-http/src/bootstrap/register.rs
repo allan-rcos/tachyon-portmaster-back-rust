@@ -6,7 +6,6 @@ use crate::bootstrap::api_provider::ApiProviderImpl;
 use crate::bootstrap::provider::ApiProvider;
 use crate::config::api_config::ApiConfig;
 use crate::config::jwt_config::JwtConfig;
-use crate::ports::cookie::adapter::http_auth_cookie::HttpAuthCookie;
 use crate::ports::session_policy::SessionPolicy;
 use crate::ports::token::adapter::jwt_token_service::JwtTokenService;
 
@@ -37,12 +36,10 @@ pub(crate) fn register<P: AppProvider>(
 ) -> impl ApiProvider {
     let refresh_ttl_seconds = SessionPolicy::REFRESH_TTL.as_secs();
     let tokens = JwtTokenService::new(jwt);
-    let cookies = HttpAuthCookie::new();
 
     ApiProviderImpl::new(
         app,
         tokens,
-        cookies,
         config.environment,
         refresh_ttl_seconds,
         config.request_timeout,

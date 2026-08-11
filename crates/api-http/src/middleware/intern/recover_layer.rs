@@ -83,13 +83,13 @@ where
                         [("panic", &describe(&panic))],
                     );
 
-                    let (status, problem, cookies) = ApiError::new(
+                    let (status, problem) = ApiError::new(
                         StatusCode::INTERNAL_SERVER_ERROR,
                         "An unexpected error occurred.",
                     )
                     .into_parts();
 
-                    EncodeContext.respond(status, &problem, cookies)
+                    EncodeContext.respond(status, &problem)
                 }
             })
         })

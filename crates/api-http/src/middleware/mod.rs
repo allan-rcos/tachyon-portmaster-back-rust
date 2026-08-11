@@ -20,8 +20,10 @@
 //! `.layer()` embrulha o serviço num tipo novo —, então não há `dyn` nem
 //! `middleware::from_fn` solto em ponto nenhum dela.
 
+pub(crate) mod cookie_port;
 pub(crate) mod decode_port;
 pub(crate) mod encode_port;
 pub(crate) mod request_id_port;
+pub(crate) mod session_port;
 
 pub(crate) mod intern;

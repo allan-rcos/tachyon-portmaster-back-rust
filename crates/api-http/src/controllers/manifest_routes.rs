@@ -4,7 +4,8 @@ use axum::routing::post;
 use axum::Router;
 
 use crate::controllers::manifest_controller::ManifestController;
-use crate::session::Session;
+use crate::middleware::intern::session_context::SessionContext;
+use crate::middleware::session_port::SessionPort as _;
 use crate::wire::api_response::ApiResponse;
 use crate::wire::body::Body;
 
@@ -18,7 +19,7 @@ pub(crate) fn routes<C: ManifestController>(controller: C) -> Router {
             post(move |Body(request)| async move {
                 ApiResponse::ok(
                     async {
-                        let context = Session::require_user()?;
+                        let context = SessionContext.require_user()?;
                         load.load(context, request).await
                     }
                     .await,
@@ -30,7 +31,7 @@ pub(crate) fn routes<C: ManifestController>(controller: C) -> Router {
             post(move |Body(request)| async move {
                 ApiResponse::ok(
                     async {
-                        let context = Session::require_user()?;
+                        let context = SessionContext.require_user()?;
                         controller.unload(context, request).await
                     }
                     .await,

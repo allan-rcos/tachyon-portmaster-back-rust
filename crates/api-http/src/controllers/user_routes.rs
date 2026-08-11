@@ -6,8 +6,9 @@ use axum::Router;
 
 use crate::controllers::params::user_page_params::UserPageParams;
 use crate::controllers::user_controller::UserController;
+use crate::middleware::intern::session_context::SessionContext;
+use crate::middleware::session_port::SessionPort as _;
 use crate::ports::error::api_error::ApiError;
-use crate::session::Session;
 use crate::wire::api_response::ApiResponse;
 use crate::wire::body::Body;
 
@@ -26,7 +27,7 @@ pub(crate) fn routes<C: UserController>(controller: C) -> Router {
             post(move |Body(request)| async move {
                 ApiResponse::created(
                     async {
-                        let context = Session::require_user()?;
+                        let context = SessionContext.require_user()?;
                         create.create(context, request).await
                     }
                     .await,
@@ -35,7 +36,7 @@ pub(crate) fn routes<C: UserController>(controller: C) -> Router {
             .get(move |Query(params): Query<UserPageParams>| async move {
                 ApiResponse::ok(
                     async {
-                        let context = Session::require_user()?;
+                        let context = SessionContext.require_user()?;
                         list.list(context, params).await
                     }
                     .await,
@@ -47,7 +48,7 @@ pub(crate) fn routes<C: UserController>(controller: C) -> Router {
             get(move |Path(id): Path<String>| async move {
                 ApiResponse::ok(
                     async {
-                        let context = Session::require_user()?;
+                        let context = SessionContext.require_user()?;
                         read.get(context, id).await
                     }
                     .await,
@@ -56,7 +57,7 @@ pub(crate) fn routes<C: UserController>(controller: C) -> Router {
             .put(move |Path(id): Path<String>, Body(request)| async move {
                 ApiResponse::ok(
                     async {
-                        let context = Session::require_user()?;
+                        let context = SessionContext.require_user()?;
                         update.update(context, id, request).await
                     }
                     .await,
@@ -64,7 +65,7 @@ pub(crate) fn routes<C: UserController>(controller: C) -> Router {
             })
             .delete(move |Path(id): Path<String>| async move {
                 async {
-                    let context = Session::require_user()?;
+                    let context = SessionContext.require_user()?;
                     delete.delete(context, id).await?;
 
                     Ok::<_, ApiError>(ApiResponse::no_content())
@@ -77,7 +78,7 @@ pub(crate) fn routes<C: UserController>(controller: C) -> Router {
             put(move |Path(id): Path<String>, Body(request)| async move {
                 ApiResponse::ok(
                     async {
-                        let context = Session::require_user()?;
+                        let context = SessionContext.require_user()?;
                         roles.update_roles(context, id, request).await
                     }
                     .await,
@@ -88,7 +89,7 @@ pub(crate) fn routes<C: UserController>(controller: C) -> Router {
             "/users/{id}/password",
             put(move |Path(id): Path<String>, Body(request)| async move {
                 async {
-                    let context = Session::require_user()?;
+                    let context = SessionContext.require_user()?;
                     controller.reset_password(context, id, request).await?;
 
                     Ok::<_, ApiError>(ApiResponse::no_content())

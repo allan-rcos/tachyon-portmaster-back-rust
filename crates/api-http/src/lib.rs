@@ -37,8 +37,6 @@ pub mod config;
 
 pub(crate) mod ports;
 
-pub(crate) mod session;
-
 pub(crate) mod middleware;
 
 pub(crate) mod controllers;

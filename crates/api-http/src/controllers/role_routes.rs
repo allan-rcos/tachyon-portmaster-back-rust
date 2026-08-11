@@ -6,7 +6,8 @@ use axum::Router;
 
 use crate::controllers::params::page_params::PageParams;
 use crate::controllers::role_controller::RoleController;
-use crate::session::Session;
+use crate::middleware::intern::session_context::SessionContext;
+use crate::middleware::session_port::SessionPort as _;
 use crate::wire::api_response::ApiResponse;
 use crate::wire::body::Body;
 
@@ -27,14 +28,14 @@ pub(crate) fn routes<C: RoleController>(controller: C) -> Router {
         .route(
             "/roles",
             post(move |Body(request)| async move {
-                let context = Session::require_user()?;
+                let context = SessionContext.require_user()?;
 
                 Ok::<_, crate::ports::error::api_error::ApiError>(ApiResponse::created(
                     create.create(context, request).await,
                 ))
             })
             .get(move |Query(params): Query<PageParams>| async move {
-                let context = Session::require_user()?;
+                let context = SessionContext.require_user()?;
 
                 Ok::<_, crate::ports::error::api_error::ApiError>(ApiResponse::ok(
                     list.list(context, params).await,
@@ -44,7 +45,7 @@ pub(crate) fn routes<C: RoleController>(controller: C) -> Router {
         .route(
             "/roles/{id}/permissions",
             put(move |Path(id): Path<String>, Body(request)| async move {
-                let context = Session::require_user()?;
+                let context = SessionContext.require_user()?;
 
                 Ok::<_, crate::ports::error::api_error::ApiError>(ApiResponse::ok(
                     controller.update_permissions(context, id, request).await,

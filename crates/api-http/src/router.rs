@@ -12,6 +12,7 @@ use crate::controllers::{
     account_routes, auth_routes, container_routes, manifest_routes, metadata_routes,
     metrics_routes, product_routes, role_routes, server_routes, user_routes,
 };
+use crate::middleware::intern::cookie_layer::CookieLayer;
 use crate::middleware::intern::decode_layer::DecodeLayer;
 use crate::middleware::intern::encode_layer::EncodeLayer;
 use crate::middleware::intern::logging_layer::LoggingLayer;
@@ -57,15 +58,16 @@ pub async fn router<P: AppProvider>(
 /// Junta as rotas de cada recurso e aplica a pilha.
 ///
 /// A pilha é aplicada de dentro para fora: o último `.layer` é o mais externo.
-/// Três ordens aqui não são gosto, e sim requisito:
+/// Quatro ordens aqui não são gosto, e sim requisito — cada layer que abre um
+/// escopo tem de estar **fora** de quem lê aquele escopo:
 ///
-/// * `RequestId` é o mais externo — o `Logging` lê o id pelo escopo que ele
-///   abre, e um escopo só alcança o que está dentro dele.
+/// * `RequestId` é o mais externo, porque o `Logging` lê o id dele.
 /// * `Logging` vem logo em seguida, para que o span envolva o resto da pilha e o
 ///   handler inteiro.
-/// * `Encode` e `Decode` ficam **fora** do `Recover` e do `Timeout`. Os dois
-///   produzem resposta por conta própria — um `500` e um `504` — e precisam do
-///   formato já negociado para escrevê-la.
+/// * `Encode` e `Decode` ficam fora do `Recover` e do `Timeout`, que produzem
+///   resposta por conta própria — um `500` e um `504` — e precisam do formato já
+///   negociado para escrevê-la.
+/// * `Cookie` fica fora do `Session`, que lê o access token por ele.
 fn routes<P: ApiProvider>(provider: &P) -> Router {
     Router::new()
         .merge(server_routes::routes(provider.server_controller()))
@@ -79,10 +81,8 @@ fn routes<P: ApiProvider>(provider: &P) -> Router {
         .merge(metadata_routes::routes(provider.metadata_controller()))
         .merge(metrics_routes::routes(provider.metrics_controller()))
         // De dentro para fora: o último `.layer` é o mais externo.
-        .layer(SessionLayer::new(
-            provider.token_service(),
-            provider.auth_cookie(),
-        ))
+        .layer(SessionLayer::new(provider.token_service()))
+        .layer(CookieLayer::new())
         .layer(cors_layer(provider.cors_origins()))
         .layer(TimeoutLayer::new(provider.request_timeout()))
         .layer(RecoverLayer::new())

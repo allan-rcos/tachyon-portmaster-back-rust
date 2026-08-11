@@ -4,7 +4,8 @@ use axum::routing::get;
 use axum::Router;
 
 use crate::controllers::metrics_controller::MetricsController;
-use crate::session::Session;
+use crate::middleware::intern::session_context::SessionContext;
+use crate::middleware::session_port::SessionPort as _;
 use crate::wire::api_response::ApiResponse;
 
 /// Liga os handlers do painel aos caminhos.
@@ -14,7 +15,7 @@ pub(crate) fn routes<C: MetricsController>(controller: C) -> Router {
         get(move || async move {
             ApiResponse::ok(
                 async {
-                    let context = Session::require_user()?;
+                    let context = SessionContext.require_user()?;
                     controller.get(context).await
                 }
                 .await,

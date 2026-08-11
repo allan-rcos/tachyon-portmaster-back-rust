@@ -10,7 +10,6 @@ use crate::controllers::product_controller::ProductController;
 use crate::controllers::role_controller::RoleController;
 use crate::controllers::server_controller::ServerController;
 use crate::controllers::user_controller::UserController;
-use crate::ports::cookie::auth_cookie::AuthCookie;
 use crate::ports::token::token_service::TokenService;
 use portmaster_app::{Logger, LoggerFactory, SequentialIdGenerator};
 use std::time::Duration;
@@ -62,9 +61,6 @@ pub(crate) trait ApiProvider {
 
     /// Quem emite e confere o access token, para o middleware de sessão.
     fn token_service(&self) -> impl TokenService + use<Self> + 'static;
-
-    /// Como os cookies de sessão são lidos, para o middleware de sessão.
-    fn auth_cookie(&self) -> impl AuthCookie + use<Self> + 'static;
 
     /// Fábrica de loggers, para os middlewares.
     fn logger_factory(&self) -> impl LoggerFactory + use<Self> + 'static;

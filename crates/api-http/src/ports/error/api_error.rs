@@ -22,7 +22,6 @@
 
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use cookie::Cookie;
 use portmaster_app::domain::FieldError;
 use portmaster_app::error::{AppError, AppErrorKind};
 use portmaster_app::{Logger as _, SystemLogger};
@@ -33,18 +32,19 @@ use crate::wire::vo::common::problem_x::ProblemX;
 
 /// Um erro pronto para virar resposta.
 ///
-/// Carrega cookies porque uma recusa às vezes **precisa** mexer na sessão: um
-/// refresh token morto tem que sair do navegador junto com o 401, senão o
-/// cliente o reapresenta a cada tentativa e nunca chega ao login. É o único caso,
-/// e é da mesma natureza do status — parte da resposta, não do erro.
+/// Um status e uma explicação, e nada mais. Ele carregava cookies, porque uma
+/// recusa às vezes precisa mexer na sessão — um refresh token morto tem que sair
+/// do navegador junto com o `401`, senão o cliente o reapresenta a cada
+/// tentativa e nunca chega ao login. Isso continua acontecendo, só que pela
+/// [`CookiePort`](crate::middleware::cookie_port::CookiePort): quem descobriu
+/// que o token morreu escreve o cookie ali, e o layer o carimba na resposta
+/// qualquer que ela seja.
 #[derive(Debug)]
 pub struct ApiError {
     /// O status HTTP da resposta.
     status: StatusCode,
     /// O que aconteceu, em texto, para o corpo do problema.
     detail: String,
-    /// Os `Set-Cookie` a acrescentar na resposta, um cabeçalho por entrada.
-    cookies: Vec<Cookie<'static>>,
 }
 
 impl ApiError {
@@ -53,15 +53,7 @@ impl ApiError {
         Self {
             status,
             detail: detail.into(),
-            cookies: Vec::new(),
         }
-    }
-
-    /// Acrescenta um `Set-Cookie` à recusa.
-    #[must_use]
-    pub(crate) fn with_cookie(mut self, cookie: Cookie<'static>) -> Self {
-        self.cookies.push(cookie);
-        self
     }
 
     /// Rota protegida sem sessão.
@@ -108,13 +100,8 @@ impl ApiError {
         self.status
     }
 
-    /// Desmonta o erro no que a resposta precisa.
-    ///
-    /// Devolver as três peças de uma vez é o que permite ao
-    /// [`ApiResponse`](crate::wire::api_response::ApiResponse) juntar os cookies
-    /// do erro aos dele antes de responder, em vez de existirem dois caminhos
-    /// escrevendo `Set-Cookie`.
-    pub(crate) fn into_parts(self) -> (StatusCode, ProblemX, Vec<Cookie<'static>>) {
+    /// Desmonta o erro no status e no corpo de problema.
+    pub(crate) fn into_parts(self) -> (StatusCode, ProblemX) {
         let problem = ProblemX {
             kind: "about:blank",
             title: self.status.canonical_reason().unwrap_or("Error").to_owned(),
@@ -122,7 +109,7 @@ impl ApiError {
             detail: self.detail,
         };
 
-        (self.status, problem, self.cookies)
+        (self.status, problem)
     }
 
     /// Traduz o erro **comum** do `app` para o status que o cliente recebe.
@@ -197,9 +184,9 @@ impl IntoResponse for ApiError {
     /// injetado, e não há alternativa: `IntoResponse::into_response` não recebe
     /// argumento nenhum. O adaptador é um ZST, então construí-lo não é nada.
     fn into_response(self) -> Response {
-        let (status, problem, cookies) = self.into_parts();
+        let (status, problem) = self.into_parts();
 
-        EncodeContext.respond(status, &problem, cookies)
+        EncodeContext.respond(status, &problem)
     }
 }
 

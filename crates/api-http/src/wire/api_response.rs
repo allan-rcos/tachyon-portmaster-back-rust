@@ -2,7 +2,6 @@
 
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use cookie::Cookie;
 
 use crate::middleware::encode_port::EncodePort as _;
 use crate::middleware::intern::encode_context::EncodeContext;
@@ -33,16 +32,14 @@ use crate::wire::x::response_x::ResponseX;
 /// ## E por que o corpo é `Option`
 ///
 /// Porque `204` é uma resposta como as outras. Era um tipo à parte — o
-/// `NoContent` —, o que dava duas formas de responder e duas de anexar cookie a
-/// uma resposta. Um controller que às vezes tem corpo e às vezes não tinha de
-/// escolher entre elas no meio do método.
+/// `NoContent` —, o que dava duas formas de responder. Um controller que às
+/// vezes tem corpo e às vezes não tinha de escolher entre elas no meio do
+/// método.
 pub(crate) struct ApiResponse<X: ResponseX = ProblemX> {
     /// O status do acerto — o da falha vem do próprio erro.
     status: StatusCode,
     /// O que responder, ou por que não dá; `Ok(None)` é o `204`.
     body: Result<Option<X>, ApiError>,
-    /// Os `Set-Cookie` a acrescentar, um cabeçalho por entrada.
-    cookies: Vec<Cookie<'static>>,
 }
 
 impl<X: ResponseX> ApiResponse<X> {
@@ -61,15 +58,7 @@ impl<X: ResponseX> ApiResponse<X> {
         Self {
             status,
             body: body.map(Some),
-            cookies: Vec::new(),
         }
-    }
-
-    /// Acrescenta um `Set-Cookie` à resposta.
-    #[must_use]
-    pub(crate) fn with_cookie(mut self, cookie: Cookie<'static>) -> Self {
-        self.cookies.push(cookie);
-        self
     }
 }
 
@@ -88,50 +77,25 @@ impl ApiResponse<ProblemX> {
         Self {
             status: StatusCode::NO_CONTENT,
             body: Ok(None),
-            cookies: Vec::new(),
         }
     }
 }
 
 impl<X: ResponseX> IntoResponse for ApiResponse<X> {
-    /// Codifica o corpo — ou o problema — e carimba os cookies.
+    /// Codifica o corpo — ou o problema — no formato negociado.
     ///
-    /// Os cookies do erro entram junto com os da resposta: uma recusa às vezes
-    /// **precisa** mexer na sessão, e um refresh token morto tem que sair do
-    /// navegador junto com o 401.
+    /// Cookie não aparece aqui. Quem os carimba é o layer de cookie, depois do
+    /// handler e para toda resposta, o que é o que faz uma recusa poder mexer na
+    /// sessão sem que este tipo saiba disso.
     fn into_response(self) -> Response {
-        let mut cookies = self.cookies;
-
         match self.body {
-            Ok(Some(body)) => EncodeContext.respond(self.status, &body, cookies),
-
-            Ok(None) => {
-                let mut response = self.status.into_response();
-                append_cookies(&mut response, cookies);
-
-                response
-            }
-
+            Ok(Some(body)) => EncodeContext.respond(self.status, &body),
+            Ok(None) => self.status.into_response(),
             Err(error) => {
-                let (status, problem, from_error) = error.into_parts();
-                cookies.extend(from_error);
+                let (status, problem) = error.into_parts();
 
-                EncodeContext.respond(status, &problem, cookies)
+                EncodeContext.respond(status, &problem)
             }
-        }
-    }
-}
-
-/// Carimba os `Set-Cookie` numa resposta que não passou pelo encoder.
-///
-/// Um cabeçalho por cookie: dois `Set-Cookie` num só não são lidos por navegador
-/// nenhum.
-fn append_cookies(response: &mut Response, cookies: Vec<Cookie<'static>>) {
-    let headers = response.headers_mut();
-
-    for cookie in cookies {
-        if let Ok(value) = axum::http::HeaderValue::from_str(&cookie.to_string()) {
-            headers.append(axum::http::header::SET_COOKIE, value);
         }
     }
 }
@@ -149,45 +113,6 @@ mod tests {
             status: 200,
             detail: "tudo certo".to_owned(),
         }
-    }
-
-    #[tokio::test]
-    async fn a_resposta_vazia_ainda_carrega_cookies() {
-        // É o caso do logout: nada a dizer, mas há cookies a limpar.
-        let response = ApiResponse::no_content()
-            .with_cookie(
-                Cookie::build(("auth_token", ""))
-                    .max_age(cookie::time::Duration::ZERO)
-                    .build(),
-            )
-            .into_response();
-
-        assert_eq!(response.status(), StatusCode::NO_CONTENT);
-        assert_eq!(
-            response
-                .headers()
-                .get_all(header::SET_COOKIE)
-                .iter()
-                .count(),
-            1
-        );
-    }
-
-    #[tokio::test]
-    async fn dois_cookies_saem_em_cabecalhos_separados() {
-        let response = ApiResponse::no_content()
-            .with_cookie(Cookie::build(("auth_token", "a")).path("/").build())
-            .with_cookie(Cookie::build(("refresh_token", "b")).path("/").build())
-            .into_response();
-
-        assert_eq!(
-            response
-                .headers()
-                .get_all(header::SET_COOKIE)
-                .iter()
-                .count(),
-            2
-        );
     }
 
     #[tokio::test]

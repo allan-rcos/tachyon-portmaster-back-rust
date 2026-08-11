@@ -6,7 +6,8 @@ use axum::Router;
 
 use crate::controllers::metadata_controller::MetadataController;
 use crate::controllers::params::search_params::SearchParams;
-use crate::session::Session;
+use crate::middleware::intern::session_context::SessionContext;
+use crate::middleware::session_port::SessionPort as _;
 use crate::wire::api_response::ApiResponse;
 
 /// Liga os handlers de metadado aos caminhos.
@@ -16,7 +17,7 @@ pub(crate) fn routes<C: MetadataController>(controller: C) -> Router {
         get(move |Query(params): Query<SearchParams>| async move {
             ApiResponse::ok(
                 async {
-                    let context = Session::require_user()?;
+                    let context = SessionContext.require_user()?;
                     controller.list_permissions(context, params).await
                 }
                 .await,

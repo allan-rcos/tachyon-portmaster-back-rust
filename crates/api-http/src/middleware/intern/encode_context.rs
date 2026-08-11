@@ -6,9 +6,8 @@
 
 use std::future::Future;
 
-use axum::http::{header, HeaderValue, StatusCode};
+use axum::http::{header, StatusCode};
 use axum::response::{IntoResponse as _, Response};
-use cookie::Cookie;
 
 use crate::middleware::encode_port::EncodePort;
 use crate::wire::media_type::MediaType;
@@ -69,12 +68,7 @@ impl EncodeContext {
 }
 
 impl EncodePort for EncodeContext {
-    fn respond<X: ResponseX>(
-        &self,
-        status: StatusCode,
-        body: &X,
-        cookies: Vec<Cookie<'static>>,
-    ) -> Response {
+    fn respond<X: ResponseX>(&self, status: StatusCode, body: &X) -> Response {
         let media = Self::current();
 
         let encoded = match media {
@@ -82,7 +76,7 @@ impl EncodePort for EncodeContext {
             MediaType::FlatBuffers => FlatBuffersEncodeStrategy.encode(body),
         };
 
-        let mut response = match encoded {
+        match encoded {
             Ok(bytes) => (
                 status,
                 [(header::CONTENT_TYPE, media.header_value())],
@@ -90,16 +84,7 @@ impl EncodePort for EncodeContext {
             )
                 .into_response(),
             Err(error) => error.into_response(),
-        };
-
-        let headers = response.headers_mut();
-        for cookie in cookies {
-            if let Ok(value) = HeaderValue::from_str(&cookie.to_string()) {
-                headers.append(header::SET_COOKIE, value);
-            }
         }
-
-        response
     }
 }
 
@@ -121,7 +106,7 @@ mod tests {
     #[tokio::test]
     async fn a_resposta_sai_no_formato_do_escopo() {
         let response = EncodeContext::scope(MediaType::FlatBuffers, async {
-            EncodeContext.respond(StatusCode::OK, &problem(), Vec::new())
+            EncodeContext.respond(StatusCode::OK, &problem())
         })
         .await;
 
@@ -137,7 +122,7 @@ mod tests {
     /// Um erro que nasce antes do middleware ainda precisa virar resposta.
     #[tokio::test]
     async fn fora_do_escopo_a_resposta_sai_em_json() {
-        let response = EncodeContext.respond(StatusCode::OK, &problem(), Vec::new());
+        let response = EncodeContext.respond(StatusCode::OK, &problem());
 
         assert_eq!(
             response
@@ -151,10 +136,10 @@ mod tests {
     #[tokio::test]
     async fn escopos_de_requisicoes_diferentes_nao_se_misturam() {
         let json = tokio::spawn(EncodeContext::scope(MediaType::Json, async {
-            EncodeContext.respond(StatusCode::OK, &problem(), Vec::new())
+            EncodeContext.respond(StatusCode::OK, &problem())
         }));
         let binary = tokio::spawn(EncodeContext::scope(MediaType::FlatBuffers, async {
-            EncodeContext.respond(StatusCode::OK, &problem(), Vec::new())
+            EncodeContext.respond(StatusCode::OK, &problem())
         }));
 
         let (json, binary) = tokio::join!(json, binary);

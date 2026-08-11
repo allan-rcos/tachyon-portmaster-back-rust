@@ -7,8 +7,9 @@ use axum::Router;
 use crate::controllers::container_controller::ContainerController;
 use crate::controllers::params::container_page_params::ContainerPageParams;
 use crate::controllers::params::summary_page_params::SummaryPageParams;
+use crate::middleware::intern::session_context::SessionContext;
+use crate::middleware::session_port::SessionPort as _;
 use crate::ports::error::api_error::ApiError;
-use crate::session::Session;
 use crate::wire::api_response::ApiResponse;
 use crate::wire::body::Body;
 
@@ -36,7 +37,7 @@ fn collection<C: ContainerController>(controller: C) -> Router {
             post(move |Body(request)| async move {
                 ApiResponse::created(
                     async {
-                        let context = Session::require_user()?;
+                        let context = SessionContext.require_user()?;
                         create.create(context, request).await
                     }
                     .await,
@@ -46,7 +47,7 @@ fn collection<C: ContainerController>(controller: C) -> Router {
                 move |Query(params): Query<ContainerPageParams>| async move {
                     ApiResponse::ok(
                         async {
-                            let context = Session::require_user()?;
+                            let context = SessionContext.require_user()?;
                             list.list(context, params).await
                         }
                         .await,
@@ -59,7 +60,7 @@ fn collection<C: ContainerController>(controller: C) -> Router {
             get(move |Query(params): Query<SummaryPageParams>| async move {
                 ApiResponse::ok(
                     async {
-                        let context = Session::require_user()?;
+                        let context = SessionContext.require_user()?;
                         summary.summary(context, params).await
                     }
                     .await,
@@ -81,7 +82,7 @@ fn item<C: ContainerController>(controller: C) -> Router {
             get(move |Path(id): Path<String>| async move {
                 ApiResponse::ok(
                     async {
-                        let context = Session::require_user()?;
+                        let context = SessionContext.require_user()?;
                         read.get(context, id).await
                     }
                     .await,
@@ -90,7 +91,7 @@ fn item<C: ContainerController>(controller: C) -> Router {
             .put(move |Path(id): Path<String>, Body(request)| async move {
                 ApiResponse::ok(
                     async {
-                        let context = Session::require_user()?;
+                        let context = SessionContext.require_user()?;
                         update.update(context, id, request).await
                     }
                     .await,
@@ -98,7 +99,7 @@ fn item<C: ContainerController>(controller: C) -> Router {
             })
             .delete(move |Path(id): Path<String>| async move {
                 async {
-                    let context = Session::require_user()?;
+                    let context = SessionContext.require_user()?;
                     delete.delete(context, id).await?;
 
                     Ok::<_, ApiError>(ApiResponse::no_content())
@@ -110,7 +111,7 @@ fn item<C: ContainerController>(controller: C) -> Router {
             "/containers/{id}/seal",
             post(move |Path(id): Path<String>| async move {
                 async {
-                    let context = Session::require_user()?;
+                    let context = SessionContext.require_user()?;
                     seal.seal(context, id).await?;
 
                     Ok::<_, ApiError>(ApiResponse::no_content())
@@ -122,7 +123,7 @@ fn item<C: ContainerController>(controller: C) -> Router {
             "/containers/{id}/dispatch",
             post(move |Path(id): Path<String>| async move {
                 async {
-                    let context = Session::require_user()?;
+                    let context = SessionContext.require_user()?;
                     controller.dispatch(context, id).await?;
 
                     Ok::<_, ApiError>(ApiResponse::no_content())

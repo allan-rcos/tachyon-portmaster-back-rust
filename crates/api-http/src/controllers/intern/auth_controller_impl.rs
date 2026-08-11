@@ -1,7 +1,6 @@
 //! O controller de sessão. Não sai do módulo.
 
-use axum::http::{HeaderMap, StatusCode};
-use cookie::Cookie;
+use axum::http::StatusCode;
 use portmaster_app::commands::marker::{RegisterMarkerGroupCommand, SetMarkerCommand};
 use portmaster_app::commands::session::{LoginCommand, SetupCommand};
 use portmaster_app::context::UserContext;
@@ -12,7 +11,8 @@ use portmaster_app::services::{MarkUseCase, SessionUseCase};
 use portmaster_app::{Logger, RandomIdGenerator};
 
 use crate::controllers::auth_controller::AuthController;
-use crate::ports::cookie::auth_cookie::AuthCookie;
+use crate::middleware::cookie_port::CookiePort;
+use crate::ports::cookie::cookie_name::CookieName;
 use crate::ports::error::api_error::ApiError;
 use crate::ports::token::refresh_token::RefreshToken;
 use crate::ports::token::token_service::TokenService;
@@ -41,6 +41,12 @@ const REFRESH_TOKEN_GROUP: &str = "refresh-token";
 /// Antes o controller declarava `tokens: TokenService` e `cookies: AuthCookie`
 /// com as impls, e a hierarquia que as traits desenham valia para fora do crate
 /// mas não para dentro dele.
+///
+/// É o único controller que injeta a [`CookiePort`], e é a razão de ela existir:
+/// a sessão **é** um par de cookies, e quem decide o que entra neles é quem
+/// emite o token. O que a porta garante é que ele o faça sem ver um `Cookie`,
+/// sem escolher `Path` nem `Max-Age`, e sem que o tipo interno do crate `cookie`
+/// apareça na assinatura de contrato nenhum.
 #[derive(Clone)]
 pub(crate) struct AuthControllerImpl<S, M, R, T, A, L> {
     /// O caso de uso de sessão.
@@ -51,7 +57,7 @@ pub(crate) struct AuthControllerImpl<S, M, R, T, A, L> {
     random: R,
     /// Quem emite e confere o access token.
     tokens: T,
-    /// Como os cookies de sessão são escritos e lidos.
+    /// Por onde os cookies de sessão são escritos e lidos.
     cookies: A,
     /// Para onde vai o que não impediu a operação.
     logger: L,
@@ -65,7 +71,7 @@ where
     M: MarkUseCase,
     R: RandomIdGenerator,
     T: TokenService,
-    A: AuthCookie,
+    A: CookiePort,
     L: Logger,
 {
     /// Monta o controller.
@@ -89,26 +95,19 @@ where
         }
     }
 
-    /// Emite access e refresh, e monta o corpo da sessão.
-    async fn issue_session(
-        &self,
-        user: &dyn User,
-    ) -> Result<(LoginXResponse, Vec<Cookie<'static>>), ApiError> {
+    /// Emite access e refresh, publica os cookies e monta o corpo da sessão.
+    async fn issue_session(&self, user: &dyn User) -> Result<LoginXResponse, ApiError> {
         let refresh = self.mint_refresh(user).await?;
         let access = self.tokens.issue(user)?;
 
-        let body = LoginXResponse {
-            token: access.clone(),
+        self.cookies.set(CookieName::Access, &access)?;
+        self.cookies.set(CookieName::Refresh, &refresh)?;
+
+        Ok(LoginXResponse {
+            token: access,
             token_type: TOKEN_TYPE.to_owned(),
             user: UserX::of(user),
-        };
-
-        let cookies = vec![
-            self.cookies.issue_access(&access),
-            self.cookies.issue_refresh(&refresh),
-        ];
-
-        Ok((body, cookies))
+        })
     }
 
     /// Gasta o refresh apresentado e devolve o usuário que ele nomeia.
@@ -190,7 +189,7 @@ where
     M: MarkUseCase + Clone + Send + Sync + 'static,
     R: RandomIdGenerator + Clone + Send + Sync + 'static,
     T: TokenService,
-    A: AuthCookie,
+    A: CookiePort,
     L: Logger,
 {
     async fn register_marker_group(&self) -> Result<(), ApiError> {
@@ -209,10 +208,7 @@ where
     /// os campos que faltaram, de uma vez. Levantar erro nesta camada devolveria
     /// um problema por requisição e duplicaria, no `api-http`, uma regra que já
     /// mora no `domain`.
-    async fn setup(
-        &self,
-        request: SetupXRequest,
-    ) -> Result<(LoginXResponse, Vec<Cookie<'static>>), ApiError> {
+    async fn setup(&self, request: SetupXRequest) -> Result<LoginXResponse, ApiError> {
         let user = self
             .sessions
             .setup(SetupCommand {
@@ -232,10 +228,7 @@ where
     /// o `app` responde igual para e-mail desconhecido e senha errada, e
     /// distinguir "não mandou o campo" aqui entregaria ao atacante metade da
     /// resposta.
-    async fn login(
-        &self,
-        request: LoginXRequest,
-    ) -> Result<(LoginXResponse, Vec<Cookie<'static>>), ApiError> {
+    async fn login(&self, request: LoginXRequest) -> Result<LoginXResponse, ApiError> {
         let user = self
             .sessions
             .login(LoginCommand {
@@ -254,24 +247,28 @@ where
     /// `Set-Cookie` para quem nunca teve sessão. Já um token apresentado e morto
     /// **é** tirado do navegador — é o que impede o cliente de reapresentá-lo
     /// para sempre.
-    async fn refresh(&self, headers: HeaderMap) -> Result<Vec<Cookie<'static>>, ApiError> {
-        let Some(presented) = self.cookies.read_refresh(&headers) else {
+    async fn refresh(&self) -> Result<(), ApiError> {
+        let Some(presented) = self.cookies.read(CookieName::Refresh)? else {
             return Err(refused());
         };
 
-        let user = self.rotate(&presented).await.map_err(|error| {
-            error
-                .with_cookie(self.cookies.clear_access())
-                .with_cookie(self.cookies.clear_refresh())
-        })?;
+        let user = match self.rotate(&presented).await {
+            Ok(user) => user,
+            Err(error) => {
+                self.cookies.clear(CookieName::Access)?;
+                self.cookies.clear(CookieName::Refresh)?;
+
+                return Err(error);
+            }
+        };
 
         let refreshed = self.mint_refresh(user.as_ref()).await?;
         let access = self.tokens.issue(user.as_ref())?;
 
-        Ok(vec![
-            self.cookies.issue_access(&access),
-            self.cookies.issue_refresh(&refreshed),
-        ])
+        self.cookies.set(CookieName::Access, &access)?;
+        self.cookies.set(CookieName::Refresh, &refreshed)?;
+
+        Ok(())
     }
 
     /// Revoga o refresh e limpa os dois cookies.
@@ -282,8 +279,8 @@ where
     ///
     /// Revogar é **esforço, não condição**: falhar em revogar não pode impedir
     /// o cliente de sair. O que fica é o registro para quem investiga.
-    async fn logout(&self, headers: HeaderMap) -> Vec<Cookie<'static>> {
-        if let Some(presented) = self.cookies.read_refresh(&headers) {
+    async fn logout(&self) -> Result<(), ApiError> {
+        if let Ok(Some(presented)) = self.cookies.read(CookieName::Refresh) {
             if let Err(error) = self.revoke(&presented).await {
                 self.logger.warn(
                     "não foi possível revogar o refresh token no logout",
@@ -292,7 +289,10 @@ where
             }
         }
 
-        vec![self.cookies.clear_access(), self.cookies.clear_refresh()]
+        self.cookies.clear(CookieName::Access)?;
+        self.cookies.clear(CookieName::Refresh)?;
+
+        Ok(())
     }
 }
 

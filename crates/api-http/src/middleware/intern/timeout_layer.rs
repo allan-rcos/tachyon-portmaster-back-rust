@@ -80,13 +80,13 @@ where
                             [("limit_ms", &limit.as_millis().to_string())],
                         );
 
-                    let (status, problem, cookies) = ApiError::new(
+                    let (status, problem) = ApiError::new(
                         StatusCode::GATEWAY_TIMEOUT,
                         "The request took too long to complete.",
                     )
                     .into_parts();
 
-                    Ok(EncodeContext.respond(status, &problem, cookies))
+                    Ok(EncodeContext.respond(status, &problem))
                 }
             }
         })

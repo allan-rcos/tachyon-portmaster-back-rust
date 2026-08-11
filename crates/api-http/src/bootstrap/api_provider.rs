@@ -24,8 +24,7 @@ use crate::controllers::product_controller::ProductController;
 use crate::controllers::role_controller::RoleController;
 use crate::controllers::server_controller::ServerController;
 use crate::controllers::user_controller::UserController;
-use crate::ports::cookie::adapter::http_auth_cookie::HttpAuthCookie;
-use crate::ports::cookie::auth_cookie::AuthCookie;
+use crate::middleware::intern::cookie_context::CookieContext;
 use crate::ports::token::adapter::jwt_token_service::JwtTokenService;
 use crate::ports::token::token_service::TokenService;
 
@@ -47,8 +46,6 @@ pub(crate) struct ApiProviderImpl<P> {
     app: P,
     /// Quem emite e confere o access token.
     tokens: JwtTokenService,
-    /// Como os cookies de sessão são escritos e lidos.
-    cookies: HttpAuthCookie,
     /// Em que ambiente o processo está rodando.
     environment: String,
     /// Por quanto tempo o refresh vale, em segundos.
@@ -68,7 +65,6 @@ impl<P: AppProvider> ApiProviderImpl<P> {
     pub(crate) const fn new(
         app: P,
         tokens: JwtTokenService,
-        cookies: HttpAuthCookie,
         environment: String,
         refresh_ttl_seconds: u64,
         request_timeout: Duration,
@@ -77,7 +73,6 @@ impl<P: AppProvider> ApiProviderImpl<P> {
         Self {
             app,
             tokens,
-            cookies,
             environment,
             refresh_ttl_seconds,
             request_timeout,
@@ -97,7 +92,7 @@ impl<P: AppProvider> ApiProvider for ApiProviderImpl<P> {
             self.app.mark_use_case(),
             self.app.random_id_generator(),
             self.tokens.clone(),
-            self.cookies,
+            CookieContext,
             self.logger(AUTH_CHANNEL),
             self.refresh_ttl_seconds,
         )
@@ -137,10 +132,6 @@ impl<P: AppProvider> ApiProvider for ApiProviderImpl<P> {
 
     fn token_service(&self) -> impl TokenService + use<P> + 'static {
         self.tokens.clone()
-    }
-
-    fn auth_cookie(&self) -> impl AuthCookie + use<P> + 'static {
-        self.cookies
     }
 
     fn logger_factory(&self) -> impl LoggerFactory + use<P> + 'static {

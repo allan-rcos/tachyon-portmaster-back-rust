@@ -1,4 +1,4 @@
-//! O middleware que resolve a sessão a partir do token.
+//! O middleware que resolve a sessão a partir do token apresentado.
 
 use std::task::{Context, Poll};
 
@@ -7,59 +7,53 @@ use axum::response::Response;
 use futures::future::BoxFuture;
 use tower::{Layer, Service};
 
-use crate::ports::cookie::auth_cookie::AuthCookie;
+use crate::middleware::cookie_port::CookiePort as _;
+use crate::middleware::intern::cookie_context::CookieContext;
+use crate::middleware::intern::session_context::SessionContext;
+use crate::ports::cookie::cookie_name::CookieName;
 use crate::ports::token::token_service::TokenService;
-use crate::session::Session;
 
 /// Resolve a sessão a partir do token apresentado e abre o escopo dela.
 ///
-/// Genérico sobre o token e sobre os cookies: ele pede "o token apresentado" e
-/// "o principal deste token" sem conhecer nenhuma das duas impls.
+/// Genérico sobre o serviço de token: ele pede "o principal deste token" sem
+/// conhecer a impl. O token em si vem pelo `CookiePort`, o que significa que
+/// este layer tem de ficar **dentro** do `CookieLayer`.
 ///
 /// ## O layer é o serviço antes de saber o que envolve
 ///
-/// Um tipo só, e não um par. `SessionLayer<T, A>` é o `Layer`, e
-/// `SessionLayer<T, A, S>` é o `Service` que sai do `layer()`. Eram dois tipos
-/// em dois arquivos, e o segundo nunca foi nomeado por ninguém.
+/// Um tipo só, e não um par. `SessionLayer<T>` é o `Layer`, e
+/// `SessionLayer<T, S>` é o `Service` que sai do `layer()`.
 #[derive(Clone)]
-pub(crate) struct SessionLayer<T, A, S = ()> {
+pub(crate) struct SessionLayer<T, S = ()> {
     /// O serviço interno, que este envolve; `()` enquanto é só layer.
     inner: S,
     /// Quem confere o access token.
     tokens: T,
-    /// De onde o access token é lido.
-    cookies: A,
 }
 
-impl<T, A> SessionLayer<T, A> {
+impl<T> SessionLayer<T> {
     /// Monta o layer com o que o provider entregou.
-    pub(crate) const fn new(tokens: T, cookies: A) -> Self {
-        Self {
-            inner: (),
-            tokens,
-            cookies,
-        }
+    pub(crate) const fn new(tokens: T) -> Self {
+        Self { inner: (), tokens }
     }
 }
 
-impl<S, T: TokenService, A: AuthCookie> Layer<S> for SessionLayer<T, A> {
-    type Service = SessionLayer<T, A, S>;
+impl<S, T: TokenService> Layer<S> for SessionLayer<T> {
+    type Service = SessionLayer<T, S>;
 
     fn layer(&self, inner: S) -> Self::Service {
         SessionLayer {
             inner,
             tokens: self.tokens.clone(),
-            cookies: self.cookies.clone(),
         }
     }
 }
 
-impl<S, T, A> Service<Request> for SessionLayer<T, A, S>
+impl<S, T> Service<Request> for SessionLayer<T, S>
 where
     S: Service<Request, Response = Response> + Clone + Send + 'static,
     S::Future: Send + 'static,
     T: TokenService,
-    A: AuthCookie,
 {
     type Response = Response;
     type Error = S::Error;
@@ -77,14 +71,14 @@ where
     ///
     /// Sem token, ou com um que não vale, o escopo abre com `None`. Recusar aqui
     /// fecharia as rotas públicas junto; quem exige sessão é o controller, com
-    /// [`Session::require_user`].
+    /// [`SessionPort::require_user`](crate::middleware::session_port::SessionPort::require_user()).
     fn call(&mut self, request: Request) -> Self::Future {
         let clone = self.inner.clone();
         let mut inner = std::mem::replace(&mut self.inner, clone);
 
-        let presented = self.cookies.read_access(request.headers());
+        let presented = CookieContext.read(CookieName::Access).ok().flatten();
         let user = presented.and_then(|token| self.tokens.verify(&token));
 
-        Box::pin(async move { Session::scope(user, inner.call(request)).await })
+        Box::pin(async move { SessionContext::scope(user, inner.call(request)).await })
     }
 }

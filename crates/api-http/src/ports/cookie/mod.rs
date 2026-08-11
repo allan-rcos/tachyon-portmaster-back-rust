@@ -1,15 +1,13 @@
 //! Os cookies que carregam a sessão.
 //!
-//! `HttpOnly` em ambos, sempre. É o que impede um XSS de ler o token por
-//! JavaScript — a diferença entre um script injetado poder incomodar o usuário
-//! e poder roubar a sessão dele inteira.
+//! Só o **vocabulário** mora aqui: sob que nome cada cookie viaja. Quem os monta
+//! e os lê é o contexto de cookie do middleware, e é o único ponto do sistema
+//! que conhece o tipo `Cookie`.
 //!
-//! O resto da política — validade, `Secure`, `SameSite` — mora na
-//! [`SessionPolicy`](crate::ports::session_policy::SessionPolicy), decidida em
-//! compilação. Aqui fica só o que é do cookie em si: sob que nome ele viaja, e
-//! quem sabe montá-lo.
+//! Havia uma trait `AuthCookie` tentando abstrair aquele tipo, e ela não
+//! abstraía nada: quatro dos seus seis métodos o devolviam na assinatura, então
+//! ele atravessava o contrato e chegava aos controllers de qualquer forma. O que
+//! restou dela é a [`CookiePort`](crate::middleware::cookie_port::CookiePort),
+//! que fala em nome e valor.
 
-pub(crate) mod auth_cookie;
 pub(crate) mod cookie_name;
-
-pub(crate) mod adapter;

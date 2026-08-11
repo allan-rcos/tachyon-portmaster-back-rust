@@ -1,6 +1,5 @@
 //! As rotas de sessão.
 
-use axum::http::HeaderMap;
 use axum::routing::post;
 use axum::Router;
 
@@ -22,43 +21,19 @@ pub(crate) fn routes<C: AuthController>(controller: C) -> Router {
         .route(
             "/setup",
             post(move |Body(request)| async move {
-                match setup.setup(request).await {
-                    Ok((body, cookies)) => cookies
-                        .into_iter()
-                        .fold(ApiResponse::created(Ok(body)), ApiResponse::with_cookie),
-                    Err(error) => ApiResponse::created(Err(error)),
-                }
+                ApiResponse::created(setup.setup(request).await)
             }),
         )
         .route(
             "/auth/login",
-            post(move |Body(request)| async move {
-                match login.login(request).await {
-                    Ok((body, cookies)) => cookies
-                        .into_iter()
-                        .fold(ApiResponse::ok(Ok(body)), ApiResponse::with_cookie),
-                    Err(error) => ApiResponse::ok(Err(error)),
-                }
-            }),
+            post(move |Body(request)| async move { ApiResponse::ok(login.login(request).await) }),
         )
         .route(
             "/auth/refresh",
-            post(move |headers: HeaderMap| async move {
-                refresh.refresh(headers).await.map(|cookies| {
-                    cookies
-                        .into_iter()
-                        .fold(ApiResponse::no_content(), ApiResponse::with_cookie)
-                })
-            }),
+            post(move || async move { refresh.refresh().await.map(|()| ApiResponse::no_content()) }),
         )
         .route(
             "/auth/logout",
-            post(move |headers: HeaderMap| async move {
-                controller
-                    .logout(headers)
-                    .await
-                    .into_iter()
-                    .fold(ApiResponse::no_content(), ApiResponse::with_cookie)
-            }),
+            post(move || async move { controller.logout().await.map(|()| ApiResponse::no_content()) }),
         )
 }
