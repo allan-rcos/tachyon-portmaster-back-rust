@@ -30,7 +30,7 @@ pub(crate) fn routes<C: RoleController>(controller: C) -> Router {
             post(move |encoder: Encoder, Body(request)| async move {
                 let context = Session::require_user()?;
 
-                Ok::<_, crate::error::api_error::ApiError>(ApiResponse::created(
+                Ok::<_, crate::ports::error::api_error::ApiError>(ApiResponse::created(
                     encoder,
                     create.create(context, request).await,
                 ))
@@ -39,7 +39,7 @@ pub(crate) fn routes<C: RoleController>(controller: C) -> Router {
                 move |encoder: Encoder, Query(params): Query<PageParams>| async move {
                     let context = Session::require_user()?;
 
-                    Ok::<_, crate::error::api_error::ApiError>(ApiResponse::ok(
+                    Ok::<_, crate::ports::error::api_error::ApiError>(ApiResponse::ok(
                         encoder,
                         list.list(context, params).await,
                     ))
@@ -52,7 +52,7 @@ pub(crate) fn routes<C: RoleController>(controller: C) -> Router {
                 move |encoder: Encoder, Path(id): Path<String>, Body(request)| async move {
                     let context = Session::require_user()?;
 
-                    Ok::<_, crate::error::api_error::ApiError>(ApiResponse::ok(
+                    Ok::<_, crate::ports::error::api_error::ApiError>(ApiResponse::ok(
                         encoder,
                         controller.update_permissions(context, id, request).await,
                     ))

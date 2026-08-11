@@ -1,6 +1,6 @@
 //! O VO de `UserAdminPasswordResetRequest`.
 
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::dto::json::admin::user_admin_password_reset_request_json::UserAdminPasswordResetRequestJson;
 use crate::wire::tables as fbs;
 use crate::wire::x::request_x::RequestX;

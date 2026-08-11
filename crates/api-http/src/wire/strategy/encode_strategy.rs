@@ -1,6 +1,6 @@
 //! O contrato de quem escreve uma resposta no fio.
 
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::x::response_x::ResponseX;
 
 /// Escreve um VO de resposta num formato.

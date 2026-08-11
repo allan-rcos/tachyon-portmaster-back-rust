@@ -8,7 +8,7 @@ use portmaster_app::queries::account::GetAccountQuery;
 use portmaster_app::services::AccountUseCase;
 
 use crate::controllers::account_controller::AccountController;
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::vo::account::account_password_change_x_request::AccountPasswordChangeXRequest;
 use crate::wire::vo::account::account_profile_x_response::AccountProfileXResponse;
 use crate::wire::vo::account::account_update_x_request::AccountUpdateXRequest;

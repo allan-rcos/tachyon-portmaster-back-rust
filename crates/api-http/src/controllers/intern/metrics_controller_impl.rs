@@ -6,7 +6,7 @@ use portmaster_app::queries::metrics::GetMetricsQuery;
 use portmaster_app::services::MetricsUseCase;
 
 use crate::controllers::metrics_controller::MetricsController;
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::vo::metrics::metrics_x_response::MetricsXResponse;
 
 /// Os handlers do painel, genéricos sobre o caso de uso.

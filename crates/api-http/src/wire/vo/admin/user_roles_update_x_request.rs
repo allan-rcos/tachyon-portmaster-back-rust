@@ -1,6 +1,6 @@
 //! O VO de `UserRolesUpdateRequest`.
 
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::dto::json::admin::user_roles_update_request_json::UserRolesUpdateRequestJson;
 use crate::wire::tables as fbs;
 use crate::wire::x::request_x::RequestX;

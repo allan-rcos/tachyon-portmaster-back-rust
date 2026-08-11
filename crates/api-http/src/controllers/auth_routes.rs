@@ -5,7 +5,7 @@ use axum::routing::post;
 use axum::Router;
 
 use crate::controllers::auth_controller::AuthController;
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::api_response::ApiResponse;
 use crate::wire::body::Body;
 use crate::wire::encoder::Encoder;

@@ -4,7 +4,7 @@ use portmaster_app::context::UserContext;
 
 use crate::controllers::params::container_page_params::ContainerPageParams;
 use crate::controllers::params::summary_page_params::SummaryPageParams;
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::vo::container::container_create_x_request::ContainerCreateXRequest;
 use crate::wire::vo::container::container_list_x_response::ContainerListXResponse;
 use crate::wire::vo::container::container_summary_list_x_response::ContainerSummaryListXResponse;

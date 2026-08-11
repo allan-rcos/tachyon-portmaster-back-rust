@@ -65,7 +65,13 @@ services:
     restart: "no"
 
   app:
-    build: .
+    build:
+      context: .
+      args:
+        # This stack serves plain HTTP, and the session cookies are `Secure` in
+        # a release build. Without this the browser keeps them and never sends
+        # them back, so logging in locally would silently do nothing.
+        RUST_DEBUG_ASSERTIONS: "on"
     depends_on:
       seed:
         condition: service_completed_successfully
@@ -82,7 +88,6 @@ services:
       APP_DB_PASSWORD: root
       # At least 32 bytes: HS256 refuses a secret shorter than its digest.
       APP_JWT_SECRET: dev-only-change-me-32-bytes-minimum
-      APP_JWT_COOKIE_SECURE: "false"
     ports:
       - "8000:8000"
 

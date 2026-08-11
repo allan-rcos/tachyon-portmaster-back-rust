@@ -1,6 +1,6 @@
 //! O contrato de quem lê um corpo de requisição.
 
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::x::request_x::RequestX;
 
 /// Lê um VO de requisição de um formato.

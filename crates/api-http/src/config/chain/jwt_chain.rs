@@ -46,16 +46,7 @@ impl JwtChain {
 
         draft.jwt = Some(JwtConfig {
             secret: SecretString::from(secret),
-            ttl: env.duration(Env::JWT_TTL, defaults.ttl),
             issuer: env.string(Env::JWT_ISSUER, &defaults.issuer),
-            cookie_name: env.string(Env::JWT_COOKIE_NAME, &defaults.cookie_name),
-            cookie_secure: env.flag(Env::JWT_COOKIE_SECURE, defaults.cookie_secure),
-            cookie_same_site: env.string(Env::JWT_COOKIE_SAME_SITE, &defaults.cookie_same_site),
-            refresh_cookie_name: env.string(
-                Env::REFRESH_COOKIE_NAME,
-                &defaults.refresh_cookie_name,
-            ),
-            refresh_ttl: env.duration(Env::REFRESH_TTL, defaults.refresh_ttl),
         });
     }
 }

@@ -3,8 +3,8 @@
 use tower::Layer;
 
 use super::token::Token;
-use crate::cookie::auth_cookie::AuthCookie;
-use crate::token::token_service::TokenService;
+use crate::ports::cookie::auth_cookie::AuthCookie;
+use crate::ports::token::token_service::TokenService;
 
 /// Aplica o [`Token`].
 #[derive(Clone)]

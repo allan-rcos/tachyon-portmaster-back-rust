@@ -7,4 +7,4 @@
 pub(crate) mod refresh_token;
 pub(crate) mod token_service;
 
-pub(crate) mod intern;
+pub(crate) mod adapter;

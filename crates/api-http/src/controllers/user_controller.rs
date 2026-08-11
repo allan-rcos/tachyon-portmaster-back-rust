@@ -3,7 +3,7 @@
 use portmaster_app::context::UserContext;
 
 use crate::controllers::params::user_page_params::UserPageParams;
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::vo::admin::user_admin_password_reset_x_request::UserAdminPasswordResetXRequest;
 use crate::wire::vo::admin::user_admin_x_response::UserAdminXResponse;
 use crate::wire::vo::admin::user_create_x_request::UserCreateXRequest;

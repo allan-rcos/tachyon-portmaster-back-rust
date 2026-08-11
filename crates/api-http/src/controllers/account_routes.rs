@@ -4,7 +4,7 @@ use axum::routing::{get, put};
 use axum::Router;
 
 use crate::controllers::account_controller::AccountController;
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::session::Session;
 use crate::wire::api_response::ApiResponse;
 use crate::wire::body::Body;

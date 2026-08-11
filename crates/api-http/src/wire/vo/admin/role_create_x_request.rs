@@ -1,6 +1,6 @@
 //! O VO de `RoleCreateRequest`.
 
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::dto::json::admin::role_create_request_json::RoleCreateRequestJson;
 use crate::wire::tables as fbs;
 use crate::wire::x::request_x::RequestX;

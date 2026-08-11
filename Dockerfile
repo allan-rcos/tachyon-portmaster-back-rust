@@ -44,13 +44,25 @@ COPY swagger ./swagger
 COPY xtask/Cargo.toml ./xtask/Cargo.toml
 RUN mkdir -p xtask/src && echo 'fn main() {}' > xtask/src/main.rs
 
+# A `SessionPolicy` liga o `Secure` dos cookies de sessão pelo perfil de
+# compilação, e esta imagem é release — então o cookie sai `Secure` e um cliente
+# que fale HTTP puro nunca o devolve. É o correto para produção, e é o que
+# inviabilizaria o compose de desenvolvimento e a suíte de integração, que sobem
+# esta mesma imagem em `http://`.
+#
+# Daí o argumento: ele liga as debug assertions dentro do build de release, que é
+# o que a `SessionPolicy` lê. Fica `off` por padrão de propósito — quem quer a
+# imagem que serve HTTP puro tem que pedir por ela.
+ARG RUST_DEBUG_ASSERTIONS=off
+
 # Os caches de registro e de artefato ficam em mounts do BuildKit em vez de numa
 # camada: uma recompilação reaproveita o que já foi construído sem que nada disso
 # vá parar na imagem. Por isso o binário é copiado para fora do `target` ainda
 # dentro do mesmo `RUN` — o mount some quando ele termina.
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/build/target \
-    cargo build --release --locked --bin portmaster-api-http \
+    if [ "$RUST_DEBUG_ASSERTIONS" = "on" ]; then export RUSTFLAGS="-C debug-assertions=on"; fi \
+    && cargo build --release --locked --bin portmaster-api-http \
     && cp target/release/portmaster-api-http /usr/local/bin/portmaster-api-http
 
 # --- Etapa 2: rodar ---------------------------------------------------------

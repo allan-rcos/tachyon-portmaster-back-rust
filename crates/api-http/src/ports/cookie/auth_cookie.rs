@@ -5,7 +5,7 @@ use cookie::Cookie;
 
 /// Emite e lê os cookies que carregam a sessão.
 ///
-/// Trait pela mesma razão do [`TokenService`](crate::token::token_service::TokenService):
+/// Trait pela mesma razão do [`TokenService`](crate::ports::token::token_service::TokenService):
 /// o controller de auth pede "o cookie que limpa o refresh" e recebe um
 /// [`Cookie`], sem saber como ele é montado nem sob que nome viaja.
 pub(crate) trait AuthCookie: Clone + Send + Sync + 'static {

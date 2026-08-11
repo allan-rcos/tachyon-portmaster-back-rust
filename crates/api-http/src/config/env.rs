@@ -6,6 +6,12 @@
 /// renomear qualquer uma quebra um deploy existente em silêncio, porque o valor
 /// simplesmente cai no padrão.
 ///
+/// Só entra aqui **segredo ou identidade de deploy**. As seis variáveis de
+/// sessão que o PHP tinha (`APP_JWT_TTL`, `APP_REFRESH_TTL` e os quatro
+/// `*_COOKIE_*`) não eram nem uma coisa nem outra: viraram a
+/// [`SessionPolicy`](crate::ports::session_policy::SessionPolicy), fixada em
+/// compilação.
+///
 /// Struct-namespace e não um `mod` de consts soltas: o módulo já é o arquivo, e
 /// agrupá-las num tipo é o que mantém um export só por arquivo.
 pub(crate) struct Env;
@@ -37,20 +43,8 @@ impl Env {
     pub(crate) const DB_SSL_VERIFY_CN: &str = "APP_DB_SSL_VERIFY_CN";
     /// `APP_JWT_SECRET`
     pub(crate) const JWT_SECRET: &str = "APP_JWT_SECRET";
-    /// `APP_JWT_TTL`
-    pub(crate) const JWT_TTL: &str = "APP_JWT_TTL";
     /// `APP_JWT_ISSUER`
     pub(crate) const JWT_ISSUER: &str = "APP_JWT_ISSUER";
-    /// `APP_JWT_COOKIE_NAME`
-    pub(crate) const JWT_COOKIE_NAME: &str = "APP_JWT_COOKIE_NAME";
-    /// `APP_JWT_COOKIE_SECURE`
-    pub(crate) const JWT_COOKIE_SECURE: &str = "APP_JWT_COOKIE_SECURE";
-    /// `APP_JWT_COOKIE_SAME_SITE`
-    pub(crate) const JWT_COOKIE_SAME_SITE: &str = "APP_JWT_COOKIE_SAME_SITE";
-    /// `APP_REFRESH_COOKIE_NAME`
-    pub(crate) const REFRESH_COOKIE_NAME: &str = "APP_REFRESH_COOKIE_NAME";
-    /// `APP_REFRESH_TTL`
-    pub(crate) const REFRESH_TTL: &str = "APP_REFRESH_TTL";
     /// `APP_CLUSTER_ID`
     pub(crate) const CLUSTER_ID: &str = "APP_CLUSTER_ID";
     /// `APP_SERVER_ID`

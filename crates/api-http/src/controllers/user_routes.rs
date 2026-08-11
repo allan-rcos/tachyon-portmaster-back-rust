@@ -6,7 +6,7 @@ use axum::Router;
 
 use crate::controllers::params::user_page_params::UserPageParams;
 use crate::controllers::user_controller::UserController;
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::session::Session;
 use crate::wire::api_response::ApiResponse;
 use crate::wire::body::Body;

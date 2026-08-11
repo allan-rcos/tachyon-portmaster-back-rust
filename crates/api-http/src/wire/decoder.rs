@@ -1,6 +1,6 @@
 //! O contexto do Strategy pattern na entrada.
 
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::media_type::MediaType;
 use crate::wire::strategy::decode_strategy::DecodeStrategy as _;
 use crate::wire::strategy::flatbuffers_decode_strategy::FlatBuffersDecodeStrategy;

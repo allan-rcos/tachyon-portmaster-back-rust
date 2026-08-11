@@ -19,11 +19,11 @@ use portmaster_app::context::{RoleContext, UserContext};
 use portmaster_app::domain::User;
 use secrecy::ExposeSecret as _;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
 
 use crate::config::jwt_config::JwtConfig;
-use crate::error::api_error::ApiError;
-use crate::token::token_service::TokenService;
+use crate::ports::session_policy::SessionPolicy;
+use crate::ports::error::api_error::ApiError;
+use crate::ports::token::token_service::TokenService;
 use crate::wire::tables as fbs;
 
 /// As claims do access token.
@@ -50,8 +50,6 @@ pub(crate) struct JwtTokenService {
     decoding: DecodingKey,
     /// Quem emitiu, gravado e conferido na claim `iss`.
     issuer: String,
-    /// Validade do access token.
-    ttl: Duration,
 }
 
 impl JwtTokenService {
@@ -63,7 +61,6 @@ impl JwtTokenService {
             encoding: EncodingKey::from_secret(secret),
             decoding: DecodingKey::from_secret(secret),
             issuer: config.issuer.clone(),
-            ttl: config.ttl,
         }
     }
 
@@ -175,7 +172,7 @@ impl TokenService for JwtTokenService {
         let claims = Claims {
             sub: user.id().to_owned(),
             iss: self.issuer.clone(),
-            exp: now + self.ttl.as_secs(),
+            exp: now + SessionPolicy::ACCESS_TTL.as_secs(),
             iat: now,
             user_data: Self::pack_principal(user),
         };
@@ -279,13 +276,7 @@ mod tests {
     fn config_base() -> JwtConfig {
         JwtConfig {
             secret: SecretString::from("dev-only-change-me-32-bytes-minimum"),
-            ttl: Duration::from_secs(3600),
             issuer: "tachyon/portmaster".to_owned(),
-            cookie_name: "auth_token".to_owned(),
-            cookie_secure: false,
-            cookie_same_site: "Strict".to_owned(),
-            refresh_cookie_name: "refresh_token".to_owned(),
-            refresh_ttl: Duration::from_secs(1_209_600),
         }
     }
 

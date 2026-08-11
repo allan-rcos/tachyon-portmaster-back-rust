@@ -3,7 +3,7 @@
 use portmaster_app::context::UserContext;
 use portmaster_app::domain::User;
 
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 
 /// Emite e confere tokens de sessão.
 ///

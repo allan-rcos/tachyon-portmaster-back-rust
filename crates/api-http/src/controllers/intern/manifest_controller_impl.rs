@@ -7,7 +7,7 @@ use portmaster_app::error::ManifestError;
 use portmaster_app::services::ManifestUseCase;
 
 use crate::controllers::manifest_controller::ManifestController;
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::vo::container::container_x_response::ContainerXResponse;
 use crate::wire::vo::manifest::load_item_x_request::LoadItemXRequest;
 use crate::wire::vo::manifest::manifest_x_response::ManifestXResponse;

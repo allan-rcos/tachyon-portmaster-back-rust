@@ -24,10 +24,10 @@ use crate::controllers::product_controller::ProductController;
 use crate::controllers::role_controller::RoleController;
 use crate::controllers::server_controller::ServerController;
 use crate::controllers::user_controller::UserController;
-use crate::cookie::auth_cookie::AuthCookie;
-use crate::cookie::intern::http_auth_cookie::HttpAuthCookie;
-use crate::token::intern::jwt_token_service::JwtTokenService;
-use crate::token::token_service::TokenService;
+use crate::ports::cookie::auth_cookie::AuthCookie;
+use crate::ports::cookie::adapter::http_auth_cookie::HttpAuthCookie;
+use crate::ports::token::adapter::jwt_token_service::JwtTokenService;
+use crate::ports::token::token_service::TokenService;
 
 /// O nome do logger que os controllers recebem quando precisam de um.
 const AUTH_CHANNEL: &str = "auth";
@@ -97,7 +97,7 @@ impl<P: AppProvider> ApiProvider for ApiProviderImpl<P> {
             self.app.mark_use_case(),
             self.app.random_id_generator(),
             self.tokens.clone(),
-            self.cookies.clone(),
+            self.cookies,
             self.logger(AUTH_CHANNEL),
             self.refresh_ttl_seconds,
         )
@@ -140,7 +140,7 @@ impl<P: AppProvider> ApiProvider for ApiProviderImpl<P> {
     }
 
     fn auth_cookie(&self) -> impl AuthCookie + use<P> + 'static {
-        self.cookies.clone()
+        self.cookies
     }
 
     fn logger_factory(&self) -> impl LoggerFactory + use<P> + 'static {

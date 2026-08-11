@@ -1,6 +1,6 @@
 //! O VO de `LoadItemRequest`.
 
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::dto::json::manifest::load_item_request_json::LoadItemRequestJson;
 use crate::wire::tables as fbs;
 use crate::wire::x::request_x::RequestX;

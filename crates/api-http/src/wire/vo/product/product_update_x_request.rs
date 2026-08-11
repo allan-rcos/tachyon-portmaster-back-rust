@@ -1,6 +1,6 @@
 //! O VO de `ProductUpdateRequest`.
 
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::dto::json::product::product_update_request_json::ProductUpdateRequestJson;
 use crate::wire::tables as fbs;
 use crate::wire::vo::common::risk_class_x::RiskClassX;

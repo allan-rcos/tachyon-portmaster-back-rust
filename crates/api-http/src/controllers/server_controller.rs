@@ -1,6 +1,6 @@
 //! O contrato do controller de estado do serviço.
 
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::vo::server::project_info_x::ProjectInfoX;
 
 /// O handler que descreve o processo.

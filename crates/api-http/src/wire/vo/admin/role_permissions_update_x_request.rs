@@ -1,6 +1,6 @@
 //! O VO de `RolePermissionsUpdateRequest`.
 
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::dto::json::admin::role_permissions_update_request_json::RolePermissionsUpdateRequestJson;
 use crate::wire::tables as fbs;
 use crate::wire::x::request_x::RequestX;

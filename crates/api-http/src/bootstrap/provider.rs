@@ -10,8 +10,8 @@ use crate::controllers::product_controller::ProductController;
 use crate::controllers::role_controller::RoleController;
 use crate::controllers::server_controller::ServerController;
 use crate::controllers::user_controller::UserController;
-use crate::cookie::auth_cookie::AuthCookie;
-use crate::token::token_service::TokenService;
+use crate::ports::cookie::auth_cookie::AuthCookie;
+use crate::ports::token::token_service::TokenService;
 use portmaster_app::{Logger, LoggerFactory, SequentialIdGenerator};
 use std::time::Duration;
 

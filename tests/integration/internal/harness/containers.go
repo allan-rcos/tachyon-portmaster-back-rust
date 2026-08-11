@@ -22,8 +22,16 @@ const (
 
 // buildAPIImage builds the application image from the repo Dockerfile exactly
 // once; every API container in the pool then starts from this tag.
+//
+// RUST_DEBUG_ASSERTIONS is what keeps the session cookies usable here. The
+// SessionPolicy marks them Secure in a release build, and Go's cookie jar
+// refuses to send a Secure cookie over the http:// URL these containers expose —
+// so without the arg the whole session story would fail on a cookie the server
+// did set.
 func buildAPIImage(ctx context.Context, repoRoot string) error {
-	cmd := exec.CommandContext(ctx, "docker", "build", "-t", apiImageTag, repoRoot)
+	cmd := exec.CommandContext(ctx, "docker", "build",
+		"--build-arg", "RUST_DEBUG_ASSERTIONS=on",
+		"-t", apiImageTag, repoRoot)
 	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
@@ -102,8 +110,7 @@ func startAPI(ctx context.Context, networkName, dbName string) (testcontainers.C
 			"APP_DB_USER":     "root",
 			"APP_DB_PASSWORD": dbRootPass,
 			// HS256 rejects a secret shorter than its 32-byte digest.
-			"APP_JWT_SECRET":        "integration-test-secret-32-bytes-min",
-			"APP_JWT_COOKIE_SECURE": "false",
+			"APP_JWT_SECRET": "integration-test-secret-32-bytes-min",
 		},
 		WaitingFor: wait.ForHTTP("/info").
 			WithPort("8000/tcp").

@@ -3,7 +3,7 @@
 use axum::http::HeaderMap;
 use cookie::Cookie;
 
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::vo::auth::login_x_request::LoginXRequest;
 use crate::wire::vo::auth::login_x_response::LoginXResponse;
 use crate::wire::vo::auth::setup_x_request::SetupXRequest;
@@ -17,7 +17,7 @@ use crate::wire::vo::auth::setup_x_request::SetupXRequest;
 ///
 /// Os métodos de refresh e logout recebem os cabeçalhos em vez de um token já
 /// extraído porque o nome do cookie é assunto da impl de
-/// [`AuthCookie`](crate::cookie::auth_cookie::AuthCookie), e as rotas não o
+/// [`AuthCookie`](crate::ports::cookie::auth_cookie::AuthCookie), e as rotas não o
 /// conhecem.
 #[trait_variant::make(Send)]
 pub(crate) trait AuthController: Clone + Sync + 'static {

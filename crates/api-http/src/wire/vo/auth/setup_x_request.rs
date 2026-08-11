@@ -1,6 +1,6 @@
 //! O VO de `SetupRequest`.
 
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::dto::json::auth::setup_request_json::SetupRequestJson;
 use crate::wire::tables as fbs;
 use crate::wire::x::request_x::RequestX;

@@ -9,7 +9,7 @@ use portmaster_app::services::RoleUseCase;
 
 use crate::controllers::params::page_params::PageParams;
 use crate::controllers::role_controller::RoleController;
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::vo::account::role_x_response::RoleXResponse;
 use crate::wire::vo::admin::role_create_x_request::RoleCreateXRequest;
 use crate::wire::vo::admin::role_list_x_response::RoleListXResponse;

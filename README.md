@@ -133,13 +133,13 @@ A configuração é **inteiramente por variáveis de ambiente** — a mesma imag
 | `APP_DB_SSL_MODE` | `disabled` (padrão), `required` ou `verify_ca` |
 | `APP_DB_SSL_CA`, `APP_DB_SSL_VERIFY_CN` | bundle da CA e checagem do nome — só lidos em `verify_ca` |
 | `APP_JWT_SECRET` | chave de assinatura HS256 — **mínimo de 32 bytes**, o boot recusa menos |
-| `APP_JWT_TTL`, `APP_REFRESH_TTL` | validade do token e do refresh, em segundos |
-| `APP_JWT_ISSUER`, `APP_JWT_COOKIE_NAME`, `APP_REFRESH_COOKIE_NAME` | emissor e nomes dos cookies |
-| `APP_JWT_COOKIE_SECURE`, `APP_JWT_COOKIE_SAME_SITE` | `false`/`Strict` em HTTP local; ligue `Secure` atrás de HTTPS |
+| `APP_JWT_ISSUER` | emissor, gravado e conferido na claim `iss` |
 | `APP_CLUSTER_ID`, `APP_SERVER_ID` | identidade deste processo na composição do Snowflake |
 | `APP_CORS_ORIGINS` | origens aceitas, separadas por vírgula; vazio não acrescenta cabeçalho nenhum |
 
-> **Em produção**, troque `APP_JWT_SECRET` por um valor aleatório forte e ligue `APP_JWT_COOKIE_SECURE`.
+> **Em produção**, troque `APP_JWT_SECRET` por um valor aleatório forte. Não há mais nada a ligar: os cookies de sessão saem `Secure`, `HttpOnly` e `SameSite=Strict` por construção.
+
+> **A sessão não é configurável, e é de propósito.** Validade do token e do refresh, nomes dos cookies, `Secure` e `SameSite` eram seis variáveis (`APP_JWT_TTL`, `APP_REFRESH_TTL`, `APP_JWT_COOKIE_NAME`, `APP_REFRESH_COOKIE_NAME`, `APP_JWT_COOKIE_SECURE`, `APP_JWT_COOKIE_SAME_SITE`) e viraram a `SessionPolicy`, fixada em compilação. Nenhuma era segredo nem identidade de deploy: eram o que a API promete, e duas instâncias da mesma versão não deveriam poder discordar disso — muito menos emitir um cookie cuja validade não bate com a do token que ele carrega. O `Secure` acompanha o perfil de compilação; um build que precise servir HTTP puro passa `--build-arg RUST_DEBUG_ASSERTIONS=on`, que é o que o `docker-compose.yml` e a suíte de integração fazem.
 
 > **Sobre `APP_DB_SSL_MODE`.** O padrão `disabled` é a resposta certa para um banco em `127.0.0.1` ou numa subnet privada — e a errada para qualquer banco gerenciado, que recusa conexão em claro. `required` criptografa sem validar o certificado: resolve escuta passiva, não ataque ativo. `verify_ca` exige `APP_DB_SSL_CA` e valida a cadeia, recusando um certificado que não fecha com a CA configurada em vez de cair para texto claro.
 

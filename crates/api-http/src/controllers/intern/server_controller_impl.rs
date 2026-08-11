@@ -1,7 +1,7 @@
 //! O controller de estado do serviço. Não sai do módulo.
 
 use crate::controllers::server_controller::ServerController;
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::vo::server::project_info_x::ProjectInfoX;
 
 /// O nome com que o serviço se identifica.

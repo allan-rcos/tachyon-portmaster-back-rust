@@ -2,7 +2,7 @@
 
 use serde::de::DeserializeOwned;
 
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 
 /// Um VO de requisição que sabe nascer de cada um dos DTOs de entrada.
 ///

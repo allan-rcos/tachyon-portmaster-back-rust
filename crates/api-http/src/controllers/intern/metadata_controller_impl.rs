@@ -7,7 +7,7 @@ use portmaster_app::services::MetadataUseCase;
 
 use crate::controllers::metadata_controller::MetadataController;
 use crate::controllers::params::search_params::SearchParams;
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::vo::metadata::permission_list_x_response::PermissionListXResponse;
 
 /// Os handlers de metadado, genéricos sobre o caso de uso.

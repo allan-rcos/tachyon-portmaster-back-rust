@@ -3,7 +3,7 @@
 use portmaster_app::context::UserContext;
 
 use crate::controllers::params::search_params::SearchParams;
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::vo::metadata::permission_list_x_response::PermissionListXResponse;
 
 /// Os handlers de metadado de sistema.

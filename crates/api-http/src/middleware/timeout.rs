@@ -10,7 +10,7 @@ use futures::future::BoxFuture;
 use portmaster_app::{Logger as _, SystemLogger};
 use tower::Service;
 
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::encoder::Encoder;
 
 /// O serviço que desiste depois do prazo.

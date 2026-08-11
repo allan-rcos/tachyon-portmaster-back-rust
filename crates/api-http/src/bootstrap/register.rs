@@ -6,8 +6,9 @@ use crate::bootstrap::api_provider::ApiProviderImpl;
 use crate::bootstrap::provider::ApiProvider;
 use crate::config::api_config::ApiConfig;
 use crate::config::jwt_config::JwtConfig;
-use crate::cookie::intern::http_auth_cookie::HttpAuthCookie;
-use crate::token::intern::jwt_token_service::JwtTokenService;
+use crate::ports::cookie::adapter::http_auth_cookie::HttpAuthCookie;
+use crate::ports::session_policy::SessionPolicy;
+use crate::ports::token::adapter::jwt_token_service::JwtTokenService;
 
 /// Monta o provider da apresentação.
 ///
@@ -34,9 +35,9 @@ pub(crate) fn register<P: AppProvider>(
     config: ApiConfig,
     jwt: &JwtConfig,
 ) -> impl ApiProvider {
-    let refresh_ttl_seconds = jwt.refresh_ttl.as_secs();
+    let refresh_ttl_seconds = SessionPolicy::REFRESH_TTL.as_secs();
     let tokens = JwtTokenService::new(jwt);
-    let cookies = HttpAuthCookie::new(jwt);
+    let cookies = HttpAuthCookie::new();
 
     ApiProviderImpl::new(
         app,

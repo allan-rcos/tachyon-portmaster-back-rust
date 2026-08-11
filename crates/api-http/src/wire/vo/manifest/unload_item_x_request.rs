@@ -1,6 +1,6 @@
 //! O VO de `UnloadItemRequest`.
 
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::dto::json::manifest::unload_item_request_json::UnloadItemRequestJson;
 use crate::wire::tables as fbs;
 use crate::wire::x::request_x::RequestX;

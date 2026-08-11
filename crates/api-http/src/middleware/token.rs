@@ -7,9 +7,9 @@ use axum::response::Response;
 use futures::future::BoxFuture;
 use tower::Service;
 
-use crate::cookie::auth_cookie::AuthCookie;
+use crate::ports::cookie::auth_cookie::AuthCookie;
 use crate::session::Session;
-use crate::token::token_service::TokenService;
+use crate::ports::token::token_service::TokenService;
 
 /// O serviço que resolve a sessão.
 ///

@@ -1,6 +1,6 @@
 //! A leitura de um corpo `FlatBuffers`.
 
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::strategy::decode_strategy::DecodeStrategy;
 use crate::wire::x::request_x::RequestX;
 

@@ -1,6 +1,6 @@
 //! O VO de `ProductCreateRequest`.
 
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::dto::json::product::product_create_request_json::ProductCreateRequestJson;
 use crate::wire::tables as fbs;
 use crate::wire::vo::common::risk_class_x::RiskClassX;

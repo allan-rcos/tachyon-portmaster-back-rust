@@ -2,7 +2,7 @@
 
 use portmaster_app::context::UserContext;
 
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::vo::manifest::load_item_x_request::LoadItemXRequest;
 use crate::wire::vo::manifest::manifest_x_response::ManifestXResponse;
 use crate::wire::vo::manifest::unload_item_x_request::UnloadItemXRequest;

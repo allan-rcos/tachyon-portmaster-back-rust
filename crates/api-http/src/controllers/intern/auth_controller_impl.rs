@@ -12,10 +12,10 @@ use portmaster_app::services::{MarkUseCase, SessionUseCase};
 use portmaster_app::{Logger, RandomIdGenerator};
 
 use crate::controllers::auth_controller::AuthController;
-use crate::cookie::auth_cookie::AuthCookie;
-use crate::error::api_error::ApiError;
-use crate::token::refresh_token::RefreshToken;
-use crate::token::token_service::TokenService;
+use crate::ports::cookie::auth_cookie::AuthCookie;
+use crate::ports::error::api_error::ApiError;
+use crate::ports::token::refresh_token::RefreshToken;
+use crate::ports::token::token_service::TokenService;
 use crate::wire::vo::auth::login_x_request::LoginXRequest;
 use crate::wire::vo::auth::login_x_response::LoginXResponse;
 use crate::wire::vo::auth::setup_x_request::SetupXRequest;

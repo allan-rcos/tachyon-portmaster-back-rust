@@ -21,7 +21,7 @@ use std::future::Future;
 use portmaster_app::context::UserContext;
 use portmaster_app::{Logger as _, SystemLogger};
 
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 
 tokio::task_local! {
     /// Se o middleware de token já rodou nesta requisição.

@@ -1,6 +1,6 @@
 //! A escrita de uma resposta em JSON.
 
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::strategy::encode_strategy::EncodeStrategy;
 use crate::wire::x::response_x::ResponseX;
 

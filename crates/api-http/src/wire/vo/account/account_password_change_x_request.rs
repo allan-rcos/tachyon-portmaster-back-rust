@@ -1,6 +1,6 @@
 //! O VO de `AccountPasswordChangeRequest`.
 
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::dto::json::account::account_password_change_request_json::AccountPasswordChangeRequestJson;
 use crate::wire::tables as fbs;
 use crate::wire::x::request_x::RequestX;

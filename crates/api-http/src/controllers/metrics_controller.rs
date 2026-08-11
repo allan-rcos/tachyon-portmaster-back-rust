@@ -2,7 +2,7 @@
 
 use portmaster_app::context::UserContext;
 
-use crate::error::api_error::ApiError;
+use crate::ports::error::api_error::ApiError;
 use crate::wire::vo::metrics::metrics_x_response::MetricsXResponse;
 
 /// Os handlers do painel do pátio.
