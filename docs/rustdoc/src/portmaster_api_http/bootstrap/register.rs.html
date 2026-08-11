@@ -5,41 +5,37 @@
 <a href=#5 id=5 data-nosnippet>5</a><span class="kw">use </span><span class="kw">crate</span>::bootstrap::api_provider::ApiProviderImpl;
 <a href=#6 id=6 data-nosnippet>6</a><span class="kw">use </span><span class="kw">crate</span>::bootstrap::provider::ApiProvider;
 <a href=#7 id=7 data-nosnippet>7</a><span class="kw">use </span><span class="kw">crate</span>::config::api_config::ApiConfig;
-<a href=#8 id=8 data-nosnippet>8</a><span class="kw">use </span><span class="kw">crate</span>::cookie::intern::http_auth_cookie::HttpAuthCookie;
-<a href=#9 id=9 data-nosnippet>9</a><span class="kw">use </span><span class="kw">crate</span>::token::intern::jwt_token_service::JwtTokenService;
-<a href=#10 id=10 data-nosnippet>10</a>
-<a href=#11 id=11 data-nosnippet>11</a><span class="doccomment">/// Monta o provider da apresentação.
-<a href=#12 id=12 data-nosnippet>12</a>///
-<a href=#13 id=13 data-nosnippet>13</a>/// Consome o provider da camada de baixo e a configuração, e devolve algo
-<a href=#14 id=14 data-nosnippet>14</a>/// pronto. É o último elo da cadeia de `register` que começa no `domain`:
-<a href=#15 id=15 data-nosnippet>15</a>/// ninguém acima disto conhece uma impl.
-<a href=#16 id=16 data-nosnippet>16</a>///
-<a href=#17 id=17 data-nosnippet>17</a>/// `pub(crate)` e não `pub`, ao contrário dos `register` das outras camadas.
-<a href=#18 id=18 data-nosnippet>18</a>/// Elas precisam ser públicas porque a camada de cima as chama; esta é a de
-<a href=#19 id=19 data-nosnippet>19</a>/// cima. Publicá-la obrigaria a publicar o [`ApiProvider`], os dez traits de
-<a href=#20 id=20 data-nosnippet>20</a>/// controller e — por tabela — todos os VOs que aparecem nas assinaturas deles,
-<a href=#21 id=21 data-nosnippet>21</a>/// espalhando pela API do crate um grafo que só o `main` ao lado consome. O que
-<a href=#22 id=22 data-nosnippet>22</a>/// sai daqui é o [`router`](crate::router()), e ele basta.
-<a href=#23 id=23 data-nosnippet>23</a>///
-<a href=#24 id=24 data-nosnippet>24</a>/// ## A configuração morre aqui
-<a href=#25 id=25 data-nosnippet>25</a>///
-<a href=#26 id=26 data-nosnippet>26</a>/// A [`ApiConfig`] entra por valor, é destrinchada nos valores que cada
-<a href=#27 id=27 data-nosnippet>27</a>/// construtor precisa — o serviço de token pega o segredo e o TTL, os cookies
-<a href=#28 id=28 data-nosnippet>28</a>/// pegam nomes e política — e sai de escopo. Nada a guarda, e nenhum objeto do
-<a href=#29 id=29 data-nosnippet>29</a>/// sistema carrega um objeto de configuração para consultar depois.
-<a href=#30 id=30 data-nosnippet>30</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>register&lt;P: AppProvider&gt;(app: P, config: ApiConfig) -&gt; <span class="kw">impl </span>ApiProvider {
-<a href=#31 id=31 data-nosnippet>31</a>    <span class="kw">let </span>refresh_ttl_seconds = config.jwt.refresh_ttl.as_secs();
-<a href=#32 id=32 data-nosnippet>32</a>    <span class="kw">let </span>tokens = JwtTokenService::new(<span class="kw-2">&amp;</span>config.jwt);
-<a href=#33 id=33 data-nosnippet>33</a>    <span class="kw">let </span>cookies = HttpAuthCookie::new(<span class="kw-2">&amp;</span>config.jwt);
-<a href=#34 id=34 data-nosnippet>34</a>
-<a href=#35 id=35 data-nosnippet>35</a>    ApiProviderImpl::new(
-<a href=#36 id=36 data-nosnippet>36</a>        app,
-<a href=#37 id=37 data-nosnippet>37</a>        tokens,
-<a href=#38 id=38 data-nosnippet>38</a>        cookies,
-<a href=#39 id=39 data-nosnippet>39</a>        config.environment,
-<a href=#40 id=40 data-nosnippet>40</a>        refresh_ttl_seconds,
-<a href=#41 id=41 data-nosnippet>41</a>        config.request_timeout,
-<a href=#42 id=42 data-nosnippet>42</a>        config.cors_origins,
-<a href=#43 id=43 data-nosnippet>43</a>    )
-<a href=#44 id=44 data-nosnippet>44</a>}
+<a href=#8 id=8 data-nosnippet>8</a><span class="kw">use </span><span class="kw">crate</span>::config::jwt_config::JwtConfig;
+<a href=#9 id=9 data-nosnippet>9</a>
+<a href=#10 id=10 data-nosnippet>10</a><span class="doccomment">/// Monta o provider da apresentação.
+<a href=#11 id=11 data-nosnippet>11</a>///
+<a href=#12 id=12 data-nosnippet>12</a>/// Consome o provider da camada de baixo e a configuração, e devolve algo
+<a href=#13 id=13 data-nosnippet>13</a>/// pronto. É o último elo da cadeia de `register` que começa no `domain`:
+<a href=#14 id=14 data-nosnippet>14</a>/// ninguém acima disto conhece uma impl.
+<a href=#15 id=15 data-nosnippet>15</a>///
+<a href=#16 id=16 data-nosnippet>16</a>/// `pub(crate)` e não `pub`, ao contrário dos `register` das outras camadas.
+<a href=#17 id=17 data-nosnippet>17</a>/// Elas precisam ser públicas porque a camada de cima as chama; esta é a de
+<a href=#18 id=18 data-nosnippet>18</a>/// cima. Publicá-la obrigaria a publicar o [`ApiProvider`], os dez traits de
+<a href=#19 id=19 data-nosnippet>19</a>/// controller e — por tabela — todos os VOs que aparecem nas assinaturas deles,
+<a href=#20 id=20 data-nosnippet>20</a>/// espalhando pela API do crate um grafo que só o `main` ao lado consome. O que
+<a href=#21 id=21 data-nosnippet>21</a>/// sai daqui é o [`router`](crate::router()), e ele basta.
+<a href=#22 id=22 data-nosnippet>22</a>///
+<a href=#23 id=23 data-nosnippet>23</a>/// ## Uma linha, e é o ponto
+<a href=#24 id=24 data-nosnippet>24</a>///
+<a href=#25 id=25 data-nosnippet>25</a>/// Ela destrinchava a configuração em valores soltos — o segredo do token, os
+<a href=#26 id=26 data-nosnippet>26</a>/// nomes de cookie, o ambiente, o teto de tempo, as origens de CORS — e
+<a href=#27 id=27 data-nosnippet>27</a>/// construía o serviço de token e os cookies para entregá-los prontos ao
+<a href=#28 id=28 data-nosnippet>28</a>/// provider. Era o provider recebendo classe em vez de montá-la, e uma
+<a href=#29 id=29 data-nosnippet>29</a>/// configuração nova significava um argumento novo em duas assinaturas.
+<a href=#30 id=30 data-nosnippet>30</a>///
+<a href=#31 id=31 data-nosnippet>31</a>/// Agora o provider recebe **só** o provider de baixo e a configuração, e monta
+<a href=#32 id=32 data-nosnippet>32</a>/// o que precisar de onde a informação está. Esta função existe para não expor
+<a href=#33 id=33 data-nosnippet>33</a>/// o tipo concreto do provider, e mais nada.
+<a href=#34 id=34 data-nosnippet>34</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>register&lt;P: AppProvider&gt;(
+<a href=#35 id=35 data-nosnippet>35</a>    app: P,
+<a href=#36 id=36 data-nosnippet>36</a>    config: ApiConfig,
+<a href=#37 id=37 data-nosnippet>37</a>    jwt: JwtConfig,
+<a href=#38 id=38 data-nosnippet>38</a>) -&gt; <span class="kw">impl </span>ApiProvider {
+<a href=#39 id=39 data-nosnippet>39</a>    ApiProviderImpl::new(app, config, jwt)
+<a href=#40 id=40 data-nosnippet>40</a>}
 </code></pre></div></section></main></body></html>

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["CORS_MAX_AGE_SECONDS"],"fn":["cors_layer","router","routes"]};
+window.SIDEBAR_ITEMS = {"constant":["CORS_MAX_AGE_SECONDS"],"fn":["cors_layer","router"],"mod":["intern","route","router_hub","versioned_router"]};

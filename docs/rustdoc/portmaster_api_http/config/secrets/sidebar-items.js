@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["MIN_JWT_SECRET_BYTES"],"fn":["database_uri","flag","optional","parsed","required","ssl_mode"],"struct":["Secrets"]};
+window.SIDEBAR_ITEMS = {"struct":["Secrets"]};

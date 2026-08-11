@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["api_chain","database_chain","domain_chain","jwt_chain"]};

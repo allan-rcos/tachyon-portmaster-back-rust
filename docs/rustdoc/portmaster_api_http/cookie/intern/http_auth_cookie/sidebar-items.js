@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["as_seconds","same_site_of"],"struct":["HttpAuthCookie"]};

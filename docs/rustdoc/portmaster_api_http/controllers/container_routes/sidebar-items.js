@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["collection","item","routes"]};
+window.SIDEBAR_ITEMS = {"fn":["routes"]};

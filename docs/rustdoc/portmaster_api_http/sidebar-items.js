@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["router"],"mod":["bootstrap","config","controllers","cookie","error","middleware","router","session","token","wire"]};
+window.SIDEBAR_ITEMS = {"fn":["router"],"mod":["bootstrap","config","controllers","middleware","ports","router","wire"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["api_config","env","jwt_config","secrets"]};
+window.SIDEBAR_ITEMS = {"mod":["api_config","boot_draft","chain","config_link","config_links","env","env_source","jwt_config","secrets"]};

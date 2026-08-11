@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["FLATBUFFERS","JSON"],"enum":["MediaType"]};
+window.SIDEBAR_ITEMS = {"constant":["ANY","FLATBUFFERS","JSON","OCTET_STREAM"],"enum":["MediaType"]};

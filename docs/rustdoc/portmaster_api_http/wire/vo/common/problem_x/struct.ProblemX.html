@@ -5,7 +5,7 @@
     pub(crate) detail: <a class="struct" href="https://doc.rust-lang.org/1.96.0/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>,
 }</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Um problema, na forma da RFC 7807.</p>
 <p>É um VO de resposta como qualquer outro, e é isso que importa: um erro sai
-pelo <code>Encoder</code> da requisição, no formato que o cliente pediu. O desenho
+pela porta de encode da requisição, no formato que o cliente pediu. O desenho
 anterior tinha um literal de bytes JSON no middleware de pânico e um
 <code>application/problem+json</code> fixo no erro — dois corpos escapando da
 negociação, num sistema cujo cliente de produção fala <code>FlatBuffers</code>.</p>

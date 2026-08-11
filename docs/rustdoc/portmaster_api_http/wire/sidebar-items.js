@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["api_response","body","convert","decoder","dto","encoder","media_type","no_content","strategy","vo","x"]};
+window.SIDEBAR_ITEMS = {"mod":["api_response","body","dto","media_type","strategy","vo","x"]};

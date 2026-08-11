@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["role_create_x_request","role_ids_x_request","role_list_x_response","role_permissions_update_x_request","user_admin_password_reset_x_request","user_admin_x_response","user_create_x_request","user_list_x_response","user_update_x_request"]};
+window.SIDEBAR_ITEMS = {"mod":["role_create_x_request","role_list_x_response","role_permissions_update_x_request","user_admin_password_reset_x_request","user_admin_x_response","user_create_x_request","user_list_x_response","user_roles_update_x_request","user_update_x_request"]};

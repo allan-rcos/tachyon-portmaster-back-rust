@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["REQUEST_ID_HEADER"]};

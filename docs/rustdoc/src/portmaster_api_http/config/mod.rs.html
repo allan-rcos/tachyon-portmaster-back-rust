@@ -6,17 +6,35 @@
 <a href=#6 id=6 data-nosnippet>6</a>//! recebem o que precisam por argumento, e por isso são testáveis sem preparar
 <a href=#7 id=7 data-nosnippet>7</a>//! ambiente nenhum.
 <a href=#8 id=8 data-nosnippet>8</a>//!
-<a href=#9 id=9 data-nosnippet>9</a>//! ## O que é runtime e o que é build
+<a href=#9 id=9 data-nosnippet>9</a>//! ## Uma chain, um grupo por elo
 <a href=#10 id=10 data-nosnippet>10</a>//!
-<a href=#11 id=11 data-nosnippet>11</a>//! Aqui só entra **segredo ou identidade de deploy**: senha do banco, segredo do
-<a href=#12 id=12 data-nosnippet>12</a>//! JWT, host/porta, quem é este servidor na composição do Snowflake. Knobs de
-<a href=#13 id=13 data-nosnippet>13</a>//! **arquitetura** — tamanho de pool, capacidade e TTL dos caches, estratégia de
-<a href=#14 id=14 data-nosnippet>14</a>//! id — são features de compilação, e não têm variável correspondente de
-<a href=#15 id=15 data-nosnippet>15</a>//! propósito: um `if` em produção sobre uma decisão de arquitetura é um bug
-<a href=#16 id=16 data-nosnippet>16</a>//! esperando o dia de errar.
-<a href=#17 id=17 data-nosnippet>17</a>
-<a href=#18 id=18 data-nosnippet>18</a></span><span class="kw">pub mod </span>api_config;
-<a href=#19 id=19 data-nosnippet>19</a><span class="kw">pub mod </span>env;
-<a href=#20 id=20 data-nosnippet>20</a><span class="kw">pub mod </span>jwt_config;
-<a href=#21 id=21 data-nosnippet>21</a><span class="kw">pub mod </span>secrets;
+<a href=#11 id=11 data-nosnippet>11</a>//! A leitura não é uma função só. Cada grupo de configuração é um elo em
+<a href=#12 id=12 data-nosnippet>12</a>//! `chain`, que se declara sozinho na slice que o linker preenche e escreve no
+<a href=#13 id=13 data-nosnippet>13</a>//! slot dele do `BootDraft`. O [`secrets::Secrets::load()`] percorre a slice,
+<a href=#14 id=14 data-nosnippet>14</a>//! congela o rascunho e descarta tudo — a chain não sobrevive ao boot.
+<a href=#15 id=15 data-nosnippet>15</a>//!
+<a href=#16 id=16 data-nosnippet>16</a>//! É a Chain of Responsibility do `DotEnvChain` do PHP, pela mesma razão que ela
+<a href=#17 id=17 data-nosnippet>17</a>//! existe lá: a alternativa era uma classe com um campo, um setter e um ramo de
+<a href=#18 id=18 data-nosnippet>18</a>//! validação por variável, que só cresce.
+<a href=#19 id=19 data-nosnippet>19</a>//!
+<a href=#20 id=20 data-nosnippet>20</a>//! ## O que é runtime e o que é build
+<a href=#21 id=21 data-nosnippet>21</a>//!
+<a href=#22 id=22 data-nosnippet>22</a>//! Aqui só entra **segredo ou identidade de deploy**: senha do banco, segredo do
+<a href=#23 id=23 data-nosnippet>23</a>//! JWT, host/porta, quem é este servidor na composição do Snowflake. Knobs de
+<a href=#24 id=24 data-nosnippet>24</a>//! **arquitetura** — tamanho de pool, capacidade e TTL dos caches, estratégia de
+<a href=#25 id=25 data-nosnippet>25</a>//! id — são features de compilação, e não têm variável correspondente de
+<a href=#26 id=26 data-nosnippet>26</a>//! propósito: um `if` em produção sobre uma decisão de arquitetura é um bug
+<a href=#27 id=27 data-nosnippet>27</a>//! esperando o dia de errar.
+<a href=#28 id=28 data-nosnippet>28</a>
+<a href=#29 id=29 data-nosnippet>29</a></span><span class="kw">pub mod </span>api_config;
+<a href=#30 id=30 data-nosnippet>30</a><span class="kw">pub mod </span>jwt_config;
+<a href=#31 id=31 data-nosnippet>31</a><span class="kw">pub mod </span>secrets;
+<a href=#32 id=32 data-nosnippet>32</a>
+<a href=#33 id=33 data-nosnippet>33</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>chain;
+<a href=#34 id=34 data-nosnippet>34</a>
+<a href=#35 id=35 data-nosnippet>35</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>boot_draft;
+<a href=#36 id=36 data-nosnippet>36</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>config_link;
+<a href=#37 id=37 data-nosnippet>37</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>config_links;
+<a href=#38 id=38 data-nosnippet>38</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>env;
+<a href=#39 id=39 data-nosnippet>39</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>env_source;
 </code></pre></div></section></main></body></html>

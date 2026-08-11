@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"static":["DOMAIN"],"struct":["DomainChain"]};
