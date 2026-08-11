@@ -7,7 +7,7 @@ use crate::wire::x::response_x::ResponseX;
 /// Um problema, na forma da RFC 7807.
 ///
 /// É um VO de resposta como qualquer outro, e é isso que importa: um erro sai
-/// pelo `Encoder` da requisição, no formato que o cliente pediu. O desenho
+/// pela porta de encode da requisição, no formato que o cliente pediu. O desenho
 /// anterior tinha um literal de bytes JSON no middleware de pânico e um
 /// `application/problem+json` fixo no erro — dois corpos escapando da
 /// negociação, num sistema cujo cliente de produção fala `FlatBuffers`.

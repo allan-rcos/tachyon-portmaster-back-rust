@@ -11,7 +11,7 @@
 //!
 //! Falta de sessão é a única coisa que o `app` não tem como saber, porque só
 //! esta camada lê o token. Permissão (403), validação (422), ausência (404) e
-//! conflito (409) vêm todos do `app`, traduzidos em [`crate::error`].
+//! conflito (409) vêm todos do `app`, traduzidos em `ports::error`.
 //!
 //! ## Cada recurso são três arquivos
 //!

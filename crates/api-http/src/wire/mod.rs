@@ -12,20 +12,28 @@
 //!   diferentes** de propósito — colar os dois amarraria o corpo textual à forma
 //!   do schema binário.
 //! * As **traits de [`x`]** ligam o VO aos seus dois DTOs.
-//! * As **strategies** ([`strategy`]) serializam, e os **contextos**
-//!   ([`encoder`], [`decoder`]) guardam a strategy da vez.
+//! * As **strategies** ([`strategy`]) serializam, uma por formato.
+//!
+//! ## O contexto do Strategy não mora aqui
+//!
+//! Ele é o escopo da requisição, em `middleware/intern/{encode,decode}_context`,
+//! e o que o resto do sistema vê são as portas de encode e decode. Havia aqui um
+//! `Encoder` e um `Decoder` que faziam esse papel — o `Encoder` era um extractor
+//! que trinta assinaturas de rota declaravam só para repassá-lo ao construtor da
+//! resposta, e o `Decoder` era remontado dentro do extractor de corpo a cada
+//! requisição. Negociar virou uma decisão só, tomada uma vez por requisição, por
+//! um middleware.
 //!
 //! ## Não há `dyn` em lugar nenhum
 //!
 //! `EncodeStrategy::encode` e `DecodeStrategy::decode` são genéricos sobre o VO,
 //! e por isso as traits não são object-safe — o que é o ponto, não um efeito
 //! colateral. O que varia em tempo de execução é **qual** strategy está em uso, e
-//! isso é uma variante de enum dentro do contexto: um `match` monomorfizado, sem
-//! vTable, sem `Arc`, sem alocação.
+//! isso é a variante de [`media_type::MediaType`] guardada no escopo: um `match`
+//! monomorfizado, sem vTable, sem `Arc`, sem alocação.
 //!
-//! O contexto também não atravessa a aplicação. Ele nasce como extractor no
-//! adaptador de rota e morre ao virar resposta; o controller devolve um VO e não
-//! sabe que existe negociação.
+//! A negociação também não atravessa a aplicação. O controller devolve um VO e
+//! não sabe que ela existe.
 //!
 //! Os schemas `.fbs` são a fonte compartilhada com o cliente e não são alterados
 //! por nada disto. Os tipos `FlatBuffers` em [`fbs`] são gerados a partir deles
@@ -33,12 +41,8 @@
 
 pub(crate) mod api_response;
 pub(crate) mod body;
-pub(crate) mod convert;
-pub(crate) mod decoder;
 pub(crate) mod dto;
-pub(crate) mod encoder;
 pub(crate) mod media_type;
-pub(crate) mod no_content;
 pub(crate) mod strategy;
 pub(crate) mod vo;
 pub(crate) mod x;

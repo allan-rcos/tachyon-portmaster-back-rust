@@ -1,6 +1,5 @@
 //! O VO de `RoleListResponse`.
 
-use crate::wire::convert::Convert;
 use crate::wire::dto::json::admin::role_list_response_json::RoleListResponseJson;
 use crate::wire::tables as fbs;
 use crate::wire::vo::account::role_x_response::RoleXResponse;
@@ -45,7 +44,7 @@ impl RoleListXResponse {
         Self {
             data: RoleXResponse::of_all(source.items),
             next_cursor: source.next_cursor,
-            total: Convert::count(source.total),
+            total: i32::try_from(source.total).unwrap_or(i32::MAX),
         }
     }
 }

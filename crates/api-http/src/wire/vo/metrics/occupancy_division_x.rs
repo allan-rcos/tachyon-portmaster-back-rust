@@ -1,6 +1,5 @@
 //! O VO de `OccupancyDivision`.
 
-use crate::wire::convert::Convert;
 use crate::wire::dto::json::metrics::occupancy_division_json::OccupancyDivisionJson;
 use crate::wire::tables as fbs;
 use crate::wire::x::response_x::ResponseX;
@@ -46,10 +45,10 @@ impl OccupancyDivisionX {
     /// A divisão por status.
     pub(crate) fn of(source: OccupancyView) -> Self {
         Self {
-            empty: Convert::count(source.empty),
-            loading: Convert::count(source.loading),
-            sealed: Convert::count(source.sealed),
-            in_transit: Convert::count(source.in_transit),
+            empty: i32::try_from(source.empty).unwrap_or(i32::MAX),
+            loading: i32::try_from(source.loading).unwrap_or(i32::MAX),
+            sealed: i32::try_from(source.sealed).unwrap_or(i32::MAX),
+            in_transit: i32::try_from(source.in_transit).unwrap_or(i32::MAX),
         }
     }
 }

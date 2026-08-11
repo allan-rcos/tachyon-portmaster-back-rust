@@ -1,6 +1,5 @@
 //! O VO de `ContainerSummaryListResponse`.
 
-use crate::wire::convert::Convert;
 use crate::wire::dto::json::container::container_summary_list_response_json::ContainerSummaryListResponseJson;
 use crate::wire::tables as fbs;
 use crate::wire::vo::container::container_summary_x_response::ContainerSummaryXResponse;
@@ -49,7 +48,7 @@ impl ContainerSummaryListXResponse {
                 .map(ContainerSummaryXResponse::of)
                 .collect(),
             next_cursor: source.next_cursor,
-            total: Convert::count(source.total),
+            total: i32::try_from(source.total).unwrap_or(i32::MAX),
         }
     }
 }

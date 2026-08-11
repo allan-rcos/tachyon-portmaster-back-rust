@@ -1,12 +1,12 @@
 //! O corpo da requisição, já no VO da mensagem.
 
 use axum::body::Bytes;
-use axum::extract::{FromRequest, FromRequestParts as _, Request};
-use axum::http::{header, StatusCode};
+use axum::extract::{FromRequest, Request};
+use axum::http::StatusCode;
 
+use crate::middleware::decode_port::DecodePort as _;
+use crate::middleware::intern::decode_context::DecodeContext;
 use crate::ports::error::api_error::ApiError;
-use crate::wire::decoder::Decoder;
-use crate::wire::encoder::Encoder;
 use crate::wire::x::request_x::RequestX;
 
 /// O teto de um corpo de requisição.
@@ -19,8 +19,13 @@ const MAX_BODY_BYTES: usize = 1024 * 1024;
 /// Extrai o corpo no VO da mensagem, seja qual for o formato que chegou.
 ///
 /// A rota escreve `Body<LoginXRequest>` e recebe um `LoginXRequest`: o VO, não
-/// um DTO, não uma factory. Qual dos dois formatos chegou é assunto do
-/// [`Decoder`], que resolve isso e some.
+/// um DTO, não uma factory.
+///
+/// Ele **não decide** o formato. Quem decidiu foi o middleware, uma vez, no
+/// começo da requisição; aqui só se aplica o que ele escolheu. Antes este
+/// extractor relia o `Content-Type`, montava um decoder e ainda extraía um
+/// encoder de reserva para anexar à recusa — três decisões de negociação dentro
+/// de um extractor de corpo.
 pub(crate) struct Body<X: RequestX>(pub(crate) X);
 
 impl<S, X> FromRequest<S> for Body<X>
@@ -30,41 +35,19 @@ where
 {
     type Rejection = ApiError;
 
-    /// Lê o corpo e o entrega ao decoder do formato anunciado.
-    ///
-    /// O encoder é extraído antes de qualquer coisa poder falhar, e anexado à
-    /// recusa: é o que faz um corpo ilegível sair no formato que o cliente
-    /// pediu, em vez de num JSON que ele talvez não leia.
+    /// Lê o corpo e o entrega à strategy que o escopo escolheu.
     async fn from_request(request: Request, state: &S) -> Result<Self, Self::Rejection> {
-        let (mut parts, body) = request.into_parts();
-
-        let encoder = Encoder::from_request_parts(&mut parts, state)
+        let bytes = Bytes::from_request(request, state)
             .await
-            .unwrap_or_default();
-        let decoder = Decoder::of_request(
-            parts
-                .headers
-                .get(header::CONTENT_TYPE)
-                .and_then(|value| value.to_str().ok()),
-        );
-
-        let bytes = Bytes::from_request(Request::from_parts(parts, body), state)
-            .await
-            .map_err(|e| {
-                ApiError::unreadable_body(format!("não foi possível ler o corpo: {e}"))
-                    .with_encoder(encoder)
-            })?;
+            .map_err(|e| ApiError::unreadable_body(format!("não foi possível ler o corpo: {e}")))?;
 
         if bytes.len() > MAX_BODY_BYTES {
-            return Err(
-                ApiError::new(StatusCode::PAYLOAD_TOO_LARGE, "corpo grande demais")
-                    .with_encoder(encoder),
-            );
+            return Err(ApiError::new(
+                StatusCode::PAYLOAD_TOO_LARGE,
+                "corpo grande demais",
+            ));
         }
 
-        decoder
-            .decode(&bytes)
-            .map(Self)
-            .map_err(|error| error.with_encoder(encoder))
+        DecodeContext.decode(&bytes).map(Self)
     }
 }

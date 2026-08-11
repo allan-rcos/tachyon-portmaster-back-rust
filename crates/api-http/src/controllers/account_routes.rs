@@ -8,8 +8,6 @@ use crate::ports::error::api_error::ApiError;
 use crate::session::Session;
 use crate::wire::api_response::ApiResponse;
 use crate::wire::body::Body;
-use crate::wire::encoder::Encoder;
-use crate::wire::no_content::NoContent;
 
 /// Liga os handlers de conta aos caminhos.
 pub(crate) fn routes<C: AccountController>(controller: C) -> Router {
@@ -19,9 +17,8 @@ pub(crate) fn routes<C: AccountController>(controller: C) -> Router {
     Router::new()
         .route(
             "/account",
-            get(move |encoder: Encoder| async move {
+            get(move || async move {
                 ApiResponse::ok(
-                    encoder,
                     async {
                         let context = Session::require_user()?;
                         read.get(context).await
@@ -29,9 +26,8 @@ pub(crate) fn routes<C: AccountController>(controller: C) -> Router {
                     .await,
                 )
             })
-            .put(move |encoder: Encoder, Body(request)| async move {
+            .put(move |Body(request)| async move {
                 ApiResponse::ok(
-                    encoder,
                     async {
                         let context = Session::require_user()?;
                         update.update(context, request).await
@@ -42,15 +38,14 @@ pub(crate) fn routes<C: AccountController>(controller: C) -> Router {
         )
         .route(
             "/account/password",
-            put(move |encoder: Encoder, Body(request)| async move {
+            put(move |Body(request)| async move {
                 async {
                     let context = Session::require_user()?;
                     controller.change_password(context, request).await?;
 
-                    Ok(NoContent::new())
+                    Ok::<_, ApiError>(ApiResponse::no_content())
                 }
                 .await
-                .map_err(|error: ApiError| error.with_encoder(encoder))
             }),
         )
 }

@@ -1,6 +1,5 @@
 //! O VO de `MetricsResponse`.
 
-use crate::wire::convert::Convert;
 use crate::wire::dto::json::metrics::metrics_response_json::MetricsResponseJson;
 use crate::wire::tables as fbs;
 use crate::wire::vo::metrics::occupancy_division_x::OccupancyDivisionX;
@@ -51,10 +50,10 @@ impl MetricsXResponse {
     /// O painel do pátio.
     pub(crate) fn of(source: MetricsView) -> Self {
         Self {
-            active_containers: Convert::count(source.active_containers),
-            total_containers: Convert::count(source.total_containers),
+            active_containers: i32::try_from(source.active_containers).unwrap_or(i32::MAX),
+            total_containers: i32::try_from(source.total_containers).unwrap_or(i32::MAX),
             yard_load: source.yard_load,
-            registered_products: Convert::count(source.registered_products),
+            registered_products: i32::try_from(source.registered_products).unwrap_or(i32::MAX),
             occupancy_division: OccupancyDivisionX::of(source.occupancy),
         }
     }

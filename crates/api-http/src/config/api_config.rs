@@ -4,13 +4,12 @@ use std::time::Duration;
 
 /// Onde o servidor escuta e como se comporta.
 ///
-/// **Os padrões moram aqui, e só aqui.** O elo que lê o ambiente
-/// ([`ApiChain`](crate::config::chain::api_chain::ApiChain)) constrói um
-/// `Self::default()` e usa cada campo dele como fallback da variável
+/// **Os padrões moram aqui, e só aqui.** O elo que lê o ambiente (`ApiChain`)
+/// constrói um `Self::default()` e usa cada campo dele como fallback da variável
 /// correspondente — então um campo novo com padrão não obriga a tocar no elo, e
 /// não existe um segundo lugar onde o mesmo padrão possa divergir.
 ///
-/// O que é do token e dos cookies não está aqui: mora em
+/// O que é do token e dos cookies não está aqui: mora na
 /// [`JwtConfig`](crate::config::jwt_config::JwtConfig), que é o slot de outro
 /// elo. Juntá-los faria dois elos escreverem na mesma struct.
 #[derive(Debug, Clone)]

@@ -9,10 +9,9 @@
 //! ## Uma chain, um grupo por elo
 //!
 //! A leitura não é uma função só. Cada grupo de configuração é um elo em
-//! [`chain`], que se declara sozinho na slice que o linker preenche e escreve no
-//! slot dele do [`boot_draft::BootDraft`]. O
-//! [`secrets::Secrets::load()`] percorre a slice, congela o rascunho e descarta
-//! tudo — a chain não sobrevive ao boot.
+//! `chain`, que se declara sozinho na slice que o linker preenche e escreve no
+//! slot dele do `BootDraft`. O [`secrets::Secrets::load()`] percorre a slice,
+//! congela o rascunho e descarta tudo — a chain não sobrevive ao boot.
 //!
 //! É a Chain of Responsibility do `DotEnvChain` do PHP, pela mesma razão que ela
 //! existe lá: a alternativa era uma classe com um campo, um setter e um ramo de

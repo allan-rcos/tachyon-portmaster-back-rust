@@ -1,6 +1,5 @@
 //! O VO de `ProductListResponse`.
 
-use crate::wire::convert::Convert;
 use crate::wire::dto::json::product::product_list_response_json::ProductListResponseJson;
 use crate::wire::tables as fbs;
 use crate::wire::vo::product::product_x_response::ProductXResponse;
@@ -45,7 +44,7 @@ impl ProductListXResponse {
         Self {
             data: source.items.into_iter().map(ProductXResponse::of).collect(),
             next_cursor: source.next_cursor,
-            total: Convert::count(source.total),
+            total: i32::try_from(source.total).unwrap_or(i32::MAX),
         }
     }
 }

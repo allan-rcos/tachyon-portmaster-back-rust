@@ -10,14 +10,15 @@
 //! ## O corpo de erro é negociado como qualquer outro
 //!
 //! Um erro vira [`ProblemX`], que é um VO de resposta como qualquer outro, e sai
-//! pelo [`Encoder`] da requisição — em JSON ou em `FlatBuffers`, conforme o
-//! `Accept`. Antes o corpo era `application/problem+json` fixo, o que num
-//! sistema cujo cliente de produção fala `FlatBuffers` significava que todo
-//! caminho de erro entregava algo que ele não sabia ler.
+//! pela [`EncodePort`](crate::middleware::encode_port::EncodePort) da
+//! requisição — em JSON ou em `FlatBuffers`, conforme o `Accept`. Antes o corpo
+//! era `application/problem+json` fixo, o que num sistema cujo cliente de
+//! produção fala `FlatBuffers` significava que todo caminho de erro entregava
+//! algo que ele não sabia ler.
 //!
 //! Quando não há requisição de onde negociar — um erro que nasce antes de
-//! qualquer cabeçalho ser lido — vale o padrão do [`Encoder`], que é JSON. É a
-//! mesma escolha que um `Accept` irreconhecível recebe.
+//! qualquer cabeçalho ser lido — vale JSON, que é o padrão do contexto fora do
+//! escopo.
 
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
@@ -26,7 +27,8 @@ use portmaster_app::domain::FieldError;
 use portmaster_app::error::{AppError, AppErrorKind};
 use portmaster_app::{Logger as _, SystemLogger};
 
-use crate::wire::encoder::Encoder;
+use crate::middleware::encode_port::EncodePort as _;
+use crate::middleware::intern::encode_context::EncodeContext;
 use crate::wire::vo::common::problem_x::ProblemX;
 
 /// Um erro pronto para virar resposta.
@@ -43,12 +45,6 @@ pub struct ApiError {
     detail: String,
     /// Os `Set-Cookie` a acrescentar na resposta, um cabeçalho por entrada.
     cookies: Vec<Cookie<'static>>,
-    /// Como escrever o corpo, quando este erro virar resposta sozinho.
-    ///
-    /// Só importa para a recusa de um extractor, que vira resposta sem passar
-    /// por um [`ApiResponse`](crate::wire::api_response::ApiResponse). Nos
-    /// demais caminhos quem codifica é o encoder da resposta.
-    encoder: Encoder,
 }
 
 impl ApiError {
@@ -58,7 +54,6 @@ impl ApiError {
             status,
             detail: detail.into(),
             cookies: Vec::new(),
-            encoder: Encoder::default(),
         }
     }
 
@@ -66,13 +61,6 @@ impl ApiError {
     #[must_use]
     pub(crate) fn with_cookie(mut self, cookie: Cookie<'static>) -> Self {
         self.cookies.push(cookie);
-        self
-    }
-
-    /// Fixa por onde este erro sai, se sair sozinho.
-    #[must_use]
-    pub(crate) const fn with_encoder(mut self, encoder: Encoder) -> Self {
-        self.encoder = encoder;
         self
     }
 
@@ -123,9 +111,9 @@ impl ApiError {
     /// Desmonta o erro no que a resposta precisa.
     ///
     /// Devolver as três peças de uma vez é o que permite ao
-    /// [`ApiResponse`](crate::wire::api_response::ApiResponse) codificar o
-    /// problema pelo **seu** encoder, e não pelo que este erro carrega — que é
-    /// só o de reserva, para quando ele vira resposta sozinho.
+    /// [`ApiResponse`](crate::wire::api_response::ApiResponse) juntar os cookies
+    /// do erro aos dele antes de responder, em vez de existirem dois caminhos
+    /// escrevendo `Set-Cookie`.
     pub(crate) fn into_parts(self) -> (StatusCode, ProblemX, Vec<Cookie<'static>>) {
         let problem = ProblemX {
             kind: "about:blank",
@@ -197,16 +185,21 @@ impl ApiError {
 }
 
 impl IntoResponse for ApiError {
-    /// Codifica o problema pelo encoder de reserva.
+    /// Codifica o problema no formato que a requisição negociou.
     ///
-    /// Este caminho é o da recusa de extractor — o corpo que não deu para ler, a
-    /// sessão que falta. Quem o alcança já anexou o encoder da requisição com
-    /// [`Self::with_encoder`] quando tinha um.
+    /// Este caminho é o da recusa que vira resposta **sozinha** — a de um
+    /// extractor, ou a de um middleware. O erro não carrega mais um encoder de
+    /// reserva anexado à mão: o formato está no escopo da requisição, e a
+    /// [`EncodePort`](crate::middleware::encode_port::EncodePort) o alcança de
+    /// onde quer que este erro tenha nascido.
+    ///
+    /// É o único ponto do sistema que constrói o adaptador em vez de recebê-lo
+    /// injetado, e não há alternativa: `IntoResponse::into_response` não recebe
+    /// argumento nenhum. O adaptador é um ZST, então construí-lo não é nada.
     fn into_response(self) -> Response {
-        let encoder = self.encoder;
         let (status, problem, cookies) = self.into_parts();
 
-        encoder.respond(status, &problem, cookies)
+        EncodeContext.respond(status, &problem, cookies)
     }
 }
 
@@ -226,6 +219,7 @@ fn describe_fields(fields: &[FieldError]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::wire::media_type::MediaType;
     use axum::http::header;
     use pretty_assertions::assert_eq;
 
@@ -303,11 +297,15 @@ mod tests {
 
     /// É o item que motivou o desenho: um cliente que fala `FlatBuffers` recebe
     /// o erro em `FlatBuffers`, e não num JSON que ele não sabe ler.
-    #[test]
-    fn o_erro_sai_no_formato_que_o_cliente_pediu() {
-        let response = ApiError::unauthenticated()
-            .with_encoder(Encoder::of_response(Some("application/x-flatbuffers")))
-            .into_response();
+    ///
+    /// O erro não carrega mais o formato — ele o encontra no escopo, de onde
+    /// quer que tenha nascido.
+    #[tokio::test]
+    async fn o_erro_sai_no_formato_que_o_cliente_pediu() {
+        let response = EncodeContext::scope_for_test(MediaType::FlatBuffers, async {
+            ApiError::unauthenticated().into_response()
+        })
+        .await;
 
         assert_eq!(
             response

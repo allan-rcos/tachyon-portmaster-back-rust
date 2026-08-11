@@ -21,8 +21,8 @@ use secrecy::ExposeSecret as _;
 use serde::{Deserialize, Serialize};
 
 use crate::config::jwt_config::JwtConfig;
-use crate::ports::session_policy::SessionPolicy;
 use crate::ports::error::api_error::ApiError;
+use crate::ports::session_policy::SessionPolicy;
 use crate::ports::token::token_service::TokenService;
 use crate::wire::tables as fbs;
 

@@ -73,7 +73,13 @@ mod tests {
 
         let (first, second) = tokio::join!(first, second);
 
-        assert_eq!(first.expect("a tarefa não entra em pânico"), Some("um".to_owned()));
-        assert_eq!(second.expect("a tarefa não entra em pânico"), Some("dois".to_owned()));
+        assert_eq!(
+            first.expect("a tarefa não entra em pânico"),
+            Some("um".to_owned())
+        );
+        assert_eq!(
+            second.expect("a tarefa não entra em pânico"),
+            Some("dois".to_owned())
+        );
     }
 }

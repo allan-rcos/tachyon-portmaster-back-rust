@@ -1,6 +1,7 @@
 //! O VO de `TelemetryLogItem`.
 
-use crate::wire::convert::Convert;
+use chrono::{DateTime, Utc};
+
 use crate::wire::dto::json::container::telemetry_log_item_json::TelemetryLogItemJson;
 use crate::wire::tables as fbs;
 use crate::wire::vo::common::telemetry_event_x::TelemetryEventX;
@@ -50,7 +51,8 @@ impl TelemetryLogItemX {
             id: source.id,
             event: TelemetryEventX::of_index(source.event),
             description: source.description,
-            timestamp: Convert::timestamp(source.timestamp),
+            timestamp: DateTime::<Utc>::from_timestamp_millis(source.timestamp)
+                .map(|at| at.to_rfc3339()),
         }
     }
 }

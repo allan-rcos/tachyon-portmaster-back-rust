@@ -1,6 +1,5 @@
 //! O VO de `ContainerListResponse`.
 
-use crate::wire::convert::Convert;
 use crate::wire::dto::json::container::container_list_response_json::ContainerListResponseJson;
 use crate::wire::tables as fbs;
 use crate::wire::vo::container::container_x_response::ContainerXResponse;
@@ -49,7 +48,7 @@ impl ContainerListXResponse {
                 .map(ContainerXResponse::of)
                 .collect(),
             next_cursor: source.next_cursor,
-            total: Convert::count(source.total),
+            total: i32::try_from(source.total).unwrap_or(i32::MAX),
         }
     }
 }

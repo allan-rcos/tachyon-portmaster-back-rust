@@ -9,7 +9,6 @@ use crate::controllers::role_controller::RoleController;
 use crate::session::Session;
 use crate::wire::api_response::ApiResponse;
 use crate::wire::body::Body;
-use crate::wire::encoder::Encoder;
 
 /// Liga os handlers de papel aos caminhos.
 ///
@@ -27,36 +26,29 @@ pub(crate) fn routes<C: RoleController>(controller: C) -> Router {
     Router::new()
         .route(
             "/roles",
-            post(move |encoder: Encoder, Body(request)| async move {
+            post(move |Body(request)| async move {
                 let context = Session::require_user()?;
 
                 Ok::<_, crate::ports::error::api_error::ApiError>(ApiResponse::created(
-                    encoder,
                     create.create(context, request).await,
                 ))
             })
-            .get(
-                move |encoder: Encoder, Query(params): Query<PageParams>| async move {
-                    let context = Session::require_user()?;
+            .get(move |Query(params): Query<PageParams>| async move {
+                let context = Session::require_user()?;
 
-                    Ok::<_, crate::ports::error::api_error::ApiError>(ApiResponse::ok(
-                        encoder,
-                        list.list(context, params).await,
-                    ))
-                },
-            ),
+                Ok::<_, crate::ports::error::api_error::ApiError>(ApiResponse::ok(
+                    list.list(context, params).await,
+                ))
+            }),
         )
         .route(
             "/roles/{id}/permissions",
-            put(
-                move |encoder: Encoder, Path(id): Path<String>, Body(request)| async move {
-                    let context = Session::require_user()?;
+            put(move |Path(id): Path<String>, Body(request)| async move {
+                let context = Session::require_user()?;
 
-                    Ok::<_, crate::ports::error::api_error::ApiError>(ApiResponse::ok(
-                        encoder,
-                        controller.update_permissions(context, id, request).await,
-                    ))
-                },
-            ),
+                Ok::<_, crate::ports::error::api_error::ApiError>(ApiResponse::ok(
+                    controller.update_permissions(context, id, request).await,
+                ))
+            }),
         )
 }

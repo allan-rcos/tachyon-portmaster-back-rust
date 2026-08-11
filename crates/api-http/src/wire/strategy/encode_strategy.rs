@@ -8,8 +8,8 @@ use crate::wire::x::response_x::ResponseX;
 /// Genérica sobre o VO, e por isso **não é object-safe** — que é o ponto. Cada
 /// par (strategy, VO) é monomorfizado: não há vTable, não há `Arc`, não há
 /// alocação para despachar. Quem guarda a strategy da vez é o
-/// [`Encoder`](crate::wire::encoder::Encoder), e ele o faz num campo, não num
-/// ponteiro.
+/// contexto de encode do middleware, e ele o faz numa variante guardada no
+/// escopo da requisição, não num ponteiro.
 ///
 /// Repare no que **não** está aqui: nada que revele o tipo de mídia. Quem usa
 /// uma strategy não descobre qual formato ela escreve; isso é assunto dela e de

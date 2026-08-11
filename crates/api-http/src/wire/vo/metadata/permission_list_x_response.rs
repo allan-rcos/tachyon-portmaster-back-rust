@@ -1,6 +1,5 @@
 //! O VO de `PermissionListResponse`.
 
-use crate::wire::convert::Convert;
 use crate::wire::dto::json::metadata::permission_list_response_json::PermissionListResponseJson;
 use crate::wire::tables as fbs;
 use crate::wire::vo::metadata::metadata_item_x_response::MetadataItemXResponse;
@@ -41,7 +40,7 @@ impl PermissionListXResponse {
                 .into_iter()
                 .enumerate()
                 .map(|(index, slug)| MetadataItemXResponse {
-                    id: Convert::count(i64::try_from(index).unwrap_or(i64::MAX)),
+                    id: i32::try_from(index).unwrap_or(i32::MAX),
                     slug,
                 })
                 .collect(),

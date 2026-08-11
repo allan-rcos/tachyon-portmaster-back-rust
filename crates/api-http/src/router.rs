@@ -12,6 +12,8 @@ use crate::controllers::{
     account_routes, auth_routes, container_routes, manifest_routes, metadata_routes,
     metrics_routes, product_routes, role_routes, server_routes, user_routes,
 };
+use crate::middleware::intern::decode_layer::DecodeLayer;
+use crate::middleware::intern::encode_layer::EncodeLayer;
 use crate::middleware::intern::logging_layer::LoggingLayer;
 use crate::middleware::intern::recover_layer::RecoverLayer;
 use crate::middleware::intern::request_id_layer::RequestIdLayer;
@@ -55,10 +57,15 @@ pub async fn router<P: AppProvider>(
 /// Junta as rotas de cada recurso e aplica a pilha.
 ///
 /// A pilha é aplicada de dentro para fora: o último `.layer` é o mais externo.
-/// Por isso o `RequestId` vem por último — ele precisa carimbar o id antes de o
-/// `Logging` procurá-lo —, e por isso o `Logging` vem antes de todos os demais:
-/// o span que ele abre alcança só o que estiver **dentro** dele, e o que está
-/// dentro é o resto da pilha e o handler inteiro.
+/// Três ordens aqui não são gosto, e sim requisito:
+///
+/// * `RequestId` é o mais externo — o `Logging` lê o id pelo escopo que ele
+///   abre, e um escopo só alcança o que está dentro dele.
+/// * `Logging` vem logo em seguida, para que o span envolva o resto da pilha e o
+///   handler inteiro.
+/// * `Encode` e `Decode` ficam **fora** do `Recover` e do `Timeout`. Os dois
+///   produzem resposta por conta própria — um `500` e um `504` — e precisam do
+///   formato já negociado para escrevê-la.
 fn routes<P: ApiProvider>(provider: &P) -> Router {
     Router::new()
         .merge(server_routes::routes(provider.server_controller()))
@@ -79,6 +86,8 @@ fn routes<P: ApiProvider>(provider: &P) -> Router {
         .layer(cors_layer(provider.cors_origins()))
         .layer(TimeoutLayer::new(provider.request_timeout()))
         .layer(RecoverLayer::new())
+        .layer(DecodeLayer::new())
+        .layer(EncodeLayer::new())
         .layer(LoggingLayer::new(&provider.logger_factory()))
         .layer(RequestIdLayer::new(provider.sequential_id_generator()))
 }

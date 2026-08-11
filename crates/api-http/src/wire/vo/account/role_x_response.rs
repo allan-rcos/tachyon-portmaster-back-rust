@@ -1,6 +1,5 @@
 //! O VO de `RoleResponse`.
 
-use crate::wire::convert::Convert;
 use crate::wire::dto::json::account::role_response_json::RoleResponseJson;
 use crate::wire::tables as fbs;
 use crate::wire::x::response_x::ResponseX;
@@ -48,7 +47,7 @@ impl RoleXResponse {
         Self {
             id: source.id,
             name: source.name,
-            user_count: Convert::count(source.user_count),
+            user_count: i32::try_from(source.user_count).unwrap_or(i32::MAX),
             permissions: source.permissions,
         }
     }

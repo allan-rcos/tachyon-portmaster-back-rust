@@ -24,8 +24,8 @@ use crate::controllers::product_controller::ProductController;
 use crate::controllers::role_controller::RoleController;
 use crate::controllers::server_controller::ServerController;
 use crate::controllers::user_controller::UserController;
-use crate::ports::cookie::auth_cookie::AuthCookie;
 use crate::ports::cookie::adapter::http_auth_cookie::HttpAuthCookie;
+use crate::ports::cookie::auth_cookie::AuthCookie;
 use crate::ports::token::adapter::jwt_token_service::JwtTokenService;
 use crate::ports::token::token_service::TokenService;
 

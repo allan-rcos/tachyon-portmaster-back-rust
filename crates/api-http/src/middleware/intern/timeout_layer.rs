@@ -10,8 +10,9 @@ use futures::future::BoxFuture;
 use portmaster_app::{Logger as _, SystemLogger};
 use tower::{Layer, Service};
 
+use crate::middleware::encode_port::EncodePort as _;
+use crate::middleware::intern::encode_context::EncodeContext;
 use crate::ports::error::api_error::ApiError;
-use crate::wire::encoder::Encoder;
 
 /// Desiste da requisição depois do prazo.
 ///
@@ -65,7 +66,6 @@ where
         let clone = self.inner.clone();
         let mut inner = std::mem::replace(&mut self.inner, clone);
         let limit = self.limit;
-        let encoder = Encoder::of_headers(request.headers());
 
         Box::pin(async move {
             tokio::select! {
@@ -86,7 +86,7 @@ where
                     )
                     .into_parts();
 
-                    Ok(encoder.respond(status, &problem, cookies))
+                    Ok(EncodeContext.respond(status, &problem, cookies))
                 }
             }
         })

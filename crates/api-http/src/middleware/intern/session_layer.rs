@@ -8,8 +8,8 @@ use futures::future::BoxFuture;
 use tower::{Layer, Service};
 
 use crate::ports::cookie::auth_cookie::AuthCookie;
-use crate::session::Session;
 use crate::ports::token::token_service::TokenService;
+use crate::session::Session;
 
 /// Resolve a sessão a partir do token apresentado e abre o escopo dela.
 ///

@@ -10,8 +10,9 @@ use futures::future::{BoxFuture, FutureExt};
 use portmaster_app::{Logger as _, SystemLogger};
 use tower::{Layer, Service};
 
+use crate::middleware::encode_port::EncodePort as _;
+use crate::middleware::intern::encode_context::EncodeContext;
 use crate::ports::error::api_error::ApiError;
-use crate::wire::encoder::Encoder;
 
 /// Transforma um pânico do handler em resposta.
 ///
@@ -57,16 +58,19 @@ where
 
     /// Chama o serviço interno e transforma um pânico em resposta.
     ///
-    /// O encoder é montado **antes** da chamada, com os cabeçalhos da
-    /// requisição: depois do pânico não há mais requisição de onde negociar, e o
-    /// corpo de 500 precisa sair no formato que o cliente pediu como qualquer
-    /// outro. O desenho anterior tinha aqui um literal de bytes JSON, que num
+    /// O corpo de `500` sai pela
+    /// [`EncodePort`](crate::middleware::encode_port::EncodePort), no formato
+    /// que a requisição negociou. Este layer não relê o `Accept`: quem o
+    /// resolveu foi o `EncodeLayer`, que por isso tem de estar **fora** deste na
+    /// pilha. Antes cada middleware que responde por conta própria remontava a
+    /// negociação sozinho — a mesma decisão tomada em três lugares.
+    ///
+    /// O desenho anterior a este tinha aqui um literal de bytes JSON, que num
     /// sistema cujo cliente de produção fala `FlatBuffers` era o único corpo que
     /// ele nunca conseguiria ler.
     fn call(&mut self, request: Request) -> Self::Future {
         let clone = self.inner.clone();
         let mut inner = std::mem::replace(&mut self.inner, clone);
-        let encoder = Encoder::of_headers(request.headers());
 
         Box::pin(async move {
             let outcome = AssertUnwindSafe(inner.call(request)).catch_unwind().await;
@@ -85,7 +89,7 @@ where
                     )
                     .into_parts();
 
-                    encoder.respond(status, &problem, cookies)
+                    EncodeContext.respond(status, &problem, cookies)
                 }
             })
         })

@@ -170,7 +170,10 @@ mod tests {
 
     #[test]
     fn variavel_vazia_conta_como_ausente() {
-        assert_eq!(source(&[("APP_HOST", "   ")]).string("APP_HOST", "padrão"), "padrão");
+        assert_eq!(
+            source(&[("APP_HOST", "   ")]).string("APP_HOST", "padrão"),
+            "padrão"
+        );
     }
 
     #[test]
@@ -184,7 +187,10 @@ mod tests {
     #[test]
     fn o_booleano_so_e_verdadeiro_nas_grafias_afirmativas() {
         for afirmativo in ["1", "true", "TRUE", "yes", "on"] {
-            assert!(source(&[("F", afirmativo)]).flag("F", false), "{afirmativo}");
+            assert!(
+                source(&[("F", afirmativo)]).flag("F", false),
+                "{afirmativo}"
+            );
         }
 
         for negativo in ["0", "false", "no", "qualquer coisa"] {
