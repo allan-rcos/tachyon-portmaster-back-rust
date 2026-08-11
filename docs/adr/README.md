@@ -19,6 +19,7 @@ API documentation useless. The code now states what it does; these state why.
 | [0007](0007-phpstan-baseline-limited-to-generated-code.md) | A PHPStan baseline holding only generated code |
 | [0008](0008-minified-tarball-as-the-release-artifact.md) | A minified tarball as the release artifact, migrations apart |
 | [0009](0009-runtime-registries-in-process.md) | Runtime registries in process; InnoDB rather than MyRocks |
+| [0010](0010-versions-as-types-with-an-unversioned-alias.md) | A published version is a type; the unversioned path is a per-route alias |
 
 ## Writing one
 

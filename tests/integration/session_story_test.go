@@ -43,6 +43,17 @@ func TestSessionStory(t *testing.T) {
 		assert.NotEmpty(t, string(info.Name()))
 	})
 
+	// The unversioned path is a convenience that follows whichever published
+	// version still serves a route; /v1 is the address a client should pin to,
+	// and is what swagger.json advertises. Both must answer, and identically.
+	t.Run("a route answers under its version prefix too", func(t *testing.T) {
+		versioned := decodeRoot(t, requireOK(t, c.Get(t, "/v1/info")).Body, fbs.GetRootAsProjectInfo)
+		root := decodeRoot(t, requireOK(t, c.Get(t, "/info")).Body, fbs.GetRootAsProjectInfo)
+
+		assert.Equal(t, string(root.Name()), string(versioned.Name()))
+		assert.Equal(t, string(root.Version()), string(versioned.Version()))
+	})
+
 	t.Run("setup creates the first user and then refuses to run again", func(t *testing.T) {
 		created := client.Setup(t, c, harness.AdminName, harness.AdminEmail, harness.AdminPassword)
 		require.NotEmpty(t, created.Token(), "setup should sign the operator in")

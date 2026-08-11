@@ -1,27 +1,22 @@
 //! As rotas de produto.
 
-use axum::routing::{get, post};
-use axum::Router;
-
 use crate::controllers::product_controller::ProductController;
+use crate::router::route::Route;
 
-/// Liga os handlers de produto aos caminhos.
-pub(crate) fn routes<C: ProductController>(controller: C) -> Router {
+/// A tabela de produto.
+pub(crate) fn routes<C: ProductController>(controller: C) -> Vec<Route> {
     let list = controller.clone();
     let create = controller.clone();
     let read = controller.clone();
     let update = controller.clone();
 
-    Router::new()
-        .route(
-            "/products",
-            post(move |body| create.clone().create(body))
-                .get(move |params| list.clone().list(params)),
-        )
-        .route(
-            "/products/{id}",
-            get(move |id| read.clone().get(id))
-                .put(move |id, body| update.clone().update(id, body))
-                .delete(move |id| controller.clone().delete(id)),
-        )
+    vec![
+        Route::get("/products", move |params| list.clone().list(params)),
+        Route::post("/products", move |body| create.clone().create(body)),
+        Route::get("/products/{id}", move |id| read.clone().get(id)),
+        Route::put("/products/{id}", move |id, body| {
+            update.clone().update(id, body)
+        }),
+        Route::delete("/products/{id}", move |id| controller.clone().delete(id)),
+    ]
 }

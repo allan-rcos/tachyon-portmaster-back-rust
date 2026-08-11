@@ -1,6 +1,8 @@
 //! O contrato do controller de sessão.
 
 use crate::ports::error::api_error::ApiError;
+use crate::wire::api_response::ApiResponse;
+use crate::wire::body::Body;
 use crate::wire::vo::auth::login_x_request::LoginXRequest;
 use crate::wire::vo::auth::login_x_response::LoginXResponse;
 use crate::wire::vo::auth::setup_x_request::SetupXRequest;
@@ -31,19 +33,19 @@ pub(crate) trait AuthController: Clone + Sync + 'static {
     /// `POST /setup`
     ///
     /// Abre uma vez na vida de um deploy: cria o primeiro usuário e já o loga.
-    async fn setup(&self, request: SetupXRequest) -> Result<LoginXResponse, ApiError>;
+    async fn setup(self, request: Body<SetupXRequest>) -> ApiResponse<LoginXResponse>;
 
     /// `POST /auth/login`
-    async fn login(&self, request: LoginXRequest) -> Result<LoginXResponse, ApiError>;
+    async fn login(self, request: Body<LoginXRequest>) -> ApiResponse<LoginXResponse>;
 
     /// `POST /auth/refresh`
     ///
     /// Não devolve corpo: o par novo viaja nos cookies, e a resposta é um `204`.
-    async fn refresh(&self) -> Result<(), ApiError>;
+    async fn refresh(self) -> ApiResponse;
 
     /// `POST /auth/logout`
     ///
     /// Sair é sempre possível — a revogação do refresh é esforço, não condição,
     /// e o que pode falhar aqui é só escrever os cookies que apagam a sessão.
-    async fn logout(&self) -> Result<(), ApiError>;
+    async fn logout(self) -> ApiResponse;
 }

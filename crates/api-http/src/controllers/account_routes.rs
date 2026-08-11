@@ -1,22 +1,18 @@
 //! As rotas da própria conta.
 
-use axum::routing::{get, put};
-use axum::Router;
-
 use crate::controllers::account_controller::AccountController;
+use crate::router::route::Route;
 
-/// Liga os handlers de conta aos caminhos.
-pub(crate) fn routes<C: AccountController>(controller: C) -> Router {
+/// A tabela da própria conta.
+pub(crate) fn routes<C: AccountController>(controller: C) -> Vec<Route> {
     let read = controller.clone();
     let update = controller.clone();
 
-    Router::new()
-        .route(
-            "/account",
-            get(move || read.clone().get()).put(move |body| update.clone().update(body)),
-        )
-        .route(
-            "/account/password",
-            put(move |body| controller.clone().change_password(body)),
-        )
+    vec![
+        Route::get("/account", move || read.clone().get()),
+        Route::put("/account", move |body| update.clone().update(body)),
+        Route::put("/account/password", move |body| {
+            controller.clone().change_password(body)
+        }),
+    ]
 }

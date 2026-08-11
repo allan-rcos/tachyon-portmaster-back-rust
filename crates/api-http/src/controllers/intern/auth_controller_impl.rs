@@ -16,6 +16,8 @@ use crate::ports::cookie::cookie_name::CookieName;
 use crate::ports::error::api_error::ApiError;
 use crate::ports::token::refresh_token::RefreshToken;
 use crate::ports::token::token_service::TokenService;
+use crate::wire::api_response::ApiResponse;
+use crate::wire::body::Body;
 use crate::wire::vo::auth::login_x_request::LoginXRequest;
 use crate::wire::vo::auth::login_x_response::LoginXResponse;
 use crate::wire::vo::auth::setup_x_request::SetupXRequest;
@@ -208,18 +210,23 @@ where
     /// os campos que faltaram, de uma vez. Levantar erro nesta camada devolveria
     /// um problema por requisição e duplicaria, no `api-http`, uma regra que já
     /// mora no `domain`.
-    async fn setup(&self, request: SetupXRequest) -> Result<LoginXResponse, ApiError> {
-        let user = self
-            .sessions
-            .setup(SetupCommand {
-                name: request.name.unwrap_or_default(),
-                email: request.email.unwrap_or_default(),
-                password: request.password.unwrap_or_default(),
-            })
-            .await
-            .map_err(session_refused)?;
+    async fn setup(self, Body(request): Body<SetupXRequest>) -> ApiResponse<LoginXResponse> {
+        ApiResponse::created(
+            async {
+                let user = self
+                    .sessions
+                    .setup(SetupCommand {
+                        name: request.name.unwrap_or_default(),
+                        email: request.email.unwrap_or_default(),
+                        password: request.password.unwrap_or_default(),
+                    })
+                    .await
+                    .map_err(session_refused)?;
 
-        self.issue_session(user.as_ref()).await
+                self.issue_session(user.as_ref()).await
+            }
+            .await,
+        )
     }
 
     /// Abre a sessão.
@@ -228,17 +235,22 @@ where
     /// o `app` responde igual para e-mail desconhecido e senha errada, e
     /// distinguir "não mandou o campo" aqui entregaria ao atacante metade da
     /// resposta.
-    async fn login(&self, request: LoginXRequest) -> Result<LoginXResponse, ApiError> {
-        let user = self
-            .sessions
-            .login(LoginCommand {
-                email: request.email.unwrap_or_default(),
-                password: request.password.unwrap_or_default(),
-            })
-            .await
-            .map_err(session_refused)?;
+    async fn login(self, Body(request): Body<LoginXRequest>) -> ApiResponse<LoginXResponse> {
+        ApiResponse::ok(
+            async {
+                let user = self
+                    .sessions
+                    .login(LoginCommand {
+                        email: request.email.unwrap_or_default(),
+                        password: request.password.unwrap_or_default(),
+                    })
+                    .await
+                    .map_err(session_refused)?;
 
-        self.issue_session(user.as_ref()).await
+                self.issue_session(user.as_ref()).await
+            }
+            .await,
+        )
     }
 
     /// Troca um refresh válido por um par novo.
@@ -247,28 +259,33 @@ where
     /// `Set-Cookie` para quem nunca teve sessão. Já um token apresentado e morto
     /// **é** tirado do navegador — é o que impede o cliente de reapresentá-lo
     /// para sempre.
-    async fn refresh(&self) -> Result<(), ApiError> {
-        let Some(presented) = self.cookies.read(CookieName::Refresh)? else {
-            return Err(refused());
-        };
+    async fn refresh(self) -> ApiResponse {
+        ApiResponse::no_content(
+            async {
+                let Some(presented) = self.cookies.read(CookieName::Refresh)? else {
+                    return Err(refused());
+                };
 
-        let user = match self.rotate(&presented).await {
-            Ok(user) => user,
-            Err(error) => {
-                self.cookies.clear(CookieName::Access)?;
-                self.cookies.clear(CookieName::Refresh)?;
+                let user = match self.rotate(&presented).await {
+                    Ok(user) => user,
+                    Err(error) => {
+                        self.cookies.clear(CookieName::Access)?;
+                        self.cookies.clear(CookieName::Refresh)?;
 
-                return Err(error);
+                        return Err(error);
+                    }
+                };
+
+                let refreshed = self.mint_refresh(user.as_ref()).await?;
+                let access = self.tokens.issue(user.as_ref())?;
+
+                self.cookies.set(CookieName::Access, &access)?;
+                self.cookies.set(CookieName::Refresh, &refreshed)?;
+
+                Ok(())
             }
-        };
-
-        let refreshed = self.mint_refresh(user.as_ref()).await?;
-        let access = self.tokens.issue(user.as_ref())?;
-
-        self.cookies.set(CookieName::Access, &access)?;
-        self.cookies.set(CookieName::Refresh, &refreshed)?;
-
-        Ok(())
+            .await,
+        )
     }
 
     /// Revoga o refresh e limpa os dois cookies.
@@ -279,20 +296,25 @@ where
     ///
     /// Revogar é **esforço, não condição**: falhar em revogar não pode impedir
     /// o cliente de sair. O que fica é o registro para quem investiga.
-    async fn logout(&self) -> Result<(), ApiError> {
-        if let Ok(Some(presented)) = self.cookies.read(CookieName::Refresh) {
-            if let Err(error) = self.revoke(&presented).await {
-                self.logger.warn(
-                    "não foi possível revogar o refresh token no logout",
-                    [("error", &error.to_string())],
-                );
+    async fn logout(self) -> ApiResponse {
+        ApiResponse::no_content(
+            async {
+                if let Ok(Some(presented)) = self.cookies.read(CookieName::Refresh) {
+                    if let Err(error) = self.revoke(&presented).await {
+                        self.logger.warn(
+                            "não foi possível revogar o refresh token no logout",
+                            [("error", &error.to_string())],
+                        );
+                    }
+                }
+
+                self.cookies.clear(CookieName::Access)?;
+                self.cookies.clear(CookieName::Refresh)?;
+
+                Ok(())
             }
-        }
-
-        self.cookies.clear(CookieName::Access)?;
-        self.cookies.clear(CookieName::Refresh)?;
-
-        Ok(())
+            .await,
+        )
     }
 }
 

@@ -1,14 +1,11 @@
 //! As rotas de metadado de sistema.
 
-use axum::routing::get;
-use axum::Router;
-
 use crate::controllers::metadata_controller::MetadataController;
+use crate::router::route::Route;
 
-/// Liga os handlers de metadado aos caminhos.
-pub(crate) fn routes<C: MetadataController>(controller: C) -> Router {
-    Router::new().route(
-        "/metadata/permissions",
-        get(move |params| controller.clone().list_permissions(params)),
-    )
+/// A tabela de metadado.
+pub(crate) fn routes<C: MetadataController>(controller: C) -> Vec<Route> {
+    vec![Route::get("/metadata/permissions", move |params| {
+        controller.clone().list_permissions(params)
+    })]
 }

@@ -1,4 +1,4 @@
-//! A composição das rotas e da pilha de middlewares.
+//! A composição das versões e da pilha de middlewares.
 
 use axum::http::{HeaderValue, Method};
 use axum::Router;
@@ -8,10 +8,6 @@ use crate::bootstrap::provider::ApiProvider;
 use crate::config::api_config::ApiConfig;
 use crate::config::jwt_config::JwtConfig;
 use crate::controllers::auth_controller::AuthController;
-use crate::controllers::{
-    account_routes, auth_routes, container_routes, manifest_routes, metadata_routes,
-    metrics_routes, product_routes, role_routes, server_routes, user_routes,
-};
 use crate::middleware::intern::cookie_layer::CookieLayer;
 use crate::middleware::intern::decode_layer::DecodeLayer;
 use crate::middleware::intern::encode_layer::EncodeLayer;
@@ -20,23 +16,22 @@ use crate::middleware::intern::recover_layer::RecoverLayer;
 use crate::middleware::intern::request_id_layer::RequestIdLayer;
 use crate::middleware::intern::session_layer::SessionLayer;
 use crate::middleware::intern::timeout_layer::TimeoutLayer;
+use crate::router::router_hub::RouterHub;
 use portmaster_app::AppProvider;
+
+pub(crate) mod route;
+pub(crate) mod router_hub;
+pub(crate) mod versioned_router;
+
+pub(crate) mod intern;
 
 /// Por quanto tempo um preflight de CORS pode ser reaproveitado.
 const CORS_MAX_AGE_SECONDS: u64 = 3600;
 
 /// Monta o router completo.
 ///
-/// Cada recurso traz as **próprias** rotas, e este arquivo só as junta. É o que
-/// faz ele caber numa tela: o encanamento de extractor — qual rota tem corpo,
-/// qual tem `Path`, qual mensagem cada corpo carrega — mora ao lado do
-/// controller que o consome, e aqui não aparece nome nenhum de tipo interno.
-///
-/// Antes havia duas `macro_rules!` neste arquivo. Elas existiam para esconder
-/// que cada rota reconstruía o seu controller a cada requisição, a partir de um
-/// `Arc` do provider clonado duas vezes por chamada. Agora os controllers vêm
-/// prontos do `ApiProvider`, são construídos **uma vez** aqui, e cada rota
-/// clona o seu — um punhado de handles.
+/// As rotas vêm do `RouterHub`, que junta as versões publicadas; este arquivo
+/// só acrescenta a pilha em volta. É o que faz ele caber numa tela.
 pub async fn router<P: AppProvider>(
     app: P,
     config: ApiConfig,
@@ -52,44 +47,20 @@ pub async fn router<P: AppProvider>(
         .await
         .map_err(|error| anyhow::anyhow!("{error:?}"))?;
 
-    Ok(routes(&provider))
-}
+    let cors = cors_layer(provider.cors_origins());
+    let timeout = provider.request_timeout();
 
-/// Junta as rotas de cada recurso e aplica a pilha.
-///
-/// A pilha é aplicada de dentro para fora: o último `.layer` é o mais externo.
-/// Quatro ordens aqui não são gosto, e sim requisito — cada layer que abre um
-/// escopo tem de estar **fora** de quem lê aquele escopo:
-///
-/// * `RequestId` é o mais externo, porque o `Logging` lê o id dele.
-/// * `Logging` vem logo em seguida, para que o span envolva o resto da pilha e o
-///   handler inteiro.
-/// * `Encode` e `Decode` ficam fora do `Recover` e do `Timeout`, que produzem
-///   resposta por conta própria — um `500` e um `504` — e precisam do formato já
-///   negociado para escrevê-la.
-/// * `Cookie` fica fora do `Session`, que lê o access token por ele.
-fn routes<P: ApiProvider>(provider: &P) -> Router {
-    Router::new()
-        .merge(server_routes::routes(provider.server_controller()))
-        .merge(auth_routes::routes(provider.auth_controller()))
-        .merge(account_routes::routes(provider.account_controller()))
-        .merge(product_routes::routes(provider.product_controller()))
-        .merge(role_routes::routes(provider.role_controller()))
-        .merge(container_routes::routes(provider.container_controller()))
-        .merge(manifest_routes::routes(provider.manifest_controller()))
-        .merge(user_routes::routes(provider.user_controller()))
-        .merge(metadata_routes::routes(provider.metadata_controller()))
-        .merge(metrics_routes::routes(provider.metrics_controller()))
+    Ok(RouterHub::build(&provider)?
         // De dentro para fora: o último `.layer` é o mais externo.
         .layer(SessionLayer::new(provider.token_service()))
         .layer(CookieLayer::new())
-        .layer(cors_layer(provider.cors_origins()))
-        .layer(TimeoutLayer::new(provider.request_timeout()))
+        .layer(cors)
+        .layer(TimeoutLayer::new(timeout))
         .layer(RecoverLayer::new())
         .layer(DecodeLayer::new())
         .layer(EncodeLayer::new())
         .layer(LoggingLayer::new(&provider.logger_factory()))
-        .layer(RequestIdLayer::new(provider.sequential_id_generator()))
+        .layer(RequestIdLayer::new(provider.sequential_id_generator())))
 }
 
 /// A política de CORS.

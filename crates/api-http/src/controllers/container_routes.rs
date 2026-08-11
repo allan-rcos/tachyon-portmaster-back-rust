@@ -1,16 +1,14 @@
 //! As rotas de contêiner.
-
-use axum::routing::{get, post};
-use axum::Router;
+//!
+//! `/containers/summary` vem **antes** de `/containers/{id}`: o axum casa o
+//! segmento literal primeiro de qualquer forma, mas escrevê-los nesta ordem é o
+//! que deixa a precedência visível para quem lê.
 
 use crate::controllers::container_controller::ContainerController;
+use crate::router::route::Route;
 
-/// Liga os handlers de contêiner aos caminhos.
-///
-/// `/containers/summary` vem **antes** de `/containers/{id}`: o axum casa o
-/// segmento literal primeiro, mas escrevê-los nesta ordem é o que deixa a
-/// precedência visível para quem lê.
-pub(crate) fn routes<C: ContainerController>(controller: C) -> Router {
+/// A tabela de contêiner.
+pub(crate) fn routes<C: ContainerController>(controller: C) -> Vec<Route> {
     let list = controller.clone();
     let create = controller.clone();
     let summary = controller.clone();
@@ -19,28 +17,20 @@ pub(crate) fn routes<C: ContainerController>(controller: C) -> Router {
     let delete = controller.clone();
     let seal = controller.clone();
 
-    Router::new()
-        .route(
-            "/containers",
-            post(move |body| create.clone().create(body))
-                .get(move |params| list.clone().list(params)),
-        )
-        .route(
-            "/containers/summary",
-            get(move |params| summary.clone().summary(params)),
-        )
-        .route(
-            "/containers/{id}",
-            get(move |id| read.clone().get(id))
-                .put(move |id, body| update.clone().update(id, body))
-                .delete(move |id| delete.clone().delete(id)),
-        )
-        .route(
-            "/containers/{id}/seal",
-            post(move |id| seal.clone().seal(id)),
-        )
-        .route(
-            "/containers/{id}/dispatch",
-            post(move |id| controller.clone().dispatch(id)),
-        )
+    vec![
+        Route::get("/containers", move |params| list.clone().list(params)),
+        Route::post("/containers", move |body| create.clone().create(body)),
+        Route::get("/containers/summary", move |params| {
+            summary.clone().summary(params)
+        }),
+        Route::get("/containers/{id}", move |id| read.clone().get(id)),
+        Route::put("/containers/{id}", move |id, body| {
+            update.clone().update(id, body)
+        }),
+        Route::delete("/containers/{id}", move |id| delete.clone().delete(id)),
+        Route::post("/containers/{id}/seal", move |id| seal.clone().seal(id)),
+        Route::post("/containers/{id}/dispatch", move |id| {
+            controller.clone().dispatch(id)
+        }),
+    ]
 }
