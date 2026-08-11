@@ -1,31 +1,60 @@
-//! O serviço de autenticação stateless.
+//! O middleware que resolve a sessão a partir do token.
 
 use std::task::{Context, Poll};
 
 use axum::extract::Request;
 use axum::response::Response;
 use futures::future::BoxFuture;
-use tower::Service;
+use tower::{Layer, Service};
 
 use crate::ports::cookie::auth_cookie::AuthCookie;
 use crate::session::Session;
 use crate::ports::token::token_service::TokenService;
 
-/// O serviço que resolve a sessão.
+/// Resolve a sessão a partir do token apresentado e abre o escopo dela.
 ///
 /// Genérico sobre o token e sobre os cookies: ele pede "o token apresentado" e
 /// "o principal deste token" sem conhecer nenhuma das duas impls.
+///
+/// ## O layer é o serviço antes de saber o que envolve
+///
+/// Um tipo só, e não um par. `SessionLayer<T, A>` é o `Layer`, e
+/// `SessionLayer<T, A, S>` é o `Service` que sai do `layer()`. Eram dois tipos
+/// em dois arquivos, e o segundo nunca foi nomeado por ninguém.
 #[derive(Clone)]
-pub(crate) struct Token<S, T, A> {
-    /// O serviço interno, que este envolve.
-    pub(super) inner: S,
+pub(crate) struct SessionLayer<T, A, S = ()> {
+    /// O serviço interno, que este envolve; `()` enquanto é só layer.
+    inner: S,
     /// Quem confere o access token.
-    pub(super) tokens: T,
+    tokens: T,
     /// De onde o access token é lido.
-    pub(super) cookies: A,
+    cookies: A,
 }
 
-impl<S, T, A> Service<Request> for Token<S, T, A>
+impl<T, A> SessionLayer<T, A> {
+    /// Monta o layer com o que o provider entregou.
+    pub(crate) const fn new(tokens: T, cookies: A) -> Self {
+        Self {
+            inner: (),
+            tokens,
+            cookies,
+        }
+    }
+}
+
+impl<S, T: TokenService, A: AuthCookie> Layer<S> for SessionLayer<T, A> {
+    type Service = SessionLayer<T, A, S>;
+
+    fn layer(&self, inner: S) -> Self::Service {
+        SessionLayer {
+            inner,
+            tokens: self.tokens.clone(),
+            cookies: self.cookies.clone(),
+        }
+    }
+}
+
+impl<S, T, A> Service<Request> for SessionLayer<T, A, S>
 where
     S: Service<Request, Response = Response> + Clone + Send + 'static,
     S::Future: Send + 'static,

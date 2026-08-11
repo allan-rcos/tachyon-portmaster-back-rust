@@ -1,4 +1,4 @@
-//! O serviço de captura de pânico.
+//! O middleware que transforma pânico em resposta.
 
 use std::panic::AssertUnwindSafe;
 use std::task::{Context, Poll};
@@ -8,19 +8,41 @@ use axum::http::StatusCode;
 use axum::response::Response;
 use futures::future::{BoxFuture, FutureExt};
 use portmaster_app::{Logger as _, SystemLogger};
-use tower::Service;
+use tower::{Layer, Service};
 
 use crate::ports::error::api_error::ApiError;
 use crate::wire::encoder::Encoder;
 
-/// O serviço que captura pânico.
-#[derive(Clone)]
-pub(crate) struct Recover<S> {
-    /// O serviço interno, que este envolve.
-    pub(super) inner: S,
+/// Transforma um pânico do handler em resposta.
+///
+/// ## O layer é o serviço antes de saber o que envolve
+///
+/// Um tipo só, e não um par. `RecoverLayer` sem parâmetro é o `Layer`, e
+/// `RecoverLayer<S>` é o `Service` que sai do `layer()` — o mesmo tipo, agora
+/// com o `S` que ele embrulha. Eram dois tipos em dois arquivos, e o segundo
+/// nunca foi nomeado por ninguém.
+#[derive(Clone, Copy, Default)]
+pub(crate) struct RecoverLayer<S = ()> {
+    /// O serviço interno, que este envolve; `()` enquanto é só layer.
+    inner: S,
 }
 
-impl<S> Service<Request> for Recover<S>
+impl RecoverLayer {
+    /// Monta o layer.
+    pub(crate) const fn new() -> Self {
+        Self { inner: () }
+    }
+}
+
+impl<S> Layer<S> for RecoverLayer {
+    type Service = RecoverLayer<S>;
+
+    fn layer(&self, inner: S) -> Self::Service {
+        RecoverLayer { inner }
+    }
+}
+
+impl<S> Service<Request> for RecoverLayer<S>
 where
     S: Service<Request, Response = Response> + Clone + Send + 'static,
     S::Future: Send + 'static,
@@ -85,7 +107,6 @@ fn describe(panic: &Box<dyn std::any::Any + Send>) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::super::recover_layer::RecoverLayer;
     use super::*;
     use axum::response::IntoResponse as _;
     use tower::{ServiceBuilder, ServiceExt};

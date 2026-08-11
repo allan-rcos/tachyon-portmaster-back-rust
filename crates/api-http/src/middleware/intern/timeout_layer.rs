@@ -1,4 +1,4 @@
-//! O serviço de teto de tempo.
+//! O middleware que desiste depois do prazo.
 
 use std::task::{Context, Poll};
 use std::time::Duration;
@@ -8,21 +8,47 @@ use axum::http::StatusCode;
 use axum::response::Response;
 use futures::future::BoxFuture;
 use portmaster_app::{Logger as _, SystemLogger};
-use tower::Service;
+use tower::{Layer, Service};
 
 use crate::ports::error::api_error::ApiError;
 use crate::wire::encoder::Encoder;
 
-/// O serviço que desiste depois do prazo.
-#[derive(Clone)]
-pub(crate) struct Timeout<S> {
-    /// O serviço interno, que este envolve.
-    pub(super) inner: S,
-    /// Teto de tempo ou de tamanho, conforme o tipo.
-    pub(super) limit: Duration,
+/// Desiste da requisição depois do prazo.
+///
+/// ## O layer é o serviço antes de saber o que envolve
+///
+/// Um tipo só, e não um par. `TimeoutLayer` sem parâmetro é o `Layer` — o teto
+/// configurado, ainda sem serviço interno —, e `TimeoutLayer<S>` é o `Service`
+/// que sai do `layer()`: o mesmo teto, agora com o `S` que ele embrulha. Eram
+/// dois tipos em dois arquivos, e o segundo nunca foi nomeado por ninguém — quem
+/// monta a pilha aplica o layer e mais nada.
+#[derive(Clone, Copy)]
+pub(crate) struct TimeoutLayer<S = ()> {
+    /// O serviço interno, que este envolve; `()` enquanto é só layer.
+    inner: S,
+    /// Teto de tempo de uma requisição.
+    limit: Duration,
 }
 
-impl<S> Service<Request> for Timeout<S>
+impl TimeoutLayer {
+    /// Monta o layer com o teto configurado.
+    pub(crate) const fn new(limit: Duration) -> Self {
+        Self { inner: (), limit }
+    }
+}
+
+impl<S> Layer<S> for TimeoutLayer {
+    type Service = TimeoutLayer<S>;
+
+    fn layer(&self, inner: S) -> Self::Service {
+        TimeoutLayer {
+            inner,
+            limit: self.limit,
+        }
+    }
+}
+
+impl<S> Service<Request> for TimeoutLayer<S>
 where
     S: Service<Request, Response = Response> + Clone + Send + 'static,
     S::Future: Send + 'static,
@@ -69,7 +95,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::super::timeout_layer::TimeoutLayer;
     use super::*;
     use axum::response::IntoResponse as _;
     use tower::{ServiceBuilder, ServiceExt};

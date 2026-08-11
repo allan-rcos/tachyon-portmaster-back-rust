@@ -12,11 +12,11 @@ use crate::controllers::{
     account_routes, auth_routes, container_routes, manifest_routes, metadata_routes,
     metrics_routes, product_routes, role_routes, server_routes, user_routes,
 };
-use crate::middleware::logging_layer::LoggingLayer;
-use crate::middleware::recover_layer::RecoverLayer;
-use crate::middleware::request_id_layer::RequestIdLayer;
-use crate::middleware::timeout_layer::TimeoutLayer;
-use crate::middleware::token_layer::TokenLayer;
+use crate::middleware::intern::logging_layer::LoggingLayer;
+use crate::middleware::intern::recover_layer::RecoverLayer;
+use crate::middleware::intern::request_id_layer::RequestIdLayer;
+use crate::middleware::intern::session_layer::SessionLayer;
+use crate::middleware::intern::timeout_layer::TimeoutLayer;
 use portmaster_app::AppProvider;
 
 /// Por quanto tempo um preflight de CORS pode ser reaproveitado.
@@ -72,14 +72,14 @@ fn routes<P: ApiProvider>(provider: &P) -> Router {
         .merge(metadata_routes::routes(provider.metadata_controller()))
         .merge(metrics_routes::routes(provider.metrics_controller()))
         // De dentro para fora: o último `.layer` é o mais externo.
-        .layer(TokenLayer::new(
+        .layer(SessionLayer::new(
             provider.token_service(),
             provider.auth_cookie(),
         ))
         .layer(cors_layer(provider.cors_origins()))
         .layer(TimeoutLayer::new(provider.request_timeout()))
         .layer(RecoverLayer::new())
-        .layer(LoggingLayer::new(provider.logger_factory()))
+        .layer(LoggingLayer::new(&provider.logger_factory()))
         .layer(RequestIdLayer::new(provider.sequential_id_generator()))
 }
 
