@@ -10,10 +10,10 @@
 //!
 //! ## Nada disto sobrevive ao boot
 //!
-//! O provider do `app` é consumido pelo `register` da apresentação, que o
-//! destrincha em controllers; a `ApiConfig` é destrinchada nos valores que cada
-//! construtor precisa. Depois que o router está montado, nem um nem outro existe
-//! em memória — e por isso não há `Arc` segurando nada.
+//! O provider do `app` e a configuração desta camada entram por valor no
+//! `register`, viram um provider de apresentação, e esse provider é consumido ao
+//! montar o router. Depois disso nenhum dos três existe em memória — e por isso
+//! não há `Arc` segurando nada.
 
 use portmaster_api_http::{config, router};
 use portmaster_app::{Logger as _, SystemLogger};
@@ -35,7 +35,7 @@ async fn main() -> anyhow::Result<()> {
     let address = format!("{}:{}", secrets.api.host, secrets.api.port);
 
     let app = portmaster_app::register(secrets.app).await?;
-    let routes = router(app, secrets.api, &secrets.jwt).await?;
+    let routes = router(app, secrets.api, secrets.jwt).await?;
 
     let listener = TcpListener::bind(&address).await?;
     SystemLogger::get().info("servidor no ar", [("address", &address)]);

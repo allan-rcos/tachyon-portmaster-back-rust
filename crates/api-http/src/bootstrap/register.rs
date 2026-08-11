@@ -6,8 +6,6 @@ use crate::bootstrap::api_provider::ApiProviderImpl;
 use crate::bootstrap::provider::ApiProvider;
 use crate::config::api_config::ApiConfig;
 use crate::config::jwt_config::JwtConfig;
-use crate::ports::session_policy::SessionPolicy;
-use crate::ports::token::adapter::jwt_token_service::JwtTokenService;
 
 /// Monta o provider da apresentação.
 ///
@@ -22,27 +20,21 @@ use crate::ports::token::adapter::jwt_token_service::JwtTokenService;
 /// espalhando pela API do crate um grafo que só o `main` ao lado consome. O que
 /// sai daqui é o [`router`](crate::router()), e ele basta.
 ///
-/// ## A configuração morre aqui
+/// ## Uma linha, e é o ponto
 ///
-/// A [`ApiConfig`] e a [`JwtConfig`] entram por valor, são destrinchadas nos
-/// valores que cada construtor precisa — o serviço de token pega o segredo e o
-/// TTL, os cookies pegam nomes e política — e saem de escopo. Nada as guarda, e
-/// nenhum objeto do sistema carrega um objeto de configuração para consultar
-/// depois.
+/// Ela destrinchava a configuração em valores soltos — o segredo do token, os
+/// nomes de cookie, o ambiente, o teto de tempo, as origens de CORS — e
+/// construía o serviço de token e os cookies para entregá-los prontos ao
+/// provider. Era o provider recebendo classe em vez de montá-la, e uma
+/// configuração nova significava um argumento novo em duas assinaturas.
+///
+/// Agora o provider recebe **só** o provider de baixo e a configuração, e monta
+/// o que precisar de onde a informação está. Esta função existe para não expor
+/// o tipo concreto do provider, e mais nada.
 pub(crate) fn register<P: AppProvider>(
     app: P,
     config: ApiConfig,
-    jwt: &JwtConfig,
+    jwt: JwtConfig,
 ) -> impl ApiProvider {
-    let refresh_ttl_seconds = SessionPolicy::REFRESH_TTL.as_secs();
-    let tokens = JwtTokenService::new(jwt);
-
-    ApiProviderImpl::new(
-        app,
-        tokens,
-        config.environment,
-        refresh_ttl_seconds,
-        config.request_timeout,
-        config.cors_origins,
-    )
+    ApiProviderImpl::new(app, config, jwt)
 }

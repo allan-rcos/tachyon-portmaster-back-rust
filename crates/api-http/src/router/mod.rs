@@ -35,7 +35,7 @@ const CORS_MAX_AGE_SECONDS: u64 = 3600;
 pub async fn router<P: AppProvider>(
     app: P,
     config: ApiConfig,
-    jwt: &JwtConfig,
+    jwt: JwtConfig,
 ) -> anyhow::Result<Router> {
     let provider = crate::bootstrap::register::register(app, config, jwt);
 

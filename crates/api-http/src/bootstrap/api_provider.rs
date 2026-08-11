@@ -4,6 +4,8 @@ use portmaster_app::{AppProvider, Logger, LoggerFactory, SequentialIdGenerator};
 use std::time::Duration;
 
 use crate::bootstrap::provider::ApiProvider;
+use crate::config::api_config::ApiConfig;
+use crate::config::jwt_config::JwtConfig;
 use crate::controllers::account_controller::AccountController;
 use crate::controllers::auth_controller::AuthController;
 use crate::controllers::container_controller::ContainerController;
@@ -26,6 +28,7 @@ use crate::controllers::server_controller::ServerController;
 use crate::controllers::user_controller::UserController;
 use crate::middleware::intern::cookie_context::CookieContext;
 use crate::middleware::intern::session_context::SessionContext;
+use crate::ports::session_policy::SessionPolicy;
 use crate::ports::token::adapter::jwt_token_service::JwtTokenService;
 use crate::ports::token::token_service::TokenService;
 
@@ -34,51 +37,33 @@ const AUTH_CHANNEL: &str = "auth";
 
 /// O provider da apresentação.
 ///
-/// Guarda os **recursos já resolvidos** — o serviço de token, os cookies, o
-/// ambiente — e o provider da camada de baixo. É a mesma forma dos providers de
-/// `domain`, `infra` e `app`, e pela mesma razão: os factories devolvem
-/// `impl Trait`, e o tipo concreto de cada controller nunca é nomeado.
+/// Três campos, e é a regra: **o provider da camada de baixo e a configuração,
+/// nada mais**. Ele não recebe classe pronta — monta as que precisa, aqui
+/// dentro, a partir do que a configuração diz.
 ///
-/// A [`ApiConfig`](crate::config::api_config::ApiConfig) **não** está entre os campos. Ela entra no
-/// [`crate::bootstrap::register::register()`], é destrinchada nos valores que cada
-/// construtor precisa, e morre ali.
+/// Recebia seis argumentos, entre eles um `JwtTokenService` e um
+/// `HttpAuthCookie` já construídos. Quem os construía era o `register`, que
+/// existia por causa disso: ele destrinchava a configuração em valores soltos —
+/// o segredo do token, os nomes de cookie, o ambiente, o teto de tempo, as
+/// origens de CORS — e os repassava um a um. Uma configuração nova significava
+/// um argumento novo em duas assinaturas, e a construção de um objeto ficava
+/// longe de quem sabe do que ele é feito.
+///
+/// A configuração continua morrendo no boot, só que junto com o provider: os
+/// dois são consumidos ao montar o router e nada os mantém vivos depois.
 pub(crate) struct ApiProviderImpl<P> {
     /// De onde saem os casos de uso.
     app: P,
-    /// Quem emite e confere o access token.
-    tokens: JwtTokenService,
-    /// Em que ambiente o processo está rodando.
-    environment: String,
-    /// Por quanto tempo o refresh vale, em segundos.
-    refresh_ttl_seconds: u64,
-    /// Por quanto tempo uma requisição pode demorar.
-    request_timeout: Duration,
-    /// As origens que o CORS libera.
-    cors_origins: Vec<String>,
+    /// Onde o servidor escuta e como se comporta.
+    config: ApiConfig,
+    /// O segredo e o emissor do token de sessão.
+    jwt: JwtConfig,
 }
 
 impl<P: AppProvider> ApiProviderImpl<P> {
-    /// Monta o provider com o que o boot já resolveu.
-    ///
-    /// O serviço de token chega pronto porque só quem tem a [`ApiConfig`](crate::config::api_config::ApiConfig) em
-    /// mãos consegue construí-lo — e é o [`crate::bootstrap::register::register()`] que a
-    /// tem, e que a descarta em seguida.
-    pub(crate) const fn new(
-        app: P,
-        tokens: JwtTokenService,
-        environment: String,
-        refresh_ttl_seconds: u64,
-        request_timeout: Duration,
-        cors_origins: Vec<String>,
-    ) -> Self {
-        Self {
-            app,
-            tokens,
-            environment,
-            refresh_ttl_seconds,
-            request_timeout,
-            cors_origins,
-        }
+    /// Guarda o provider de baixo e a configuração desta camada.
+    pub(crate) const fn new(app: P, config: ApiConfig, jwt: JwtConfig) -> Self {
+        Self { app, config, jwt }
     }
 }
 
@@ -92,10 +77,10 @@ impl<P: AppProvider> ApiProvider for ApiProviderImpl<P> {
             self.app.session_use_case(),
             self.app.mark_use_case(),
             self.app.random_id_generator(),
-            self.tokens.clone(),
+            self.token_service(),
             CookieContext,
             self.logger(AUTH_CHANNEL),
-            self.refresh_ttl_seconds,
+            SessionPolicy::REFRESH_TTL.as_secs(),
         )
     }
 
@@ -124,15 +109,21 @@ impl<P: AppProvider> ApiProvider for ApiProviderImpl<P> {
     }
 
     fn server_controller(&self) -> impl ServerController + use<P> + 'static {
-        ServerControllerImpl::new(self.environment.clone())
+        ServerControllerImpl::new(self.config.environment.clone())
     }
 
     fn user_controller(&self) -> impl UserController + use<P> + 'static {
         UserControllerImpl::new(self.app.user_use_case(), SessionContext)
     }
 
+    /// Construído a cada chamada, e não guardado.
+    ///
+    /// É barato — duas chaves HMAC a partir do mesmo segredo — e é chamado duas
+    /// vezes no boot: uma pelo controller de sessão, outra pelo middleware. Um
+    /// campo memoizado economizaria uma construção e custaria um `JwtConfig`
+    /// destrinchado em dois lugares.
     fn token_service(&self) -> impl TokenService + use<P> + 'static {
-        self.tokens.clone()
+        JwtTokenService::new(&self.jwt)
     }
 
     fn logger_factory(&self) -> impl LoggerFactory + use<P> + 'static {
@@ -148,10 +139,10 @@ impl<P: AppProvider> ApiProvider for ApiProviderImpl<P> {
     }
 
     fn request_timeout(&self) -> Duration {
-        self.request_timeout
+        self.config.request_timeout
     }
 
     fn cors_origins(&self) -> &[String] {
-        &self.cors_origins
+        &self.config.cors_origins
     }
 }
