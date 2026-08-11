@@ -32,6 +32,10 @@ config = { workspace = true }
 secrecy = { workspace = true }
 base64 = { workspace = true }
 
+# Os elos da chain de configuração se declaram sozinhos numa slice que o linker
+# preenche, como as camadas do escopo da infra fazem.
+linkme = { workspace = true }
+
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }

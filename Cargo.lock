@@ -2282,6 +2282,7 @@ dependencies = [
  "cookie",
  "futures",
  "jsonwebtoken",
+ "linkme",
  "mockall",
  "planus",
  "planus-codegen",

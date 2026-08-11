@@ -35,7 +35,7 @@ async fn main() -> anyhow::Result<()> {
     let address = format!("{}:{}", secrets.api.host, secrets.api.port);
 
     let app = portmaster_app::register(secrets.app).await?;
-    let routes = router(app, secrets.api).await?;
+    let routes = router(app, secrets.api, &secrets.jwt).await?;
 
     let listener = TcpListener::bind(&address).await?;
     SystemLogger::get().info("servidor no ar", [("address", &address)]);

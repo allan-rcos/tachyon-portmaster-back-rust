@@ -6,6 +6,7 @@ use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 
 use crate::bootstrap::provider::ApiProvider;
 use crate::config::api_config::ApiConfig;
+use crate::config::jwt_config::JwtConfig;
 use crate::controllers::auth_controller::AuthController;
 use crate::controllers::{
     account_routes, auth_routes, container_routes, manifest_routes, metadata_routes,
@@ -33,8 +34,12 @@ const CORS_MAX_AGE_SECONDS: u64 = 3600;
 /// `Arc` do provider clonado duas vezes por chamada. Agora os controllers vêm
 /// prontos do `ApiProvider`, são construídos **uma vez** aqui, e cada rota
 /// clona o seu — um punhado de handles.
-pub async fn router<P: AppProvider>(app: P, config: ApiConfig) -> anyhow::Result<Router> {
-    let provider = crate::bootstrap::register::register(app, config);
+pub async fn router<P: AppProvider>(
+    app: P,
+    config: ApiConfig,
+    jwt: &JwtConfig,
+) -> anyhow::Result<Router> {
+    let provider = crate::bootstrap::register::register(app, config, jwt);
 
     // O grupo de marcador da sessão precisa existir antes da primeira
     // requisição, e quem sabe o nome dele é o controller que o usa.
