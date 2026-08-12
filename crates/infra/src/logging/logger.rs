@@ -18,16 +18,18 @@
 /// monomorfização; antes cada campo de ocasião custava um logger clonado e uma
 /// entrada num mapa, jogados fora na linha seguinte. Sem campo nenhum, é `[]`.
 pub trait Logger: Clone + Send + Sync + 'static {
-    /// Um logger igual a este, mais um campo.
+    /// Acrescenta um campo ao contexto da tarefa corrente.
     ///
-    /// Devolve um logger **novo** em vez de alterar o corrente. É para o que é
-    /// identidade **do logger** e se repete em toda linha que ele escrever; o
-    /// que pertence à requisição não passa por aqui, e sim pelo span que o
-    /// transporte abre.
-    #[must_use]
-    fn with_field(&self, key: &str, value: impl Into<String>) -> Self
-    where
-        Self: Sized;
+    /// Não devolve logger novo, e não altera este: o campo não pertence ao
+    /// logger, pertence à **tarefa**. Fica guardado no span que o transporte
+    /// abriu, então toda linha emitida dali para baixo o carrega — inclusive as
+    /// que outro componente escrever com outro logger, que nunca soube do
+    /// assunto. Era o que carimbar o campo no logger não conseguia fazer: só
+    /// alcançava quem tivesse aquele logger em mãos.
+    ///
+    /// Fora de um span aberto o campo é descartado em silêncio. Não há onde
+    /// guardá-lo, e recusar a linha por isso seria pior do que perdê-lo.
+    fn with_field(&self, key: &str, value: impl Into<String>);
 
     /// Registra um evento de rotina.
     fn info<const N: usize>(&self, message: &str, fields: [(&str, &str); N]);

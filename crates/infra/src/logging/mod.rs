@@ -7,14 +7,21 @@
 //! Para os pontos sem construtor onde injetar — pânico, função associada — há o
 //! [`SystemLogger`].
 //!
-//! ## O que correlaciona as linhas de uma requisição não está aqui
+//! ## O que atravessa as camadas é o span, e não o logger
 //!
-//! É o span do `tracing`, aberto por quem sabe o que é uma requisição: o
-//! middleware do transporte. Toda linha que sair enquanto ele estiver aberto —
-//! do `app`, da `infra`, de qualquer profundidade — sai com o `request_id`
-//! dentro, sem que nada disso precise recebê-lo por parâmetro. Era o que um
-//! logger carimbado não conseguia fazer: ele só alcançava quem o tivesse em mãos,
-//! e o `request_id` morria no middleware que o criou.
+//! Quem correlaciona é o span do `tracing`, aberto por quem sabe o que é uma
+//! requisição: o middleware do transporte. Toda linha que sair enquanto ele
+//! estiver aberto — do `app`, da `infra`, de qualquer profundidade — sai com o
+//! `request_id` dentro, sem que nada disso precise recebê-lo por parâmetro. Era
+//! o que um logger carimbado não conseguia fazer: ele só alcançava quem o
+//! tivesse em mãos, e o `request_id` morria no middleware que o criou.
+//!
+//! [`Logger::with_field`] escreve **nesse mesmo span**, e não no logger. O que a
+//! macro do span declara é fixado na expansão; o que chega depois vai para as
+//! *extensions* do span, que aceitam chave decidida em tempo de execução. O
+//! efeito é o que se espera de um contexto de tarefa: o campo que um componente
+//! acrescenta aparece nas linhas que outro componente escrever, com outro
+//! logger, enquanto os dois correrem sob o mesmo span.
 
 pub mod logger;
 pub mod logger_factory;
