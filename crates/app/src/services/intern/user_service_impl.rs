@@ -370,3 +370,7 @@ pub(crate) const PERMISSIONS: &[&str] = &[
     UPDATE,
     UPDATE_ROLES,
 ];
+
+#[cfg(test)]
+#[path = "tests/user_service_impl_test.rs"]
+mod tests;

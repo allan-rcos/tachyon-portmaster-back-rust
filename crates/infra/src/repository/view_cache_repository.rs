@@ -23,10 +23,14 @@ pub trait ViewCacheRepository {
     /// Uma entrada que não desserializa é tratada como ausência: ela é de um
     /// formato anterior, e recalcular em silêncio evita que um deploy vire
     /// incidente.
-    async fn get<V: DeserializeOwned>(&self, group: &str, key: &str) -> anyhow::Result<Option<V>>;
+    async fn get<V: DeserializeOwned + 'static>(
+        &self,
+        group: &str,
+        key: &str,
+    ) -> anyhow::Result<Option<V>>;
 
     /// Guarda a View sob esta chave.
-    async fn put<V: Serialize + Sync>(
+    async fn put<V: Serialize + Sync + 'static>(
         &self,
         group: &str,
         key: &str,

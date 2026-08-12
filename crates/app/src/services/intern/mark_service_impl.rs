@@ -80,3 +80,7 @@ where
         Ok(self.markers.is_valid(marker.group(), marker.key()).await?)
     }
 }
+
+#[cfg(test)]
+#[path = "tests/mark_service_impl_test.rs"]
+mod tests;

@@ -139,3 +139,7 @@ where
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "tests/account_service_impl_test.rs"]
+mod tests;

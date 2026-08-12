@@ -9,7 +9,7 @@ pub trait Dql {
     ///
     /// `Send` porque a View atravessa o `.await` da execução e sai por uma
     /// fronteira de tarefa — o handler que a pediu pode estar em outra thread.
-    type View: Send;
+    type View: Send + 'static;
 
     /// O que distingue esta consulta de outra do mesmo tipo.
     ///

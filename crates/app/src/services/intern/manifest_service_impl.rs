@@ -219,3 +219,7 @@ where
 /// já existem em papéis gravados, e essa é a única razão de a lista existir.
 #[cfg(test)]
 pub(crate) const PERMISSIONS: &[&str] = &[LOAD, UNLOAD];
+
+#[cfg(test)]
+#[path = "tests/manifest_service_impl_test.rs"]
+mod tests;

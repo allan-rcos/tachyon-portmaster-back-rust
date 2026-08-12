@@ -1,0 +1,22 @@
+//! O mock de [`UserTM`].
+
+use mockall::mock;
+use portmaster_domain::domain::{Role, User};
+use portmaster_domain::error::UserError;
+use portmaster_domain::table_modules::UserTM;
+
+mock! {
+    /// As regras de usuário, sob controle do teste.
+    pub(crate) UserRules {}
+
+    impl UserTM for UserRules {
+        fn create(&self, name: String, email: String, password: String,
+            roles: Vec<Box<dyn Role>>) -> Result<Box<dyn User>, UserError>;
+        fn update(&self, user: &dyn User, name: String, email: String)
+            -> Result<Box<dyn User>, UserError>;
+        fn change_password(&self, user: &dyn User, new_password: String)
+            -> Result<Box<dyn User>, UserError>;
+        fn update_roles(&self, user: &dyn User, roles: Vec<Box<dyn Role>>)
+            -> Result<Box<dyn User>, UserError>;
+    }
+}

@@ -135,3 +135,7 @@ where
         .await
     }
 }
+
+#[cfg(test)]
+#[path = "tests/session_service_impl_test.rs"]
+mod tests;

@@ -109,3 +109,7 @@ where
 /// já existem em papéis gravados, e essa é a única razão de a lista existir.
 #[cfg(test)]
 pub(crate) const PERMISSIONS: &[&str] = &[READ];
+
+#[cfg(test)]
+#[path = "tests/metrics_service_impl_test.rs"]
+mod tests;

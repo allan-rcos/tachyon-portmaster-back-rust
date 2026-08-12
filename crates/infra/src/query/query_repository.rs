@@ -12,5 +12,5 @@ pub trait QueryRepository {
     ///
     /// Um resultado vazio é sucesso com View vazia, nunca um erro: decidir que
     /// "não achei nada" é problema é do chamador, não da execução.
-    async fn run<D: SqlDql>(&self, dql: D) -> anyhow::Result<D::View>;
+    async fn run<D: SqlDql + 'static>(&self, dql: D) -> anyhow::Result<D::View>;
 }

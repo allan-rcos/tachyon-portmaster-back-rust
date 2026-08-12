@@ -337,3 +337,7 @@ where
 /// já existem em papéis gravados, e essa é a única razão de a lista existir.
 #[cfg(test)]
 pub(crate) const PERMISSIONS: &[&str] = &[CREATE, DELETE, DISPATCH, READ, SEAL, SUMMARY, UPDATE];
+
+#[cfg(test)]
+#[path = "tests/container_service_impl_test.rs"]
+mod tests;
