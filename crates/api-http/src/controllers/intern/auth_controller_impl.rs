@@ -7,7 +7,7 @@ use portmaster_app::context::UserContext;
 use portmaster_app::domain::User;
 use portmaster_app::error::{MarkerError, SessionError};
 use portmaster_app::queries::marker::GetMarkerQuery;
-use portmaster_app::services::{MarkUseCase, SessionUseCase};
+use portmaster_app::services::{MarkService, SessionService};
 use portmaster_app::{Logger, RandomIdGenerator};
 
 use crate::controllers::auth_controller::AuthController;
@@ -51,9 +51,9 @@ const REFRESH_TOKEN_GROUP: &str = "refresh-token";
 /// apareça na assinatura de contrato nenhum.
 #[derive(Clone)]
 pub(crate) struct AuthControllerImpl<S, M, R, T, A, L> {
-    /// O caso de uso de sessão.
+    /// O service de sessão.
     sessions: S,
-    /// O caso de uso de marcador, que guarda o refresh.
+    /// O service de marcador, que guarda o refresh.
     marks: M,
     /// De onde sai a metade aleatória do refresh token.
     random: R,
@@ -69,8 +69,8 @@ pub(crate) struct AuthControllerImpl<S, M, R, T, A, L> {
 
 impl<S, M, R, T, A, L> AuthControllerImpl<S, M, R, T, A, L>
 where
-    S: SessionUseCase,
-    M: MarkUseCase,
+    S: SessionService,
+    M: MarkService,
     R: RandomIdGenerator,
     T: TokenService,
     A: CookiePort,
@@ -187,8 +187,8 @@ where
 
 impl<S, M, R, T, A, L> AuthController for AuthControllerImpl<S, M, R, T, A, L>
 where
-    S: SessionUseCase + Clone + Send + Sync + 'static,
-    M: MarkUseCase + Clone + Send + Sync + 'static,
+    S: SessionService + Clone + Send + Sync + 'static,
+    M: MarkService + Clone + Send + Sync + 'static,
     R: RandomIdGenerator + Clone + Send + Sync + 'static,
     T: TokenService,
     A: CookiePort,

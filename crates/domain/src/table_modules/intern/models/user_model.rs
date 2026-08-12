@@ -7,7 +7,7 @@ use crate::domain::{Role, User};
 /// A implementação do domínio de [`User`].
 ///
 /// Construída e alterada **apenas** pelo [`UserTM`](crate::table_modules::UserTM), que é
-/// quem conhece as regras. Nem o `UseCase` nem o repositório a instanciam.
+/// quem conhece as regras. Nem o caso de uso nem o repositório a instanciam.
 pub struct UserModel {
     /// Identidade, em base62.
     id: String,

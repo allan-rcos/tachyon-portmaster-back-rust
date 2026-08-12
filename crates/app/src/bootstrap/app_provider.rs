@@ -6,19 +6,19 @@ use portmaster_infra::logging::LoggerFactory;
 use portmaster_infra::InfraProvider;
 
 use crate::bootstrap::provider::AppProvider;
-use crate::services::intern::account_use_case_impl::AccountUseCaseImpl;
-use crate::services::intern::container_use_case_impl::ContainerUseCaseImpl;
-use crate::services::intern::manifest_use_case_impl::ManifestUseCaseImpl;
-use crate::services::intern::mark_use_case_impl::MarkUseCaseImpl;
-use crate::services::intern::metadata_use_case_impl::MetadataUseCaseImpl;
-use crate::services::intern::metrics_use_case_impl::MetricsUseCaseImpl;
-use crate::services::intern::product_use_case_impl::ProductUseCaseImpl;
-use crate::services::intern::role_use_case_impl::RoleUseCaseImpl;
-use crate::services::intern::session_use_case_impl::SessionUseCaseImpl;
-use crate::services::intern::user_use_case_impl::UserUseCaseImpl;
+use crate::services::intern::account_service_impl::AccountServiceImpl;
+use crate::services::intern::container_service_impl::ContainerServiceImpl;
+use crate::services::intern::manifest_service_impl::ManifestServiceImpl;
+use crate::services::intern::mark_service_impl::MarkServiceImpl;
+use crate::services::intern::metadata_service_impl::MetadataServiceImpl;
+use crate::services::intern::metrics_service_impl::MetricsServiceImpl;
+use crate::services::intern::product_service_impl::ProductServiceImpl;
+use crate::services::intern::role_service_impl::RoleServiceImpl;
+use crate::services::intern::session_service_impl::SessionServiceImpl;
+use crate::services::intern::user_service_impl::UserServiceImpl;
 use crate::services::{
-    AccountUseCase, ContainerUseCase, ManifestUseCase, MarkUseCase, MetadataUseCase,
-    MetricsUseCase, ProductUseCase, RoleUseCase, SessionUseCase, UserUseCase,
+    AccountService, ContainerService, ManifestService, MarkService, MetadataService,
+    MetricsService, ProductService, RoleService, SessionService, UserService,
 };
 
 /// A implementação do provider. Privada: nenhum crate exporta impl.
@@ -40,8 +40,8 @@ impl<D, I> AppProviderImpl<D, I> {
 }
 
 impl<D: DomainProvider, I: InfraProvider> AppProvider for AppProviderImpl<D, I> {
-    fn account_use_case(&self) -> impl AccountUseCase + Clone + use<D, I> + 'static {
-        AccountUseCaseImpl::new(
+    fn account_service(&self) -> impl AccountService + Clone + use<D, I> + 'static {
+        AccountServiceImpl::new(
             self.infra.user_repository(),
             self.domain.user_table_module(),
             self.domain.auth_table_module(),
@@ -50,8 +50,8 @@ impl<D: DomainProvider, I: InfraProvider> AppProvider for AppProviderImpl<D, I> 
         )
     }
 
-    fn container_use_case(&self) -> impl ContainerUseCase + Clone + use<D, I> + 'static {
-        ContainerUseCaseImpl::new(
+    fn container_service(&self) -> impl ContainerService + Clone + use<D, I> + 'static {
+        ContainerServiceImpl::new(
             self.infra.container_repository(),
             self.domain.container_table_module(),
             self.infra.query_repository(),
@@ -59,8 +59,8 @@ impl<D: DomainProvider, I: InfraProvider> AppProvider for AppProviderImpl<D, I> 
         )
     }
 
-    fn manifest_use_case(&self) -> impl ManifestUseCase + Clone + use<D, I> + 'static {
-        ManifestUseCaseImpl::new(
+    fn manifest_service(&self) -> impl ManifestService + Clone + use<D, I> + 'static {
+        ManifestServiceImpl::new(
             self.infra.container_repository(),
             self.infra.product_repository(),
             self.infra.manifest_repository(),
@@ -69,8 +69,8 @@ impl<D: DomainProvider, I: InfraProvider> AppProvider for AppProviderImpl<D, I> 
         )
     }
 
-    fn mark_use_case(&self) -> impl MarkUseCase + Clone + use<D, I> + 'static {
-        MarkUseCaseImpl::new(
+    fn mark_service(&self) -> impl MarkService + Clone + use<D, I> + 'static {
+        MarkServiceImpl::new(
             self.domain.marker_table_module(),
             self.domain.marker_group_table_module(),
             self.infra.marker_repository(),
@@ -78,22 +78,22 @@ impl<D: DomainProvider, I: InfraProvider> AppProvider for AppProviderImpl<D, I> 
         )
     }
 
-    fn metadata_use_case(&self) -> impl MetadataUseCase + Clone + use<D, I> + 'static {
-        MetadataUseCaseImpl::new(
+    fn metadata_service(&self) -> impl MetadataService + Clone + use<D, I> + 'static {
+        MetadataServiceImpl::new(
             self.infra.permission_repository(),
             self.domain.permission_table_module(),
         )
     }
 
-    fn metrics_use_case(&self) -> impl MetricsUseCase + Clone + use<D, I> + 'static {
-        MetricsUseCaseImpl::new(
+    fn metrics_service(&self) -> impl MetricsService + Clone + use<D, I> + 'static {
+        MetricsServiceImpl::new(
             self.infra.query_repository(),
             self.infra.view_cache_repository(),
         )
     }
 
-    fn product_use_case(&self) -> impl ProductUseCase + Clone + use<D, I> + 'static {
-        ProductUseCaseImpl::new(
+    fn product_service(&self) -> impl ProductService + Clone + use<D, I> + 'static {
+        ProductServiceImpl::new(
             self.infra.product_repository(),
             self.domain.product_table_module(),
             self.infra.query_repository(),
@@ -101,8 +101,8 @@ impl<D: DomainProvider, I: InfraProvider> AppProvider for AppProviderImpl<D, I> 
         )
     }
 
-    fn role_use_case(&self) -> impl RoleUseCase + Clone + use<D, I> + 'static {
-        RoleUseCaseImpl::new(
+    fn role_service(&self) -> impl RoleService + Clone + use<D, I> + 'static {
+        RoleServiceImpl::new(
             self.infra.role_repository(),
             self.domain.role_table_module(),
             self.infra.query_repository(),
@@ -110,8 +110,8 @@ impl<D: DomainProvider, I: InfraProvider> AppProvider for AppProviderImpl<D, I> 
         )
     }
 
-    fn session_use_case(&self) -> impl SessionUseCase + Clone + use<D, I> + 'static {
-        SessionUseCaseImpl::new(
+    fn session_service(&self) -> impl SessionService + Clone + use<D, I> + 'static {
+        SessionServiceImpl::new(
             self.infra.user_repository(),
             self.infra.role_repository(),
             self.infra.permission_repository(),
@@ -121,8 +121,8 @@ impl<D: DomainProvider, I: InfraProvider> AppProvider for AppProviderImpl<D, I> 
         )
     }
 
-    fn user_use_case(&self) -> impl UserUseCase + Clone + use<D, I> + 'static {
-        UserUseCaseImpl::new(
+    fn user_service(&self) -> impl UserService + Clone + use<D, I> + 'static {
+        UserServiceImpl::new(
             self.infra.user_repository(),
             self.infra.role_repository(),
             self.domain.user_table_module(),

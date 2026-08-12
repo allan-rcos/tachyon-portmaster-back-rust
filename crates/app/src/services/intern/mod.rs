@@ -1,12 +1,12 @@
-//! As implementações dos casos de uso. Nenhuma sai do crate.
+//! As implementações dos services. Nenhuma sai do crate.
 
-pub(crate) mod account_use_case_impl;
-pub(crate) mod container_use_case_impl;
-pub(crate) mod manifest_use_case_impl;
-pub(crate) mod mark_use_case_impl;
-pub(crate) mod metadata_use_case_impl;
-pub(crate) mod metrics_use_case_impl;
-pub(crate) mod product_use_case_impl;
-pub(crate) mod role_use_case_impl;
-pub(crate) mod session_use_case_impl;
-pub(crate) mod user_use_case_impl;
+pub(crate) mod account_service_impl;
+pub(crate) mod container_service_impl;
+pub(crate) mod manifest_service_impl;
+pub(crate) mod mark_service_impl;
+pub(crate) mod metadata_service_impl;
+pub(crate) mod metrics_service_impl;
+pub(crate) mod product_service_impl;
+pub(crate) mod role_service_impl;
+pub(crate) mod session_service_impl;
+pub(crate) mod user_service_impl;

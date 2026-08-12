@@ -1,7 +1,7 @@
 //! # portmaster-api-http
 //!
 //! Apresentação HTTP. Depende só do `app`, e adapta o mundo REST para os
-//! `UseCases`: mapeia wire → Command na entrada e resultado → wire na saída.
+//! `Services`: mapeia wire → Command na entrada e resultado → wire na saída.
 //!
 //! Todo o HTTP mora aqui — router, middlewares, handlers, negociação de conteúdo
 //! e JWT. Nenhuma outra camada conhece token, `FlatBuffers` ou status HTTP.

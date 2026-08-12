@@ -22,7 +22,7 @@ use std::time::Duration;
 ///
 /// ## Os controllers são construídos uma vez
 ///
-/// Ao contrário dos casos de uso, que são baratos de reconstruir a cada chamada,
+/// Ao contrário dos services, que são baratos de reconstruir a cada chamada,
 /// os controllers nascem no boot e são **clonados** por requisição. É o que o
 /// [`register`](crate::bootstrap::register::register()) faz: ele consome o `AppProvider`, tira
 /// dele tudo que as rotas precisam, e o descarta. Depois do boot não existe

@@ -8,7 +8,7 @@ use portmaster_app::commands::user::{
 use portmaster_app::context::UserContext;
 use portmaster_app::error::UserError;
 use portmaster_app::queries::user::{GetUserQuery, ListUsersQuery};
-use portmaster_app::services::UserUseCase;
+use portmaster_app::services::UserService;
 
 use crate::controllers::params::user_page_params::UserPageParams;
 use crate::controllers::user_controller::UserController;
@@ -24,16 +24,16 @@ use crate::wire::vo::admin::user_roles_update_x_request::UserRolesUpdateXRequest
 use crate::wire::vo::admin::user_update_x_request::UserUpdateXRequest;
 use axum::extract::{Path, Query};
 
-/// Os handlers de usuário, genéricos sobre o caso de uso.
+/// Os handlers de usuário, genéricos sobre o service.
 #[derive(Clone)]
 pub(crate) struct UserControllerImpl<U, S> {
-    /// O caso de uso de usuário.
+    /// O service de usuário.
     users: U,
     /// Quem diz se há sessão, e quem a apresenta.
     session: S,
 }
 
-impl<U: UserUseCase, S: SessionPort> UserControllerImpl<U, S> {
+impl<U: UserService, S: SessionPort> UserControllerImpl<U, S> {
     /// Monta o controller.
     pub(crate) const fn new(users: U, session: S) -> Self {
         Self { users, session }
@@ -51,7 +51,7 @@ impl<U: UserUseCase, S: SessionPort> UserControllerImpl<U, S> {
     }
 }
 
-impl<U: UserUseCase + Clone + Send + Sync + 'static, S: SessionPort> UserController
+impl<U: UserService + Clone + Send + Sync + 'static, S: SessionPort> UserController
     for UserControllerImpl<U, S>
 {
     async fn list(self, Query(params): Query<UserPageParams>) -> ApiResponse<UserListXResponse> {

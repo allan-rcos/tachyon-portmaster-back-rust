@@ -6,8 +6,8 @@ use crate::bootstrap::app_provider::AppProviderImpl;
 use crate::bootstrap::provider::AppProvider;
 use crate::config::AppSecrets;
 use crate::services::{
-    ContainerUseCase as _, ManifestUseCase as _, MetadataUseCase as _, MetricsUseCase as _,
-    ProductUseCase as _, RoleUseCase as _, UserUseCase as _,
+    ContainerService as _, ManifestService as _, MetadataService as _, MetricsService as _,
+    ProductService as _, RoleService as _, UserService as _,
 };
 
 /// Inicializa o sistema inteiro e devolve o provider da aplicação.
@@ -29,7 +29,7 @@ use crate::services::{
 /// em endpoints que deveriam funcionar, e a causa seria invisível.
 ///
 /// Registrar no boot, e não no construtor de cada caso de uso como o PHP fazia,
-/// evita repetir o registro a cada requisição: os casos de uso são reconstruídos
+/// evita repetir o registro a cada requisição: os services são reconstruídos
 /// o tempo todo, o catálogo não.
 ///
 /// **Grupo de marcador não entra aqui.** Quem usa um grupo é a apresentação, e é
@@ -42,7 +42,7 @@ pub async fn register(secrets: AppSecrets) -> anyhow::Result<impl AppProvider> {
     let infra = portmaster_infra::register(secrets.infra).await?;
 
     let provider = AppProviderImpl::new(domain, infra);
-    let metadata = provider.metadata_use_case();
+    let metadata = provider.metadata_service();
 
     metadata
         .declare_permissions()
@@ -50,37 +50,37 @@ pub async fn register(secrets: AppSecrets) -> anyhow::Result<impl AppProvider> {
         .context("falha ao registrar as permissões de metadados")?;
 
     provider
-        .container_use_case()
+        .container_service()
         .declare_permissions(&metadata)
         .await
         .context("falha ao registrar as permissões de contêiner")?;
 
     provider
-        .manifest_use_case()
+        .manifest_service()
         .declare_permissions(&metadata)
         .await
         .context("falha ao registrar as permissões de manifesto")?;
 
     provider
-        .metrics_use_case()
+        .metrics_service()
         .declare_permissions(&metadata)
         .await
         .context("falha ao registrar as permissões do painel")?;
 
     provider
-        .product_use_case()
+        .product_service()
         .declare_permissions(&metadata)
         .await
         .context("falha ao registrar as permissões de produto")?;
 
     provider
-        .role_use_case()
+        .role_service()
         .declare_permissions(&metadata)
         .await
         .context("falha ao registrar as permissões de papel")?;
 
     provider
-        .user_use_case()
+        .user_service()
         .declare_permissions(&metadata)
         .await
         .context("falha ao registrar as permissões de usuário")?;
@@ -89,64 +89,5 @@ pub async fn register(secrets: AppSecrets) -> anyhow::Result<impl AppProvider> {
 }
 
 #[cfg(test)]
-mod tests {
-    use crate::services::intern::{
-        container_use_case_impl, manifest_use_case_impl, metadata_use_case_impl,
-        metrics_use_case_impl, product_use_case_impl, role_use_case_impl, user_use_case_impl,
-    };
-    use pretty_assertions::assert_eq;
-
-    /// Todos os slugs que o boot registra, na ordem dos serviços.
-    ///
-    /// A lista só existe sob `cfg(test)`: em produção cada slug é privado do seu
-    /// caso de uso, e nem este arquivo o enxerga.
-    fn all() -> Vec<&'static str> {
-        [
-            container_use_case_impl::PERMISSIONS,
-            manifest_use_case_impl::PERMISSIONS,
-            metadata_use_case_impl::PERMISSIONS,
-            metrics_use_case_impl::PERMISSIONS,
-            product_use_case_impl::PERMISSIONS,
-            role_use_case_impl::PERMISSIONS,
-            user_use_case_impl::PERMISSIONS,
-        ]
-        .concat()
-    }
-
-    #[test]
-    fn o_catalogo_nao_tem_slug_repetido() {
-        let mut unicos = all();
-        unicos.sort_unstable();
-        unicos.dedup();
-
-        assert_eq!(
-            unicos.len(),
-            all().len(),
-            "um slug duplicado esconde uma permissão que ninguém registrou"
-        );
-    }
-
-    /// O número é contrato: são as permissões que já existem em papéis
-    /// gravados.
-    ///
-    /// Este teste quebra tanto se alguém acrescentar um caso de uso sem
-    /// declarar a permissão quanto se remover uma que ainda está em uso.
-    #[test]
-    fn o_catalogo_tem_as_25_permissoes_do_php() {
-        assert_eq!(all().len(), 25);
-    }
-
-    /// O `TableModule` de permissão recusa slug fora deste formato — melhor
-    /// descobrir aqui do que ver o boot falhar.
-    #[test]
-    fn todo_slug_segue_o_formato_recurso_acao() {
-        for slug in all() {
-            let (resource, action) = slug
-                .split_once(':')
-                .unwrap_or_else(|| panic!("slug sem `:`: {slug}"));
-
-            assert!(!resource.is_empty(), "recurso vazio em {slug}");
-            assert!(!action.is_empty(), "ação vazia em {slug}");
-        }
-    }
-}
+#[path = "tests/register_test.rs"]
+mod tests;

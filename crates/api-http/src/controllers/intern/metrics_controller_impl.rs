@@ -2,7 +2,7 @@
 
 use portmaster_app::error::MetricsError;
 use portmaster_app::queries::metrics::GetMetricsQuery;
-use portmaster_app::services::MetricsUseCase;
+use portmaster_app::services::MetricsService;
 
 use crate::controllers::metrics_controller::MetricsController;
 use crate::middleware::session_port::SessionPort;
@@ -10,23 +10,23 @@ use crate::ports::error::api_error::ApiError;
 use crate::wire::api_response::ApiResponse;
 use crate::wire::vo::metrics::metrics_x_response::MetricsXResponse;
 
-/// Os handlers do painel, genéricos sobre o caso de uso.
+/// Os handlers do painel, genéricos sobre o service.
 #[derive(Clone)]
 pub(crate) struct MetricsControllerImpl<M, S> {
-    /// O caso de uso do painel.
+    /// O service do painel.
     metrics: M,
     /// Quem diz se há sessão, e quem a apresenta.
     session: S,
 }
 
-impl<M: MetricsUseCase, S: SessionPort> MetricsControllerImpl<M, S> {
+impl<M: MetricsService, S: SessionPort> MetricsControllerImpl<M, S> {
     /// Monta o controller.
     pub(crate) const fn new(metrics: M, session: S) -> Self {
         Self { metrics, session }
     }
 }
 
-impl<M: MetricsUseCase + Clone + Send + Sync + 'static, S: SessionPort> MetricsController
+impl<M: MetricsService + Clone + Send + Sync + 'static, S: SessionPort> MetricsController
     for MetricsControllerImpl<M, S>
 {
     async fn get(self) -> ApiResponse<MetricsXResponse> {

@@ -9,7 +9,7 @@ use portmaster_app::error::ContainerError;
 use portmaster_app::queries::container::{
     GetContainerQuery, ListContainerSummariesQuery, ListContainersQuery,
 };
-use portmaster_app::services::ContainerUseCase;
+use portmaster_app::services::ContainerService;
 
 use crate::controllers::container_controller::ContainerController;
 use crate::controllers::params::container_page_params::ContainerPageParams;
@@ -25,16 +25,16 @@ use crate::wire::vo::container::container_update_x_request::ContainerUpdateXRequ
 use crate::wire::vo::container::container_x_response::ContainerXResponse;
 use axum::extract::{Path, Query};
 
-/// Os handlers de contêiner, genéricos sobre o caso de uso.
+/// Os handlers de contêiner, genéricos sobre o service.
 #[derive(Clone)]
 pub(crate) struct ContainerControllerImpl<C, S> {
-    /// O caso de uso de contêiner.
+    /// O service de contêiner.
     containers: C,
     /// Quem diz se há sessão, e quem a apresenta.
     session: S,
 }
 
-impl<C: ContainerUseCase, S: SessionPort> ContainerControllerImpl<C, S> {
+impl<C: ContainerService, S: SessionPort> ContainerControllerImpl<C, S> {
     /// Monta o controller.
     pub(crate) const fn new(containers: C, session: S) -> Self {
         Self {
@@ -44,7 +44,7 @@ impl<C: ContainerUseCase, S: SessionPort> ContainerControllerImpl<C, S> {
     }
 }
 
-impl<C: ContainerUseCase + Clone + Send + Sync + 'static, S: SessionPort> ContainerController
+impl<C: ContainerService + Clone + Send + Sync + 'static, S: SessionPort> ContainerController
     for ContainerControllerImpl<C, S>
 {
     async fn list(
@@ -244,19 +244,5 @@ fn to_api(error: ContainerError) -> ApiError {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use pretty_assertions::assert_eq;
-
-    #[test]
-    fn o_slug_vira_status() {
-        assert_eq!(status_of("in-transit"), Some(ContainerStatus::InTransit));
-        assert_eq!(status_of("  SEALED "), Some(ContainerStatus::Sealed));
-    }
-
-    /// Um filtro que não dá para interpretar não deveria esvaziar a listagem.
-    #[test]
-    fn slug_desconhecido_nao_filtra() {
-        assert_eq!(status_of("carregando"), None);
-    }
-}
+#[path = "tests/container_controller_impl_test.rs"]
+mod tests;

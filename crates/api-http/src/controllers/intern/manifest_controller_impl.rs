@@ -3,7 +3,7 @@
 use axum::http::StatusCode;
 use portmaster_app::commands::manifest::MoveItemCommand;
 use portmaster_app::error::ManifestError;
-use portmaster_app::services::ManifestUseCase;
+use portmaster_app::services::ManifestService;
 
 use crate::controllers::manifest_controller::ManifestController;
 use crate::middleware::session_port::SessionPort;
@@ -21,23 +21,23 @@ const LOADED: &str = "Item loaded successfully.";
 /// O que a resposta de desembarque diz.
 const UNLOADED: &str = "Item unloaded successfully.";
 
-/// Os handlers de carga, genéricos sobre o caso de uso.
+/// Os handlers de carga, genéricos sobre o service.
 #[derive(Clone)]
 pub(crate) struct ManifestControllerImpl<M, S> {
-    /// O caso de uso de carga.
+    /// O service de carga.
     manifest: M,
     /// Quem diz se há sessão, e quem a apresenta.
     session: S,
 }
 
-impl<M: ManifestUseCase, S: SessionPort> ManifestControllerImpl<M, S> {
+impl<M: ManifestService, S: SessionPort> ManifestControllerImpl<M, S> {
     /// Monta o controller.
     pub(crate) const fn new(manifest: M, session: S) -> Self {
         Self { manifest, session }
     }
 }
 
-impl<M: ManifestUseCase + Clone + Send + Sync + 'static, S: SessionPort> ManifestController
+impl<M: ManifestService + Clone + Send + Sync + 'static, S: SessionPort> ManifestController
     for ManifestControllerImpl<M, S>
 {
     async fn load(self, Body(request): Body<LoadItemXRequest>) -> ApiResponse<ManifestXResponse> {

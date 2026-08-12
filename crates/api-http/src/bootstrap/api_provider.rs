@@ -52,7 +52,7 @@ const AUTH_CHANNEL: &str = "auth";
 /// A configuração continua morrendo no boot, só que junto com o provider: os
 /// dois são consumidos ao montar o router e nada os mantém vivos depois.
 pub(crate) struct ApiProviderImpl<P> {
-    /// De onde saem os casos de uso.
+    /// De onde saem os services.
     app: P,
     /// Onde o servidor escuta e como se comporta.
     config: ApiConfig,
@@ -69,13 +69,13 @@ impl<P: AppProvider> ApiProviderImpl<P> {
 
 impl<P: AppProvider> ApiProvider for ApiProviderImpl<P> {
     fn account_controller(&self) -> impl AccountController + use<P> + 'static {
-        AccountControllerImpl::new(self.app.account_use_case(), SessionContext)
+        AccountControllerImpl::new(self.app.account_service(), SessionContext)
     }
 
     fn auth_controller(&self) -> impl AuthController + use<P> + 'static {
         AuthControllerImpl::new(
-            self.app.session_use_case(),
-            self.app.mark_use_case(),
+            self.app.session_service(),
+            self.app.mark_service(),
             self.app.random_id_generator(),
             self.token_service(),
             CookieContext,
@@ -85,27 +85,27 @@ impl<P: AppProvider> ApiProvider for ApiProviderImpl<P> {
     }
 
     fn container_controller(&self) -> impl ContainerController + use<P> + 'static {
-        ContainerControllerImpl::new(self.app.container_use_case(), SessionContext)
+        ContainerControllerImpl::new(self.app.container_service(), SessionContext)
     }
 
     fn manifest_controller(&self) -> impl ManifestController + use<P> + 'static {
-        ManifestControllerImpl::new(self.app.manifest_use_case(), SessionContext)
+        ManifestControllerImpl::new(self.app.manifest_service(), SessionContext)
     }
 
     fn metadata_controller(&self) -> impl MetadataController + use<P> + 'static {
-        MetadataControllerImpl::new(self.app.metadata_use_case(), SessionContext)
+        MetadataControllerImpl::new(self.app.metadata_service(), SessionContext)
     }
 
     fn metrics_controller(&self) -> impl MetricsController + use<P> + 'static {
-        MetricsControllerImpl::new(self.app.metrics_use_case(), SessionContext)
+        MetricsControllerImpl::new(self.app.metrics_service(), SessionContext)
     }
 
     fn product_controller(&self) -> impl ProductController + use<P> + 'static {
-        ProductControllerImpl::new(self.app.product_use_case(), SessionContext)
+        ProductControllerImpl::new(self.app.product_service(), SessionContext)
     }
 
     fn role_controller(&self) -> impl RoleController + use<P> + 'static {
-        RoleControllerImpl::new(self.app.role_use_case(), SessionContext)
+        RoleControllerImpl::new(self.app.role_service(), SessionContext)
     }
 
     fn server_controller(&self) -> impl ServerController + use<P> + 'static {
@@ -113,7 +113,7 @@ impl<P: AppProvider> ApiProvider for ApiProviderImpl<P> {
     }
 
     fn user_controller(&self) -> impl UserController + use<P> + 'static {
-        UserControllerImpl::new(self.app.user_use_case(), SessionContext)
+        UserControllerImpl::new(self.app.user_service(), SessionContext)
     }
 
     /// Construído a cada chamada, e não guardado.

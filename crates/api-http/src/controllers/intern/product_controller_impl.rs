@@ -7,7 +7,7 @@ use portmaster_app::commands::product::{
 use portmaster_app::domain::RiskClass;
 use portmaster_app::error::ProductError;
 use portmaster_app::queries::product::{GetProductQuery, ListProductsQuery};
-use portmaster_app::services::ProductUseCase;
+use portmaster_app::services::ProductService;
 
 use crate::controllers::params::page_params::PageParams;
 use crate::controllers::product_controller::ProductController;
@@ -22,23 +22,23 @@ use crate::wire::vo::product::product_update_x_request::ProductUpdateXRequest;
 use crate::wire::vo::product::product_x_response::ProductXResponse;
 use axum::extract::{Path, Query};
 
-/// Os handlers de produto, genéricos sobre o caso de uso.
+/// Os handlers de produto, genéricos sobre o service.
 #[derive(Clone)]
 pub(crate) struct ProductControllerImpl<U, S> {
-    /// O caso de uso de produto.
+    /// O service de produto.
     products: U,
     /// Quem diz se há sessão, e quem a apresenta.
     session: S,
 }
 
-impl<U: ProductUseCase, S: SessionPort> ProductControllerImpl<U, S> {
+impl<U: ProductService, S: SessionPort> ProductControllerImpl<U, S> {
     /// Monta o controller.
     pub(crate) const fn new(products: U, session: S) -> Self {
         Self { products, session }
     }
 }
 
-impl<U: ProductUseCase + Clone + Send + Sync + 'static, S: SessionPort> ProductController
+impl<U: ProductService + Clone + Send + Sync + 'static, S: SessionPort> ProductController
     for ProductControllerImpl<U, S>
 {
     async fn list(self, Query(params): Query<PageParams>) -> ApiResponse<ProductListXResponse> {

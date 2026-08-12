@@ -5,7 +5,7 @@ use portmaster_app::commands::role::{CreateRoleCommand, UpdateRolePermissionsCom
 use portmaster_app::context::UserContext;
 use portmaster_app::error::RoleError;
 use portmaster_app::queries::role::{GetRoleQuery, ListRolesQuery};
-use portmaster_app::services::RoleUseCase;
+use portmaster_app::services::RoleService;
 
 use crate::controllers::params::page_params::PageParams;
 use crate::controllers::role_controller::RoleController;
@@ -19,16 +19,16 @@ use crate::wire::vo::admin::role_list_x_response::RoleListXResponse;
 use crate::wire::vo::admin::role_permissions_update_x_request::RolePermissionsUpdateXRequest;
 use axum::extract::{Path, Query};
 
-/// Os handlers de papel, genéricos sobre o caso de uso.
+/// Os handlers de papel, genéricos sobre o service.
 #[derive(Clone)]
 pub(crate) struct RoleControllerImpl<R, S> {
-    /// O caso de uso de papel.
+    /// O service de papel.
     roles: R,
     /// Quem diz se há sessão, e quem a apresenta.
     session: S,
 }
 
-impl<R: RoleUseCase, S: SessionPort> RoleControllerImpl<R, S> {
+impl<R: RoleService, S: SessionPort> RoleControllerImpl<R, S> {
     /// Monta o controller.
     pub(crate) const fn new(roles: R, session: S) -> Self {
         Self { roles, session }
@@ -46,7 +46,7 @@ impl<R: RoleUseCase, S: SessionPort> RoleControllerImpl<R, S> {
     }
 }
 
-impl<R: RoleUseCase + Clone + Send + Sync + 'static, S: SessionPort> RoleController
+impl<R: RoleService + Clone + Send + Sync + 'static, S: SessionPort> RoleController
     for RoleControllerImpl<R, S>
 {
     async fn list(self, Query(params): Query<PageParams>) -> ApiResponse<RoleListXResponse> {

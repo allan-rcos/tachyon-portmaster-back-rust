@@ -2,7 +2,7 @@
 
 use portmaster_app::error::MetadataError;
 use portmaster_app::queries::metadata::ListPermissionsQuery;
-use portmaster_app::services::MetadataUseCase;
+use portmaster_app::services::MetadataService;
 
 use crate::controllers::metadata_controller::MetadataController;
 use crate::controllers::params::search_params::SearchParams;
@@ -12,23 +12,23 @@ use crate::wire::api_response::ApiResponse;
 use crate::wire::vo::metadata::permission_list_x_response::PermissionListXResponse;
 use axum::extract::Query;
 
-/// Os handlers de metadado, genéricos sobre o caso de uso.
+/// Os handlers de metadado, genéricos sobre o service.
 #[derive(Clone)]
 pub(crate) struct MetadataControllerImpl<M, S> {
-    /// O caso de uso de metadado.
+    /// O service de metadado.
     metadata: M,
     /// Quem diz se há sessão, e quem a apresenta.
     session: S,
 }
 
-impl<M: MetadataUseCase, S: SessionPort> MetadataControllerImpl<M, S> {
+impl<M: MetadataService, S: SessionPort> MetadataControllerImpl<M, S> {
     /// Monta o controller.
     pub(crate) const fn new(metadata: M, session: S) -> Self {
         Self { metadata, session }
     }
 }
 
-impl<M: MetadataUseCase + Clone + Send + Sync + 'static, S: SessionPort> MetadataController
+impl<M: MetadataService + Clone + Send + Sync + 'static, S: SessionPort> MetadataController
     for MetadataControllerImpl<M, S>
 {
     async fn list_permissions(

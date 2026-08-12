@@ -5,7 +5,7 @@ use portmaster_app::commands::account::{ChangePasswordCommand, UpdateAccountComm
 use portmaster_app::context::UserContext;
 use portmaster_app::error::AccountError;
 use portmaster_app::queries::account::GetAccountQuery;
-use portmaster_app::services::AccountUseCase;
+use portmaster_app::services::AccountService;
 
 use crate::controllers::account_controller::AccountController;
 use crate::middleware::session_port::SessionPort;
@@ -16,16 +16,16 @@ use crate::wire::vo::account::account_password_change_x_request::AccountPassword
 use crate::wire::vo::account::account_profile_x_response::AccountProfileXResponse;
 use crate::wire::vo::account::account_update_x_request::AccountUpdateXRequest;
 
-/// Os handlers de conta, genéricos sobre o caso de uso.
+/// Os handlers de conta, genéricos sobre o service.
 #[derive(Clone)]
 pub(crate) struct AccountControllerImpl<A, S> {
-    /// O caso de uso de conta.
+    /// O service de conta.
     account: A,
     /// Quem diz se há sessão, e quem a apresenta.
     session: S,
 }
 
-impl<A: AccountUseCase, S: SessionPort> AccountControllerImpl<A, S> {
+impl<A: AccountService, S: SessionPort> AccountControllerImpl<A, S> {
     /// Monta o controller.
     pub(crate) const fn new(account: A, session: S) -> Self {
         Self { account, session }
@@ -43,7 +43,7 @@ impl<A: AccountUseCase, S: SessionPort> AccountControllerImpl<A, S> {
     }
 }
 
-impl<A: AccountUseCase + Clone + Send + Sync + 'static, S: SessionPort> AccountController
+impl<A: AccountService + Clone + Send + Sync + 'static, S: SessionPort> AccountController
     for AccountControllerImpl<A, S>
 {
     async fn get(self) -> ApiResponse<AccountProfileXResponse> {

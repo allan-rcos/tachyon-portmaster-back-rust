@@ -32,7 +32,7 @@
 //! ## Cada recurso são três arquivos
 //!
 //! O **trait** declara os handlers: que extractors cada rota consome e o que ela
-//! responde. A **impl** em `intern` é genérica sobre os casos de uso que o
+//! responde. A **impl** em `intern` é genérica sobre os services que o
 //! `AppProvider` entrega, cujos tipos são innomeáveis, e sobre as portas de
 //! contexto que ela consome. E o módulo de **rotas** é a tabela: caminho, verbo,
 //! método.
