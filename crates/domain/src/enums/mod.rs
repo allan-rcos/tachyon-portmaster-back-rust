@@ -12,7 +12,9 @@
 pub mod container_status;
 pub mod risk_class;
 pub mod telemetry_event;
+pub mod unknown_index;
 
 pub use container_status::ContainerStatus;
 pub use risk_class::RiskClass;
 pub use telemetry_event::TelemetryEvent;
+pub use unknown_index::UnknownIndex;

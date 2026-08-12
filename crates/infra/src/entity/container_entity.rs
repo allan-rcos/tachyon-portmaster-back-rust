@@ -1,22 +1,18 @@
 //! A entity de contêiner.
 
-use sqlx::mysql::MySqlRow;
-use sqlx::{FromRow, Row as _};
-
-use crate::entity::codec::Codec;
 use chrono::{DateTime, Utc};
 use portmaster_domain::domain::Container;
 use portmaster_domain::enums::ContainerStatus;
+use sqlx::FromRow;
 
-/// A entity, com o id já traduzido para base62.
+use crate::entity::entity_id::EntityId;
+
+/// A entity, que é também a linha de `containers`.
+#[derive(Clone, FromRow)]
 pub struct ContainerEntity {
-    /// Identidade em base62.
-    id: String,
-    /// O mesmo id como `BIGINT`, para os `WHERE` e as FKs.
-    ///
-    /// Guardado junto do base62 para que a escrita não precise decodificar de
-    /// volta a cada consulta.
-    raw_id: i64,
+    /// A identidade, nas duas formas.
+    #[sqlx(try_from = "i64")]
+    id: EntityId,
     /// O código do contêiner.
     code: String,
     /// Peso embarcado, em quilos.
@@ -24,6 +20,11 @@ pub struct ContainerEntity {
     /// Teto de peso.
     max_capacity: f64,
     /// O status, já como enum de domínio — a coluna guarda o índice.
+    ///
+    /// O `try_from` valida o índice na leitura: um valor que não corresponde a
+    /// variante nenhuma é uma linha que o schema não deveria admitir, e escolher
+    /// uma variante por aproximação afirmaria um estado que o banco não guardou.
+    #[sqlx(try_from = "i32")]
     status: ContainerStatus,
     /// Quando a linha nasceu, em UTC.
     created_at: DateTime<Utc>,
@@ -33,42 +34,11 @@ pub struct ContainerEntity {
     deleted_at: Option<DateTime<Utc>>,
 }
 
-impl FromRow<'_, MySqlRow> for ContainerEntity {
-    /// Uma linha de `containers` como a entity a quer.
-    ///
-    /// O índice do enum é validado aqui, na leitura: um valor que não
-    /// corresponde a variante nenhuma é uma linha que o schema não deveria
-    /// admitir, e escolher uma variante por aproximação afirmaria um estado que
-    /// o banco não guardou.
-    fn from_row(row: &MySqlRow) -> sqlx::Result<Self> {
-        let raw_id: i64 = row.try_get("id")?;
-        let status: i32 = row.try_get("status")?;
-
-        Ok(Self {
-            id: Codec::encode_id(raw_id),
-            raw_id,
-            code: row.try_get("code")?,
-            current_weight: row.try_get("current_weight")?,
-            max_capacity: row.try_get("max_capacity")?,
-            status: ContainerStatus::from_i32(status).ok_or_else(|| {
-                sqlx::Error::Decode(
-                    format!("{status} não corresponde a variante nenhuma de ContainerStatus")
-                        .into(),
-                )
-            })?,
-            created_at: row.try_get("created_at")?,
-            updated_at: row.try_get("updated_at")?,
-            deleted_at: row.try_get("deleted_at")?,
-        })
-    }
-}
-
 impl ContainerEntity {
     /// Recria a entity a partir de qualquer [`Container`], para gravá-la.
     pub(crate) fn from_domain(source: &dyn Container) -> anyhow::Result<Self> {
         Ok(Self {
-            id: source.id().to_owned(),
-            raw_id: Codec::decode_id(source.id())?,
+            id: EntityId::try_from(source.id())?,
             code: source.code().to_owned(),
             current_weight: source.current_weight(),
             max_capacity: source.max_capacity(),
@@ -81,13 +51,13 @@ impl ContainerEntity {
 
     /// O id como o banco o guarda.
     pub(crate) const fn raw_id(&self) -> i64 {
-        self.raw_id
+        self.id.raw()
     }
 }
 
 impl Container for ContainerEntity {
     fn id(&self) -> &str {
-        &self.id
+        self.id.as_str()
     }
 
     fn code(&self) -> &str {

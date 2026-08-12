@@ -2,6 +2,8 @@
 
 use std::fmt;
 
+use crate::enums::unknown_index::UnknownIndex;
+
 /// Onde um contêiner está no seu ciclo de vida no pátio.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u8)]
@@ -35,6 +37,19 @@ impl ContainerStatus {
     }
 }
 
+impl TryFrom<i32> for ContainerStatus {
+    type Error = UnknownIndex;
+
+    /// O mesmo que [`from_i32`](Self::from_i32), com a recusa já explicada.
+    ///
+    /// É esta a forma que o `#[sqlx(try_from = "i32")]` das entities usa: a
+    /// mensagem sai daqui, de onde se sabe qual enum recusou, e não do ponto de
+    /// leitura.
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
+        Self::from_i32(value).ok_or_else(|| UnknownIndex::new(value, "ContainerStatus"))
+    }
+}
+
 impl fmt::Display for ContainerStatus {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = match self {
@@ -48,38 +63,5 @@ impl fmt::Display for ContainerStatus {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use pretty_assertions::assert_eq;
-
-    /// Os índices das variantes são dado gravado, não detalhe do enum.
-    ///
-    /// Estes números estão em cada linha do banco. Se este teste quebrar depois
-    /// de mexer no enum, o problema não é o teste: as linhas já existentes
-    /// passaram a significar outra coisa.
-    #[test]
-    fn indices_das_variantes_sao_estaveis() {
-        assert_eq!(ContainerStatus::Empty.as_i32(), 0);
-        assert_eq!(ContainerStatus::Loading.as_i32(), 1);
-        assert_eq!(ContainerStatus::Sealed.as_i32(), 2);
-        assert_eq!(ContainerStatus::InTransit.as_i32(), 3);
-    }
-
-    #[test]
-    fn indice_desconhecido_nao_vira_variante() {
-        assert_eq!(ContainerStatus::from_i32(4), None);
-        assert_eq!(ContainerStatus::from_i32(-1), None);
-    }
-
-    #[test]
-    fn ida_e_volta_preserva_a_variante() {
-        for status in [
-            ContainerStatus::Empty,
-            ContainerStatus::Loading,
-            ContainerStatus::Sealed,
-            ContainerStatus::InTransit,
-        ] {
-            assert_eq!(ContainerStatus::from_i32(status.as_i32()), Some(status));
-        }
-    }
-}
+#[path = "tests/container_status_test.rs"]
+mod tests;

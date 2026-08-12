@@ -1,5 +1,7 @@
 //! A classe de risco de um produto, na numeração da ONU.
 
+use crate::enums::unknown_index::UnknownIndex;
+
 /// Classe de risco do produto, na numeração das Nações Unidas.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u8)]
@@ -50,19 +52,19 @@ impl RiskClass {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use pretty_assertions::assert_eq;
+impl TryFrom<i32> for RiskClass {
+    type Error = UnknownIndex;
 
-    #[test]
-    fn indices_das_variantes_sao_estaveis() {
-        assert_eq!(RiskClass::Class1Explosives.as_i32(), 0);
-        assert_eq!(RiskClass::None.as_i32(), 9);
-    }
-
-    #[test]
-    fn indice_desconhecido_nao_vira_variante() {
-        assert_eq!(RiskClass::from_i32(10), None);
+    /// O mesmo que [`from_i32`](Self::from_i32), com a recusa já explicada.
+    ///
+    /// É esta a forma que o `#[sqlx(try_from = "i32")]` das entities usa: a
+    /// mensagem sai daqui, de onde se sabe qual enum recusou, e não do ponto de
+    /// leitura.
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
+        Self::from_i32(value).ok_or_else(|| UnknownIndex::new(value, "RiskClass"))
     }
 }
+
+#[cfg(test)]
+#[path = "tests/risk_class_test.rs"]
+mod tests;

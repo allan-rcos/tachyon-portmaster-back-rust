@@ -3,30 +3,36 @@
 use chrono::{DateTime, Utc};
 use portmaster_domain::domain::Role;
 use portmaster_domain::domain::User;
-use sqlx::mysql::MySqlRow;
-use sqlx::{FromRow, Row as _};
+use sqlx::FromRow;
 
-use crate::entity::codec::Codec;
+use crate::entity::entity_id::EntityId;
 
-/// A entity, com o id já traduzido para base62.
+/// A entity, que é também a linha de `users`.
 ///
 /// Os papéis chegam separados: vêm de `user_roles` e são carregados pelo
 /// repositório, não pela linha de `users`.
+#[derive(FromRow)]
 pub struct UserEntity {
-    /// Identidade em base62, que é a forma que sai desta camada.
-    id: String,
-    /// O mesmo id como `BIGINT`, para os `WHERE` e as FKs.
-    ///
-    /// Guardado junto do base62 para que a escrita não precise decodificar de
-    /// volta a cada consulta.
-    raw_id: i64,
+    /// A identidade, nas duas formas.
+    #[sqlx(try_from = "i64")]
+    id: EntityId,
     /// Nome de exibição.
     name: String,
     /// E-mail, que também é a credencial de login.
     email: String,
     /// O hash Argon2, como está gravado.
     password_hash: String,
-    /// Os papéis já hidratados, vindos da mesma consulta.
+    /// Os papéis já hidratados.
+    ///
+    /// `skip` e não `default`: os dois caem no `Default`, mas o `default` ainda
+    /// tenta ler a coluna antes, e exigiria um `Decode` que `Box<dyn Role>` não
+    /// tem. `skip` não toca na linha.
+    ///
+    /// Não é coluna porque os papéis vêm de `user_roles`, numa segunda consulta,
+    /// e são anexados por [`with_roles`](Self::with_roles). Um usuário sem eles
+    /// não está completo — é o repositório que fecha isso, porque é ele quem
+    /// sabe consultar.
+    #[sqlx(skip)]
     roles: Vec<Box<dyn Role>>,
     /// Quando a linha nasceu, em UTC.
     created_at: DateTime<Utc>,
@@ -34,29 +40,6 @@ pub struct UserEntity {
     updated_at: DateTime<Utc>,
     /// Quando foi removida, ou `None` se ativa — o soft-delete.
     deleted_at: Option<DateTime<Utc>>,
-}
-
-impl FromRow<'_, MySqlRow> for UserEntity {
-    /// Uma linha de `users` como a entity a quer, **sem papéis**.
-    ///
-    /// Os papéis vêm de `user_roles`, numa segunda consulta, e são anexados por
-    /// [`with_roles`](Self::with_roles). Um usuário sem eles não está completo —
-    /// é o repositório que fecha isso, porque é ele quem sabe consultar.
-    fn from_row(row: &MySqlRow) -> sqlx::Result<Self> {
-        let raw_id: i64 = row.try_get("id")?;
-
-        Ok(Self {
-            id: Codec::encode_id(raw_id),
-            raw_id,
-            name: row.try_get("name")?,
-            email: row.try_get("email")?,
-            password_hash: row.try_get("password_hash")?,
-            roles: Vec::new(),
-            created_at: row.try_get("created_at")?,
-            updated_at: row.try_get("updated_at")?,
-            deleted_at: row.try_get("deleted_at")?,
-        })
-    }
 }
 
 impl UserEntity {
@@ -70,8 +53,7 @@ impl UserEntity {
     /// Recria a entity a partir de qualquer [`User`], para gravá-la.
     pub(crate) fn from_domain(source: &dyn User) -> anyhow::Result<Self> {
         Ok(Self {
-            id: source.id().to_owned(),
-            raw_id: Codec::decode_id(source.id())?,
+            id: EntityId::try_from(source.id())?,
             name: source.name().to_owned(),
             email: source.email().to_owned(),
             password_hash: source.password_hash().to_owned(),
@@ -84,13 +66,13 @@ impl UserEntity {
 
     /// O id como o banco o guarda.
     pub(crate) const fn raw_id(&self) -> i64 {
-        self.raw_id
+        self.id.raw()
     }
 }
 
 impl User for UserEntity {
     fn id(&self) -> &str {
-        &self.id
+        self.id.as_str()
     }
 
     fn name(&self) -> &str {
