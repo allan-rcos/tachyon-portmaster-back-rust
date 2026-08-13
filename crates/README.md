@@ -90,7 +90,7 @@ privado, e a explicação vai na doc do helper. O motivo é simples: o que está
 corpo não aparece no rustdoc, e quem lê a referência renderizada nunca vê.
 
 ```bash
-scripts/generate-docs.sh     # → docs/rustdoc, servido pelo GitHub Pages
+dagger call doc     # → docs/rustdoc, servido pelo GitHub Pages
 ```
 
 Link de doc quebrado **derruba o build** (`[workspace.lints.rustdoc]` em `deny`),
@@ -114,5 +114,5 @@ E a paridade de fio, que é o juiz final — a suíte Go fala `FlatBuffers` com 
 de verdade, sobre containers de verdade:
 
 ```bash
-scripts/integration-test.sh
+dagger call integration-test
 ```

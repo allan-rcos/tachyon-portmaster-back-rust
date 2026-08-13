@@ -9,9 +9,9 @@ belongs in the Rust unit tests instead (`cargo test --workspace`, see
 Run it:
 
 ```bash
-scripts/integration-test.sh                 # the whole suite
-scripts/integration-test.sh -run TestYard   # one story
-INTEGRATION_POOL_SIZE=2 scripts/integration-test.sh   # fewer parallel environments
+dagger call integration-test                 # the whole suite
+dagger call integration-test -run TestYard   # one story
+INTEGRATION_POOL_SIZE=2 dagger call integration-test   # fewer parallel environments
 ```
 
 Requires Docker and Go 1.25. `flatc` is **not** required — the bindings under
@@ -34,7 +34,7 @@ tests/integration/
 
 ### `internal/fbs` is generated
 
-`scripts/generate-flatbuffers-go.sh` regenerates it from the canonical schemas in
+`dagger call generate-fbs-go` regenerates it from the canonical schemas in
 the `swagger/` submodule; the output is committed so the test runtime never needs
 `flatc`. CI regenerates and runs `git diff --exit-code` against it, so a schema
 change that is not accompanied by regenerated bindings fails the build.
@@ -132,11 +132,11 @@ has a doc comment starting with its name, and the package doc lives in `doc.go`.
 ## Adding a feature to the suite
 
 1. Regenerate the bindings if the schema changed:
-   `scripts/generate-flatbuffers-go.sh`
+   `dagger call generate-fbs-go`
 2. Add the payload builders to `internal/factories/<feature>.go`, valid and
    invalid together.
 3. Add `t.Run` steps to the story that owns the resource.
-4. Run it: `scripts/integration-test.sh -run TestYardStory`
+4. Run it: `dagger call integration-test --args -run,TestYardStory`
 
 Each layer's own module documentation says what belongs in it; the
 [ADRs](../../docs/adr/) say why.

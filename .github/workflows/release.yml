@@ -58,7 +58,7 @@ jobs:
           dagger version
 
       # The version is declared once, in the workspace manifest, and read from
-      # there by scripts/build-dist.sh; this only asks the same field the same
+      # there by dagger call dist; this only asks the same field the same
       # way, to find out whether that version has been released already.
       # `git ls-remote` rather than a local tag list, so the answer is what is
       # actually published and not what this checkout happens to have fetched.

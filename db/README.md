@@ -53,7 +53,7 @@ Run them:
 
 ```bash
 docker compose up migrate                 # dev stack
-scripts/integration-test.sh               # harness does its own
+dagger call integration-test               # harness does its own
 ```
 
 ## What the column types are, and why

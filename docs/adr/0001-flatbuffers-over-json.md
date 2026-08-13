@@ -55,7 +55,7 @@ transforms are deterministic and idempotent, so they survive regeneration:
   [0007](0007-phpstan-baseline-limited-to-generated-code.md)) and from the
   rendered documentation. Proxies are excluded from neither.
 - A schema change is a four-step operation: edit `.fbs`, `composer flatbuffers`,
-  `scripts/generate-flatbuffers-go.sh`, update the proxies. The new-feature
+  `dagger call generate-fbs-go`, update the proxies. The new-feature
   guide walks it.
 - `flatc` is required to change schemas, though not to run anything.
 

@@ -21,7 +21,7 @@ sound if nothing reads them back at runtime.
 
 ## Decision
 
-`scripts/build-dist.sh` produces two zstd tarballs in `dist/`, each with a
+`dagger call dist` produces two zstd tarballs in `dist/`, each with a
 `.sha256`:
 
 | Artifact | Holds | Applied by |

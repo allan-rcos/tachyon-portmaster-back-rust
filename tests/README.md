@@ -19,7 +19,7 @@ a table module or a repository requires.
 | Lives in | `crates/*/src/**`, beside the code | here |
 | Covers | rules and control flow | the API as a client sees it |
 | Talks to | fakes and hand-written stubs | real HTTP, real MariaDB |
-| Run | `cargo test --workspace` | `scripts/integration-test.sh` |
+| Run | `cargo test --workspace` | `dagger call integration-test` |
 | Costs | ~4 s for all of them | ~20 s per leased environment |
 
 **The dividing line:** if a behaviour is observable through a request and a
@@ -86,8 +86,8 @@ Full detail, including the factory layout and the comment convention:
 cargo test --workspace                         # unit
 cargo test -p portmaster-domain                # one crate
 cargo test product::                           # one module
-scripts/integration-test.sh                    # integration
-scripts/integration-test.sh -run TestYardStory # one story
+dagger call integration-test                    # integration
+dagger call integration-test --args -run,TestYardStory # one story
 ```
 
 CI runs them as separate jobs — see [`.github/README.md`](../.github/README.md).

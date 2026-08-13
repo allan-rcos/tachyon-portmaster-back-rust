@@ -190,8 +190,8 @@ Ciclo de vida de um contêiner: crie-o, embarque itens com `POST /manifests/load
 | `cargo fmt --all --check` | formatação |
 | `cargo clippy --workspace --all-targets -- -D warnings` | lint, incluindo o código de teste |
 | `cargo test --workspace` | testes unitários — regras de domínio, espinha transacional, wire |
-| `scripts/integration-test.sh` | suíte de integração em Go (precisa de Docker) |
-| `scripts/generate-flatbuffers-go.sh` | regera os bindings Go da suíte de testes |
+| `dagger call integration-test` | suíte de integração em Go (precisa de Docker) |
+| `dagger call generate-fbs-go` | regera os bindings Go da suíte de testes |
 | `cargo doc --workspace --no-deps --open` | a documentação de API, gerada do próprio código |
 
 **A linha divisória entre as suítes:** se um comportamento é observável por uma requisição e uma resposta, é integração; se é uma regra ou um desvio, é unitário. Os testes unitários batem direto nos *table modules* — é onde as regras existem — e nos casos de uso, verificando *commit* no caminho feliz, *rollback* em qualquer falha e o guarda de `403`. A suíte de integração é escrita como **histórias** (sessão, administração, pátio) que sobem MariaDB em tmpfs e um pool de APIs reais via testcontainers-go.
@@ -216,7 +216,7 @@ O CI ([GitHub Actions](.github/workflows/ci.yml)) roda dois jobs independentes: 
 
 Contribuições são bem-vindas. Antes de abrir um PR:
 
-1. `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings` e `cargo test --workspace` precisam passar; para mudanças na borda da API, `scripts/integration-test.sh` também.
+1. `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings` e `cargo test --workspace` precisam passar; para mudanças na borda da API, `dagger call integration-test` também.
 2. Mantenha a direção das dependências e a convenção de contrato/implementação: trait público, tipo concreto `pub(crate)`, provider devolvendo `impl Trait`.
 3. Regra nova vive no *table module*, não no handler nem no repositório.
 4. Mudou schema `.fbs`? Regere os bindings Go e comite o resultado — os tipos Rust saem do build.

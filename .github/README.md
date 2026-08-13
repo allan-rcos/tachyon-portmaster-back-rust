@@ -11,7 +11,7 @@ Two, independent and parallel — a clippy failure does not hide a test failure.
 | Job | Runs | Typical |
 |---|---|---|
 | `rust` | `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test`, release build | ~3–6 min |
-| `go-integration` | `scripts/integration-test.sh` | 5–15 min |
+| `go-integration` | `dagger call integration-test` | 5–15 min |
 
 ### `rust`
 
@@ -46,9 +46,9 @@ the Go bindings, and fails on a diff:
 ```yaml
 - name: Verify generated Go bindings are up to date
   run: |
-    scripts/generate-flatbuffers-go.sh
+    dagger call generate-fbs-go
     git diff --exit-code tests/integration/internal/fbs \
-      || (echo "::error::Go FlatBuffers bindings are stale — run scripts/generate-flatbuffers-go.sh" && exit 1)
+      || (echo "::error::Go FlatBuffers bindings are stale — run dagger call generate-fbs-go" && exit 1)
 ```
 
 The bindings are committed so the test runtime never needs `flatc`. This is what
@@ -63,7 +63,7 @@ both read `swagger/flatbuffers/schemas/`.
 
 ## Release
 
-`workflows/release.yml`, one job. It runs `scripts/build-dist.sh` and nothing
+`workflows/release.yml`, one job. It runs `dagger call dist` and nothing
 else — anything CI does here, a developer can do with the same command.
 
 **The version decides, not the trigger.** Every push to `main` builds — the
