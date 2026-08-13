@@ -1,0 +1,13 @@
+{
+  "name": "codegen",
+  "engineVersion": "v0.21.8",
+  "sdk": {
+    "source": "go"
+  },
+  "dependencies": [
+    {
+      "name": "toolchain",
+      "source": "../toolchain"
+    }
+  ]
+}

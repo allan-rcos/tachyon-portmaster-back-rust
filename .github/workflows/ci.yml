@@ -15,103 +15,71 @@ env:
   # A warning that only appears locally is a warning nobody fixes.
   RUSTFLAGS: -D warnings
 
+env:
+  # Fixado na versão que os módulos de dagger/ declaram no dagger.json. Um CLI
+  # mais novo que o engine contra o qual eles foram gerados reexecuta o codegen
+  # no meio do job.
+  DAGGER_VERSION: "0.21.8"
+
 jobs:
+  # fmt, clippy, lint-exports, doc e testes eram cinco passos com um setup de
+  # toolchain próprio. São um `dagger call ci` agora, e o mesmo comando roda na
+  # máquina de quem desenvolve — que antes não tinha como reproduzir nada disto
+  # sem um push.
+  #
+  # A ordem continua deliberada e continua documentada, só que em dagger/ci.go:
+  # formatação primeiro porque é instantânea, clippy depois porque compila, e os
+  # testes por último. Um erro de formatação não deve custar uma compilação
+  # inteira para aparecer.
   rust:
-    name: fmt, clippy, tests
+    name: fmt, clippy, doc, tests
     runs-on: ubuntu-latest
-    steps:
-      # The FlatBuffers schemas are a submodule and `build.rs` generates the
-      # wire types from them, so a shallow checkout fails at compile time rather
-      # than at checkout — with an error that does not mention submodules.
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Setup Rust
-        # rust-toolchain.toml pins the channel and the components; this action
-        # reads it, so the version here and the one a developer gets locally
-        # cannot drift apart.
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache
-        uses: Swatinem/rust-cache@v2
-
-      - name: Format
-        run: cargo fmt --all --check
-
-      # --all-targets so the lint reaches test code too: a clippy failure that
-      # only shows up when someone runs the tests is a failure found late.
-      - name: Clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings
-
-      - name: Lint exports
-        run: cargo run --package xtask --locked -- lint-exports --github
-
-      # --document-private-items because the `intern/` implementations are the
-      # bulk of what is written here, and without the flag rustdoc renders the
-      # contracts and silently drops the classes behind them — along with every
-      # implementation note on them. -D warnings turns a broken `[`Item`]` link
-      # into a build failure; left as a warning it disappears into the log and
-      # the link quietly renders as plain text.
-      - name: Docs
-        run: cargo doc --workspace --no-deps --document-private-items
-        env:
-          RUSTDOCFLAGS: -D warnings
-
-      # Clippy lints code; it cannot say "this crate does not belong here". The
-      # two bans in deny.toml — async-trait and openssl — are architecture rules
-      # that have no other place to live.
-      - name: Cargo deny
-        uses: EmbarkStudios/cargo-deny-action@v2
-        with:
-          command: check bans
-
-      - name: Tests
-        run: cargo test --workspace
-
-      # The binary is what the integration suite actually runs, and a release
-      # build catches what a debug build does not — an overflow that only panics
-      # with debug assertions off, a dependency that fails to link optimised.
-      - name: Release build
-        run: cargo build --workspace --release --locked
-
-  go-integration:
-    name: Go integration (FlatBuffers, testcontainers)
-    runs-on: ubuntu-latest
-    # Building the API image and restarting a container per test makes this the
-    # slow job by a wide margin; the ceiling is here so a hung container fails
-    # rather than burning the default six hours.
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - name: Instalar o Dagger
+        run: |
+          curl -fsSL https://dl.dagger.io/dagger/install.sh \
+            | DAGGER_VERSION="${DAGGER_VERSION}" BIN_DIR=/usr/local/bin sudo -E sh
+          dagger version
+
+      - name: Verificar
+        working-directory: dagger
+        run: dagger call ci
+
+  go-integration:
+    name: Go integration (FlatBuffers, testcontainers)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-go@v5
         with:
           go-version: "1.25"
           cache-dependency-path: tests/integration/go.sum
 
-      # flatc is a test-side tool only: it regenerates the Go bindings the suite
-      # decodes responses with. The API itself never sees it — its own wire types
-      # come from planus, in Rust, at build time.
-      - name: Install flatc
+      - name: Instalar o Dagger
         run: |
-          FLATC_VERSION=25.12.19
-          curl -fsSL -o /tmp/flatc.zip \
-            "https://github.com/google/flatbuffers/releases/download/v${FLATC_VERSION}/Linux.flatc.binary.g++-13.zip"
-          sudo unzip -o /tmp/flatc.zip -d /usr/local/bin
-          flatc --version
+          curl -fsSL https://dl.dagger.io/dagger/install.sh \
+            | DAGGER_VERSION="${DAGGER_VERSION}" BIN_DIR=/usr/local/bin sudo -E sh
 
-      - name: Verify generated Go bindings are up to date
-        run: |
-          scripts/generate-flatbuffers-go.sh
-          git diff --exit-code tests/integration/internal/fbs \
-            || (echo "::error::Go FlatBuffers bindings are stale — run scripts/generate-flatbuffers-go.sh" && exit 1)
+      # O flatc saiu daqui: dagger/modules/codegen traz o seu, fixado num lugar
+      # só. E `check-fbs-go` regenera e compara DENTRO do container, então a
+      # checagem não suja a árvore de trabalho antes de a suíte rodar — o antigo
+      # `generate && git diff --exit-code` sujava.
+      - name: Os bindings Go estão em dia?
+        working-directory: dagger
+        run: dagger call check-fbs-go
 
-      # The suite builds the API image itself, from the repo Dockerfile. Nothing
-      # here has to prepare a database: testcontainers stands up a tmpfs MariaDB
-      # and migrates it per environment.
-      - name: Run integration suite
-        run: scripts/integration-test.sh
+      # Chamado direto, e não por `dagger call integration-test`: o runner já tem
+      # um daemon Docker, e passar pela função aninharia um segundo daemon dentro
+      # do engine. A função existe para rodar a suíte num laptop.
+      - name: Suíte de integração
+        working-directory: tests/integration
+        run: go test ./... -count=1 -timeout 20m

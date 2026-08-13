@@ -1,0 +1,21 @@
+{
+  "name": "back-rust",
+  "engineVersion": "v0.21.8",
+  "sdk": {
+    "source": "go"
+  },
+  "dependencies": [
+    {
+      "name": "artifact",
+      "source": "modules/artifact"
+    },
+    {
+      "name": "codegen",
+      "source": "modules/codegen"
+    },
+    {
+      "name": "toolchain",
+      "source": "modules/toolchain"
+    }
+  ]
+}

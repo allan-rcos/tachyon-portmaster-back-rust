@@ -24,6 +24,9 @@ on:
 concurrency:
   group: release-${{ github.ref }}
 
+env:
+  DAGGER_VERSION: "0.21.8"
+
 jobs:
   artifact:
     name: Build the production artifact
@@ -41,18 +44,18 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-unknown-linux-musl
-
-      # The static link needs a musl toolchain for the dependencies that carry C
-      # — `ring`, from the TLS stack, is the one that matters.
-      - name: Install the musl toolchain
-        run: sudo apt-get update && sudo apt-get install -y musl-tools zstd
-
-      - name: Cache
-        uses: Swatinem/rust-cache@v2
+      # A toolchain do Rust, o alvo musl e o musl-gcc saíram daqui. Vivem em
+      # dagger/modules/toolchain, onde a mesma definição serve a este workflow e
+      # a quem roda `dagger call dist` na própria máquina — que antes não tinha
+      # como reproduzir o artefato sem montar tudo isto à mão.
+      #
+      # A ligação estática precisa do musl-gcc por causa das dependências que
+      # carregam C; `ring`, da pilha de TLS, é a que importa.
+      - name: Instalar o Dagger
+        run: |
+          curl -fsSL https://dl.dagger.io/dagger/install.sh \
+            | DAGGER_VERSION="${DAGGER_VERSION}" BIN_DIR=/usr/local/bin sudo -E sh
+          dagger version
 
       # The version is declared once, in the workspace manifest, and read from
       # there by scripts/build-dist.sh; this only asks the same field the same
@@ -61,14 +64,16 @@ jobs:
       # actually published and not what this checkout happens to have fetched.
       - name: Decide the version and whether it is new
         id: version
+        working-directory: dagger
         run: |
           if [ "$GITHUB_REF_TYPE" = tag ]; then
             version="${GITHUB_REF_NAME#v}"
             publish=true
             echo "building tag $GITHUB_REF_NAME"
           else
-            version="$(cargo metadata --format-version 1 --no-deps \
-              | grep -o '"version":"[^"]*"' | head -1 | cut -d'"' -f4)"
+            # `dagger call version` lê o mesmo campo de [workspace.package] —
+            # em Go, sem cargo no runner e sem grep sobre um JSON.
+            version="$(dagger call version)"
             [ -n "$version" ] || { echo "the workspace declares no version" >&2; exit 1; }
             if git ls-remote --exit-code --tags origin "refs/tags/v${version}" >/dev/null 2>&1; then
               publish=false
@@ -87,7 +92,8 @@ jobs:
       # One command, the same one a developer runs. Anything CI does here has to
       # be reproducible locally, or the build only works on a machine nobody has.
       - name: Build
-        run: scripts/build-dist.sh "${{ steps.version.outputs.version }}"
+        working-directory: dagger
+        run: dagger call dist --version "${{ steps.version.outputs.version }}" export --path ../dist
 
       # tag_name creates the tag on this commit when it does not exist, so
       # cutting a release is a change to the workspace version and nothing else.
