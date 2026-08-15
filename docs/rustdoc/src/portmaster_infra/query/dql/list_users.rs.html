@@ -100,40 +100,6 @@
 <a href=#100 id=100 data-nosnippet>100</a>}
 <a href=#101 id=101 data-nosnippet>101</a>
 <a href=#102 id=102 data-nosnippet>102</a><span class="attr">#[cfg(test)]
-<a href=#103 id=103 data-nosnippet>103</a></span><span class="kw">mod </span>tests {
-<a href=#104 id=104 data-nosnippet>104</a>    <span class="kw">use </span>super::<span class="kw-2">*</span>;
-<a href=#105 id=105 data-nosnippet>105</a>    <span class="kw">use </span>pretty_assertions::assert_eq;
-<a href=#106 id=106 data-nosnippet>106</a>
-<a href=#107 id=107 data-nosnippet>107</a>    <span class="doccomment">/// É o que impede o fan-out de papéis de cortar a página no meio de um
-<a href=#108 id=108 data-nosnippet>108</a>    /// usuário.
-<a href=#109 id=109 data-nosnippet>109</a>    </span><span class="attr">#[test]
-<a href=#110 id=110 data-nosnippet>110</a>    </span><span class="kw">fn </span>a_pagina_de_usuarios_sai_de_uma_tabela_derivada() {
-<a href=#111 id=111 data-nosnippet>111</a>        <span class="kw">let </span>dql = ListUsers {
-<a href=#112 id=112 data-nosnippet>112</a>            limit: <span class="number">10</span>,
-<a href=#113 id=113 data-nosnippet>113</a>            offset: <span class="number">20</span>,
-<a href=#114 id=114 data-nosnippet>114</a>        };
-<a href=#115 id=115 data-nosnippet>115</a>
-<a href=#116 id=116 data-nosnippet>116</a>        <span class="macro">assert_eq!</span>(
-<a href=#117 id=117 data-nosnippet>117</a>            dql.build().sql(),
-<a href=#118 id=118 data-nosnippet>118</a>            <span class="string">"SELECT u.id AS user_id, u.name AS user_name, u.email AS user_email, \
-<a href=#119 id=119 data-nosnippet>119</a>             r.id AS role_id, r.name AS role_name, r.permissions AS role_permissions, \
-<a href=#120 id=120 data-nosnippet>120</a>             (SELECT COUNT(*) FROM user_roles urc WHERE urc.role_id = r.id) AS role_user_count \
-<a href=#121 id=121 data-nosnippet>121</a>             FROM (SELECT id, name, email FROM users WHERE deleted_at IS NULL \
-<a href=#122 id=122 data-nosnippet>122</a>             ORDER BY id ASC LIMIT ? OFFSET ?) AS u \
-<a href=#123 id=123 data-nosnippet>123</a>             LEFT JOIN user_roles ur ON ur.user_id = u.id \
-<a href=#124 id=124 data-nosnippet>124</a>             LEFT JOIN roles r ON r.id = ur.role_id AND r.deleted_at IS NULL \
-<a href=#125 id=125 data-nosnippet>125</a>             ORDER BY u.id ASC, r.id ASC"
-<a href=#126 id=126 data-nosnippet>126</a>        </span>);
-<a href=#127 id=127 data-nosnippet>127</a>    }
-<a href=#128 id=128 data-nosnippet>128</a>
-<a href=#129 id=129 data-nosnippet>129</a>    <span class="doccomment">/// Pedir uma página além do fim é uma lista vazia, não um resultado
-<a href=#130 id=130 data-nosnippet>130</a>    /// sorteado: sem saturar, o produto estoura o `u32` e dá a volta.
-<a href=#131 id=131 data-nosnippet>131</a>    </span><span class="attr">#[test]
-<a href=#132 id=132 data-nosnippet>132</a>    </span><span class="kw">fn </span>a_pagina_absurda_nao_da_a_volta() {
-<a href=#133 id=133 data-nosnippet>133</a>        <span class="macro">assert_eq!</span>(Paging::offset(<span class="prelude-val">Some</span>(u32::MAX), <span class="number">20</span>), u32::MAX);
-<a href=#134 id=134 data-nosnippet>134</a>        <span class="macro">assert_eq!</span>(Paging::offset(<span class="prelude-val">None</span>, <span class="number">20</span>), <span class="number">0</span>);
-<a href=#135 id=135 data-nosnippet>135</a>        <span class="macro">assert_eq!</span>(Paging::offset(<span class="prelude-val">Some</span>(<span class="number">0</span>), <span class="number">20</span>), <span class="number">0</span>);
-<a href=#136 id=136 data-nosnippet>136</a>        <span class="macro">assert_eq!</span>(Paging::offset(<span class="prelude-val">Some</span>(<span class="number">3</span>), <span class="number">10</span>), <span class="number">20</span>);
-<a href=#137 id=137 data-nosnippet>137</a>    }
-<a href=#138 id=138 data-nosnippet>138</a>}
+<a href=#103 id=103 data-nosnippet>103</a>#[path = <span class="string">"tests/list_users_test.rs"</span>]
+<a href=#104 id=104 data-nosnippet>104</a></span><span class="kw">mod </span>tests;
 </code></pre></div></section></main></body></html>

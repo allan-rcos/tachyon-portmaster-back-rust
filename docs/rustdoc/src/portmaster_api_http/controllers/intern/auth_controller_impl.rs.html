@@ -7,7 +7,7 @@
 <a href=#7 id=7 data-nosnippet>7</a><span class="kw">use </span>portmaster_app::domain::User;
 <a href=#8 id=8 data-nosnippet>8</a><span class="kw">use </span>portmaster_app::error::{MarkerError, SessionError};
 <a href=#9 id=9 data-nosnippet>9</a><span class="kw">use </span>portmaster_app::queries::marker::GetMarkerQuery;
-<a href=#10 id=10 data-nosnippet>10</a><span class="kw">use </span>portmaster_app::services::{MarkUseCase, SessionUseCase};
+<a href=#10 id=10 data-nosnippet>10</a><span class="kw">use </span>portmaster_app::services::{MarkService, SessionService};
 <a href=#11 id=11 data-nosnippet>11</a><span class="kw">use </span>portmaster_app::{Logger, RandomIdGenerator};
 <a href=#12 id=12 data-nosnippet>12</a>
 <a href=#13 id=13 data-nosnippet>13</a><span class="kw">use </span><span class="kw">crate</span>::controllers::auth_controller::AuthController;
@@ -51,9 +51,9 @@
 <a href=#51 id=51 data-nosnippet>51</a>/// apareça na assinatura de contrato nenhum.
 <a href=#52 id=52 data-nosnippet>52</a></span><span class="attr">#[derive(Clone)]
 <a href=#53 id=53 data-nosnippet>53</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>AuthControllerImpl&lt;S, M, R, T, A, L&gt; {
-<a href=#54 id=54 data-nosnippet>54</a>    <span class="doccomment">/// O caso de uso de sessão.
+<a href=#54 id=54 data-nosnippet>54</a>    <span class="doccomment">/// O service de sessão.
 <a href=#55 id=55 data-nosnippet>55</a>    </span>sessions: S,
-<a href=#56 id=56 data-nosnippet>56</a>    <span class="doccomment">/// O caso de uso de marcador, que guarda o refresh.
+<a href=#56 id=56 data-nosnippet>56</a>    <span class="doccomment">/// O service de marcador, que guarda o refresh.
 <a href=#57 id=57 data-nosnippet>57</a>    </span>marks: M,
 <a href=#58 id=58 data-nosnippet>58</a>    <span class="doccomment">/// De onde sai a metade aleatória do refresh token.
 <a href=#59 id=59 data-nosnippet>59</a>    </span>random: R,
@@ -69,8 +69,8 @@
 <a href=#69 id=69 data-nosnippet>69</a>
 <a href=#70 id=70 data-nosnippet>70</a><span class="kw">impl</span>&lt;S, M, R, T, A, L&gt; AuthControllerImpl&lt;S, M, R, T, A, L&gt;
 <a href=#71 id=71 data-nosnippet>71</a><span class="kw">where
-<a href=#72 id=72 data-nosnippet>72</a>    </span>S: SessionUseCase,
-<a href=#73 id=73 data-nosnippet>73</a>    M: MarkUseCase,
+<a href=#72 id=72 data-nosnippet>72</a>    </span>S: SessionService,
+<a href=#73 id=73 data-nosnippet>73</a>    M: MarkService,
 <a href=#74 id=74 data-nosnippet>74</a>    R: RandomIdGenerator,
 <a href=#75 id=75 data-nosnippet>75</a>    T: TokenService,
 <a href=#76 id=76 data-nosnippet>76</a>    A: CookiePort,
@@ -187,8 +187,8 @@
 <a href=#187 id=187 data-nosnippet>187</a>
 <a href=#188 id=188 data-nosnippet>188</a><span class="kw">impl</span>&lt;S, M, R, T, A, L&gt; AuthController <span class="kw">for </span>AuthControllerImpl&lt;S, M, R, T, A, L&gt;
 <a href=#189 id=189 data-nosnippet>189</a><span class="kw">where
-<a href=#190 id=190 data-nosnippet>190</a>    </span>S: SessionUseCase + Clone + Send + Sync + <span class="lifetime">'static</span>,
-<a href=#191 id=191 data-nosnippet>191</a>    M: MarkUseCase + Clone + Send + Sync + <span class="lifetime">'static</span>,
+<a href=#190 id=190 data-nosnippet>190</a>    </span>S: SessionService + Clone + Send + Sync + <span class="lifetime">'static</span>,
+<a href=#191 id=191 data-nosnippet>191</a>    M: MarkService + Clone + Send + Sync + <span class="lifetime">'static</span>,
 <a href=#192 id=192 data-nosnippet>192</a>    R: RandomIdGenerator + Clone + Send + Sync + <span class="lifetime">'static</span>,
 <a href=#193 id=193 data-nosnippet>193</a>    T: TokenService,
 <a href=#194 id=194 data-nosnippet>194</a>    A: CookiePort,

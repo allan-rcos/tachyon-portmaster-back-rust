@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["Fields","TracingLogger"]};
+window.SIDEBAR_ITEMS = {"fn":["append","record_on_span"],"struct":["SpanFields","TracingLogger"]};

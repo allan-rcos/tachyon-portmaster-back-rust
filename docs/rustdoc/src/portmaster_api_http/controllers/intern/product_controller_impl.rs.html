@@ -7,7 +7,7 @@
 <a href=#7 id=7 data-nosnippet>7</a><span class="kw">use </span>portmaster_app::domain::RiskClass;
 <a href=#8 id=8 data-nosnippet>8</a><span class="kw">use </span>portmaster_app::error::ProductError;
 <a href=#9 id=9 data-nosnippet>9</a><span class="kw">use </span>portmaster_app::queries::product::{GetProductQuery, ListProductsQuery};
-<a href=#10 id=10 data-nosnippet>10</a><span class="kw">use </span>portmaster_app::services::ProductUseCase;
+<a href=#10 id=10 data-nosnippet>10</a><span class="kw">use </span>portmaster_app::services::ProductService;
 <a href=#11 id=11 data-nosnippet>11</a>
 <a href=#12 id=12 data-nosnippet>12</a><span class="kw">use </span><span class="kw">crate</span>::controllers::params::page_params::PageParams;
 <a href=#13 id=13 data-nosnippet>13</a><span class="kw">use </span><span class="kw">crate</span>::controllers::product_controller::ProductController;
@@ -22,23 +22,23 @@
 <a href=#22 id=22 data-nosnippet>22</a><span class="kw">use </span><span class="kw">crate</span>::wire::vo::product::product_x_response::ProductXResponse;
 <a href=#23 id=23 data-nosnippet>23</a><span class="kw">use </span>axum::extract::{Path, Query};
 <a href=#24 id=24 data-nosnippet>24</a>
-<a href=#25 id=25 data-nosnippet>25</a><span class="doccomment">/// Os handlers de produto, genéricos sobre o caso de uso.
+<a href=#25 id=25 data-nosnippet>25</a><span class="doccomment">/// Os handlers de produto, genéricos sobre o service.
 <a href=#26 id=26 data-nosnippet>26</a></span><span class="attr">#[derive(Clone)]
 <a href=#27 id=27 data-nosnippet>27</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>ProductControllerImpl&lt;U, S&gt; {
-<a href=#28 id=28 data-nosnippet>28</a>    <span class="doccomment">/// O caso de uso de produto.
+<a href=#28 id=28 data-nosnippet>28</a>    <span class="doccomment">/// O service de produto.
 <a href=#29 id=29 data-nosnippet>29</a>    </span>products: U,
 <a href=#30 id=30 data-nosnippet>30</a>    <span class="doccomment">/// Quem diz se há sessão, e quem a apresenta.
 <a href=#31 id=31 data-nosnippet>31</a>    </span>session: S,
 <a href=#32 id=32 data-nosnippet>32</a>}
 <a href=#33 id=33 data-nosnippet>33</a>
-<a href=#34 id=34 data-nosnippet>34</a><span class="kw">impl</span>&lt;U: ProductUseCase, S: SessionPort&gt; ProductControllerImpl&lt;U, S&gt; {
+<a href=#34 id=34 data-nosnippet>34</a><span class="kw">impl</span>&lt;U: ProductService, S: SessionPort&gt; ProductControllerImpl&lt;U, S&gt; {
 <a href=#35 id=35 data-nosnippet>35</a>    <span class="doccomment">/// Monta o controller.
 <a href=#36 id=36 data-nosnippet>36</a>    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const fn </span>new(products: U, session: S) -&gt; <span class="self">Self </span>{
 <a href=#37 id=37 data-nosnippet>37</a>        <span class="self">Self </span>{ products, session }
 <a href=#38 id=38 data-nosnippet>38</a>    }
 <a href=#39 id=39 data-nosnippet>39</a>}
 <a href=#40 id=40 data-nosnippet>40</a>
-<a href=#41 id=41 data-nosnippet>41</a><span class="kw">impl</span>&lt;U: ProductUseCase + Clone + Send + Sync + <span class="lifetime">'static</span>, S: SessionPort&gt; ProductController
+<a href=#41 id=41 data-nosnippet>41</a><span class="kw">impl</span>&lt;U: ProductService + Clone + Send + Sync + <span class="lifetime">'static</span>, S: SessionPort&gt; ProductController
 <a href=#42 id=42 data-nosnippet>42</a>    <span class="kw">for </span>ProductControllerImpl&lt;U, S&gt;
 <a href=#43 id=43 data-nosnippet>43</a>{
 <a href=#44 id=44 data-nosnippet>44</a>    <span class="kw">async fn </span>list(<span class="self">self</span>, Query(params): Query&lt;PageParams&gt;) -&gt; ApiResponse&lt;ProductListXResponse&gt; {

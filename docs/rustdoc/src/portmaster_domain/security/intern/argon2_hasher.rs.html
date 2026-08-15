@@ -63,34 +63,6 @@
 <a href=#63 id=63 data-nosnippet>63</a>}
 <a href=#64 id=64 data-nosnippet>64</a>
 <a href=#65 id=65 data-nosnippet>65</a><span class="attr">#[cfg(test)]
-<a href=#66 id=66 data-nosnippet>66</a></span><span class="kw">mod </span>tests {
-<a href=#67 id=67 data-nosnippet>67</a>    <span class="kw">use </span>super::<span class="kw-2">*</span>;
-<a href=#68 id=68 data-nosnippet>68</a>
-<a href=#69 id=69 data-nosnippet>69</a>    <span class="attr">#[test]
-<a href=#70 id=70 data-nosnippet>70</a>    </span><span class="kw">fn </span>aceita_a_senha_correta_e_recusa_a_errada() {
-<a href=#71 id=71 data-nosnippet>71</a>        <span class="kw">let </span>hasher = Argon2Hasher::new();
-<a href=#72 id=72 data-nosnippet>72</a>        <span class="kw">let </span>hash = hasher.hash(<span class="string">"Portmaster1"</span>);
-<a href=#73 id=73 data-nosnippet>73</a>
-<a href=#74 id=74 data-nosnippet>74</a>        <span class="macro">assert!</span>(hasher.verify(<span class="string">"Portmaster1"</span>, <span class="kw-2">&amp;</span>hash));
-<a href=#75 id=75 data-nosnippet>75</a>        <span class="macro">assert!</span>(!hasher.verify(<span class="string">"portmaster1"</span>, <span class="kw-2">&amp;</span>hash));
-<a href=#76 id=76 data-nosnippet>76</a>        <span class="macro">assert!</span>(!hasher.verify(<span class="string">""</span>, <span class="kw-2">&amp;</span>hash));
-<a href=#77 id=77 data-nosnippet>77</a>    }
-<a href=#78 id=78 data-nosnippet>78</a>
-<a href=#79 id=79 data-nosnippet>79</a>    <span class="doccomment">/// O salt precisa estar sendo aplicado.
-<a href=#80 id=80 data-nosnippet>80</a>    ///
-<a href=#81 id=81 data-nosnippet>81</a>    /// Se estes coincidissem, o banco inteiro viraria alvo de uma tabela
-<a href=#82 id=82 data-nosnippet>82</a>    /// pré-computada só.
-<a href=#83 id=83 data-nosnippet>83</a>    </span><span class="attr">#[test]
-<a href=#84 id=84 data-nosnippet>84</a>    </span><span class="kw">fn </span>a_mesma_senha_gera_hashes_diferentes() {
-<a href=#85 id=85 data-nosnippet>85</a>        <span class="kw">let </span>hasher = Argon2Hasher::new();
-<a href=#86 id=86 data-nosnippet>86</a>        <span class="macro">assert_ne!</span>(hasher.hash(<span class="string">"Portmaster1"</span>), hasher.hash(<span class="string">"Portmaster1"</span>));
-<a href=#87 id=87 data-nosnippet>87</a>    }
-<a href=#88 id=88 data-nosnippet>88</a>
-<a href=#89 id=89 data-nosnippet>89</a>    <span class="attr">#[test]
-<a href=#90 id=90 data-nosnippet>90</a>    </span><span class="kw">fn </span>hash_ilegivel_nao_autentica_ninguem() {
-<a href=#91 id=91 data-nosnippet>91</a>        <span class="kw">let </span>hasher = Argon2Hasher::new();
-<a href=#92 id=92 data-nosnippet>92</a>        <span class="macro">assert!</span>(!hasher.verify(<span class="string">"qualquer"</span>, <span class="string">"não é um hash"</span>));
-<a href=#93 id=93 data-nosnippet>93</a>        <span class="macro">assert!</span>(!hasher.verify(<span class="string">"qualquer"</span>, <span class="string">""</span>));
-<a href=#94 id=94 data-nosnippet>94</a>    }
-<a href=#95 id=95 data-nosnippet>95</a>}
+<a href=#66 id=66 data-nosnippet>66</a>#[path = <span class="string">"tests/argon2_hasher_test.rs"</span>]
+<a href=#67 id=67 data-nosnippet>67</a></span><span class="kw">mod </span>tests;
 </code></pre></div></section></main></body></html>

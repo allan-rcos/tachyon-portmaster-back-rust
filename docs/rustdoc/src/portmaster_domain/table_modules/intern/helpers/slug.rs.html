@@ -53,40 +53,6 @@
 <a href=#53 id=53 data-nosnippet>53</a>}
 <a href=#54 id=54 data-nosnippet>54</a>
 <a href=#55 id=55 data-nosnippet>55</a><span class="attr">#[cfg(test)]
-<a href=#56 id=56 data-nosnippet>56</a></span><span class="kw">mod </span>tests {
-<a href=#57 id=57 data-nosnippet>57</a>    <span class="kw">use </span>super::<span class="kw-2">*</span>;
-<a href=#58 id=58 data-nosnippet>58</a>
-<a href=#59 id=59 data-nosnippet>59</a>    <span class="attr">#[test]
-<a href=#60 id=60 data-nosnippet>60</a>    </span><span class="kw">fn </span>aceita_tokens_kebab_validos() {
-<a href=#61 id=61 data-nosnippet>61</a>        <span class="kw">for </span>good <span class="kw">in </span>[<span class="string">"metrics"</span>, <span class="string">"refresh-token"</span>, <span class="string">"rate-limit"</span>, <span class="string">"a1"</span>, <span class="string">"x-9-y"</span>] {
-<a href=#62 id=62 data-nosnippet>62</a>            <span class="macro">assert!</span>(Slug::try_new(good).is_ok(), <span class="string">"deveria aceitar {good}"</span>);
-<a href=#63 id=63 data-nosnippet>63</a>        }
-<a href=#64 id=64 data-nosnippet>64</a>    }
-<a href=#65 id=65 data-nosnippet>65</a>
-<a href=#66 id=66 data-nosnippet>66</a>    <span class="attr">#[test]
-<a href=#67 id=67 data-nosnippet>67</a>    </span><span class="kw">fn </span>recusa_o_que_nao_e_kebab() {
-<a href=#68 id=68 data-nosnippet>68</a>        <span class="kw">for </span>bad <span class="kw">in </span>[
-<a href=#69 id=69 data-nosnippet>69</a>            <span class="string">""</span>,
-<a href=#70 id=70 data-nosnippet>70</a>            <span class="string">"-leading"</span>,
-<a href=#71 id=71 data-nosnippet>71</a>            <span class="string">"trailing-"</span>,
-<a href=#72 id=72 data-nosnippet>72</a>            <span class="string">"double--hyphen"</span>,
-<a href=#73 id=73 data-nosnippet>73</a>            <span class="string">"Upper"</span>,
-<a href=#74 id=74 data-nosnippet>74</a>            <span class="string">"9leading"</span>,
-<a href=#75 id=75 data-nosnippet>75</a>            <span class="string">"with_underscore"</span>,
-<a href=#76 id=76 data-nosnippet>76</a>            <span class="string">"with space"</span>,
-<a href=#77 id=77 data-nosnippet>77</a>        ] {
-<a href=#78 id=78 data-nosnippet>78</a>            <span class="macro">assert!</span>(Slug::try_new(bad).is_err(), <span class="string">"deveria recusar {bad:?}"</span>);
-<a href=#79 id=79 data-nosnippet>79</a>        }
-<a href=#80 id=80 data-nosnippet>80</a>    }
-<a href=#81 id=81 data-nosnippet>81</a>
-<a href=#82 id=82 data-nosnippet>82</a>    <span class="attr">#[test]
-<a href=#83 id=83 data-nosnippet>83</a>    </span><span class="kw">fn </span>recusa_token_longo_demais() {
-<a href=#84 id=84 data-nosnippet>84</a>        <span class="kw">let </span>long = <span class="string">"a"</span>.repeat(Slug::MAX_LENGTH.saturating_add(<span class="number">1</span>));
-<a href=#85 id=85 data-nosnippet>85</a>
-<a href=#86 id=86 data-nosnippet>86</a>        <span class="macro">assert!</span>(<span class="macro">matches!</span>(
-<a href=#87 id=87 data-nosnippet>87</a>            Slug::try_new(long),
-<a href=#88 id=88 data-nosnippet>88</a>            <span class="prelude-val">Err</span>(SlugError::LenCharMaxViolated)
-<a href=#89 id=89 data-nosnippet>89</a>        ));
-<a href=#90 id=90 data-nosnippet>90</a>    }
-<a href=#91 id=91 data-nosnippet>91</a>}
+<a href=#56 id=56 data-nosnippet>56</a>#[path = <span class="string">"tests/slug_test.rs"</span>]
+<a href=#57 id=57 data-nosnippet>57</a></span><span class="kw">mod </span>tests;
 </code></pre></div></section></main></body></html>

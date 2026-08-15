@@ -7,7 +7,7 @@
 <a href=#7 id=7 data-nosnippet>7</a><span class="doccomment">/// Inicializa o `domain` e devolve o seu provider.
 <a href=#8 id=8 data-nosnippet>8</a>///
 <a href=#9 id=9 data-nosnippet>9</a>/// Não depende de camada nenhuma, então é o fim da cadeia de `register`: quem o
-<a href=#10 id=10 data-nosnippet>10</a>/// chama é o `app`, antes de montar os seus casos de uso.
+<a href=#10 id=10 data-nosnippet>10</a>/// chama é o `app`, antes de montar os seus services.
 <a href=#11 id=11 data-nosnippet>11</a></span><span class="kw">pub fn </span>register(secrets: DomainSecrets) -&gt; <span class="kw">impl </span>DomainProvider {
 <a href=#12 id=12 data-nosnippet>12</a>    DomainProviderImpl::new(secrets)
 <a href=#13 id=13 data-nosnippet>13</a>}

@@ -58,33 +58,6 @@
 <a href=#58 id=58 data-nosnippet>58</a>}
 <a href=#59 id=59 data-nosnippet>59</a>
 <a href=#60 id=60 data-nosnippet>60</a><span class="attr">#[cfg(test)]
-<a href=#61 id=61 data-nosnippet>61</a></span><span class="kw">mod </span>tests {
-<a href=#62 id=62 data-nosnippet>62</a>    <span class="kw">use </span>super::<span class="kw-2">*</span>;
-<a href=#63 id=63 data-nosnippet>63</a>    <span class="kw">use </span><span class="kw">crate</span>::wire::vo::auth::login_x_request::LoginXRequest;
-<a href=#64 id=64 data-nosnippet>64</a>    <span class="kw">use </span>pretty_assertions::assert_eq;
-<a href=#65 id=65 data-nosnippet>65</a>
-<a href=#66 id=66 data-nosnippet>66</a>    <span class="attr">#[tokio::test]
-<a href=#67 id=67 data-nosnippet>67</a>    </span><span class="kw">async fn </span>o_corpo_e_lido_no_formato_do_escopo() {
-<a href=#68 id=68 data-nosnippet>68</a>        <span class="kw">let </span>request: LoginXRequest = DecodeContext::scope(MediaType::Json, <span class="kw">async </span>{
-<a href=#69 id=69 data-nosnippet>69</a>            DecodeContext.decode(<span class="string">br#"{"email":"ana@portmaster.local","password":"Portmaster1"}"#</span>)
-<a href=#70 id=70 data-nosnippet>70</a>        })
-<a href=#71 id=71 data-nosnippet>71</a>        .<span class="kw">await
-<a href=#72 id=72 data-nosnippet>72</a>        </span>.expect(<span class="string">"o corpo é JSON válido"</span>);
-<a href=#73 id=73 data-nosnippet>73</a>
-<a href=#74 id=74 data-nosnippet>74</a>        <span class="macro">assert_eq!</span>(request.email.as_deref(), <span class="prelude-val">Some</span>(<span class="string">"ana@portmaster.local"</span>));
-<a href=#75 id=75 data-nosnippet>75</a>    }
-<a href=#76 id=76 data-nosnippet>76</a>
-<a href=#77 id=77 data-nosnippet>77</a>    <span class="doccomment">/// O mesmo corpo, lido pela strategy errada, é lixo — e vira 400, não
-<a href=#78 id=78 data-nosnippet>78</a>    /// pânico.
-<a href=#79 id=79 data-nosnippet>79</a>    </span><span class="attr">#[tokio::test]
-<a href=#80 id=80 data-nosnippet>80</a>    </span><span class="kw">async fn </span>o_formato_errado_recusa_o_corpo_sem_entrar_em_panico() {
-<a href=#81 id=81 data-nosnippet>81</a>        <span class="kw">let </span>error = DecodeContext::scope(MediaType::FlatBuffers, <span class="kw">async </span>{
-<a href=#82 id=82 data-nosnippet>82</a>            DecodeContext.decode::&lt;LoginXRequest&gt;(<span class="string">br#"{"email":"ana@portmaster.local"}"#</span>)
-<a href=#83 id=83 data-nosnippet>83</a>        })
-<a href=#84 id=84 data-nosnippet>84</a>        .<span class="kw">await
-<a href=#85 id=85 data-nosnippet>85</a>        </span>.expect_err(<span class="string">"um JSON não é um buffer"</span>);
-<a href=#86 id=86 data-nosnippet>86</a>
-<a href=#87 id=87 data-nosnippet>87</a>        <span class="macro">assert_eq!</span>(error.status(), axum::http::StatusCode::BAD_REQUEST);
-<a href=#88 id=88 data-nosnippet>88</a>    }
-<a href=#89 id=89 data-nosnippet>89</a>}
+<a href=#61 id=61 data-nosnippet>61</a>#[path = <span class="string">"tests/decode_context_test.rs"</span>]
+<a href=#62 id=62 data-nosnippet>62</a></span><span class="kw">mod </span>tests;
 </code></pre></div></section></main></body></html>
