@@ -67,15 +67,6 @@
 <a href=#67 id=67 data-nosnippet>67</a>}
 <a href=#68 id=68 data-nosnippet>68</a>
 <a href=#69 id=69 data-nosnippet>69</a><span class="attr">#[cfg(test)]
-<a href=#70 id=70 data-nosnippet>70</a></span><span class="kw">mod </span>tests {
-<a href=#71 id=71 data-nosnippet>71</a>    <span class="kw">use </span>super::<span class="kw-2">*</span>;
-<a href=#72 id=72 data-nosnippet>72</a>
-<a href=#73 id=73 data-nosnippet>73</a>    <span class="attr">#[test]
-<a href=#74 id=74 data-nosnippet>74</a>    </span><span class="kw">fn </span>o_slug_negado_fica_no_erro() {
-<a href=#75 id=75 data-nosnippet>75</a>        <span class="comment">// Vai para o log; quem decide não mostrá-lo ao cliente é o api-http.
-<a href=#76 id=76 data-nosnippet>76</a>        </span><span class="kw">let </span>error = AppError::permission_denied(<span class="string">"product:create"</span>);
-<a href=#77 id=77 data-nosnippet>77</a>
-<a href=#78 id=78 data-nosnippet>78</a>        <span class="macro">assert!</span>(error.to_string().contains(<span class="string">"product:create"</span>));
-<a href=#79 id=79 data-nosnippet>79</a>    }
-<a href=#80 id=80 data-nosnippet>80</a>}
+<a href=#70 id=70 data-nosnippet>70</a>#[path = <span class="string">"tests/app_error_test.rs"</span>]
+<a href=#71 id=71 data-nosnippet>71</a></span><span class="kw">mod </span>tests;
 </code></pre></div></section></main></body></html>

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["PERMISSION_LIST"],"struct":["MetadataServiceImpl"]};

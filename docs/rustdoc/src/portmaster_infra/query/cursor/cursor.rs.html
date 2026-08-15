@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/infra/src/query/cursor/cursor.rs`."><title>cursor.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="portmaster_infra" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0 (ac68faa20 2026-05-25)" data-channel="1.96.0" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">portmaster_infra/query/cursor/</div>cursor.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! O cursor de paginação keyset.
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/infra/src/query/cursor/cursor.rs`."><title>cursor.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="portmaster_infra" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0 (ac68faa20 2026-05-25)" data-channel="1.96.0" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">portmaster_infra/query/cursor/</div>cursor.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! O cursor de paginação keyset.
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a></span><span class="kw">use </span><span class="kw">crate</span>::query::cursor::CursorFilters;
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span>base64::engine::general_purpose::URL_SAFE_NO_PAD;
@@ -88,103 +88,6 @@
 <a href=#88 id=88 data-nosnippet>88</a>}
 <a href=#89 id=89 data-nosnippet>89</a>
 <a href=#90 id=90 data-nosnippet>90</a><span class="attr">#[cfg(test)]
-<a href=#91 id=91 data-nosnippet>91</a></span><span class="kw">mod </span>tests {
-<a href=#92 id=92 data-nosnippet>92</a>    <span class="kw">use </span>super::<span class="kw-2">*</span>;
-<a href=#93 id=93 data-nosnippet>93</a>    <span class="kw">use </span>pretty_assertions::assert_eq;
-<a href=#94 id=94 data-nosnippet>94</a>
-<a href=#95 id=95 data-nosnippet>95</a>    <span class="kw">fn </span>busca(termo: <span class="kw-2">&amp;</span>str) -&gt; CursorFilters {
-<a href=#96 id=96 data-nosnippet>96</a>        CursorFilters::of([(<span class="string">"limit"</span>, <span class="string">"20"</span>.to_owned()), (<span class="string">"search"</span>, termo.to_owned())])
-<a href=#97 id=97 data-nosnippet>97</a>    }
-<a href=#98 id=98 data-nosnippet>98</a>
-<a href=#99 id=99 data-nosnippet>99</a>    <span class="attr">#[test]
-<a href=#100 id=100 data-nosnippet>100</a>    </span><span class="kw">fn </span>ida_e_volta_preserva_o_id() {
-<a href=#101 id=101 data-nosnippet>101</a>        <span class="kw">let </span>f = busca(<span class="string">"cimento"</span>);
-<a href=#102 id=102 data-nosnippet>102</a>        <span class="kw">let </span>token = Cursor::encode(<span class="number">9_876_543_210</span>, <span class="kw-2">&amp;</span>f);
-<a href=#103 id=103 data-nosnippet>103</a>
-<a href=#104 id=104 data-nosnippet>104</a>        <span class="macro">assert_eq!</span>(
-<a href=#105 id=105 data-nosnippet>105</a>            Cursor::decode(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>token), <span class="kw-2">&amp;</span>f),
-<a href=#106 id=106 data-nosnippet>106</a>            <span class="prelude-val">Some</span>(Cursor {
-<a href=#107 id=107 data-nosnippet>107</a>                last_id: <span class="number">9_876_543_210
-<a href=#108 id=108 data-nosnippet>108</a>            </span>})
-<a href=#109 id=109 data-nosnippet>109</a>        );
-<a href=#110 id=110 data-nosnippet>110</a>    }
-<a href=#111 id=111 data-nosnippet>111</a>
-<a href=#112 id=112 data-nosnippet>112</a>    <span class="doccomment">/// Base64url sem padding: nada de `+`, `/` ou `=`, que precisariam de
-<a href=#113 id=113 data-nosnippet>113</a>    /// escape e voltariam corrompidos.
-<a href=#114 id=114 data-nosnippet>114</a>    </span><span class="attr">#[test]
-<a href=#115 id=115 data-nosnippet>115</a>    </span><span class="kw">fn </span>o_token_atravessa_uma_querystring_intacto() {
-<a href=#116 id=116 data-nosnippet>116</a>        <span class="kw">let </span>token = Cursor::encode(i64::MAX, <span class="kw-2">&amp;</span>busca(<span class="string">"álcool etílico 70%"</span>));
-<a href=#117 id=117 data-nosnippet>117</a>
-<a href=#118 id=118 data-nosnippet>118</a>        <span class="macro">assert!</span>(
-<a href=#119 id=119 data-nosnippet>119</a>            token
-<a href=#120 id=120 data-nosnippet>120</a>                .chars()
-<a href=#121 id=121 data-nosnippet>121</a>                .all(|c| c.is_ascii_alphanumeric() || c == <span class="string">'-' </span>|| c == <span class="string">'_'</span>),
-<a href=#122 id=122 data-nosnippet>122</a>            <span class="string">"token com caractere que a querystring alteraria: {token}"
-<a href=#123 id=123 data-nosnippet>123</a>        </span>);
-<a href=#124 id=124 data-nosnippet>124</a>    }
-<a href=#125 id=125 data-nosnippet>125</a>
-<a href=#126 id=126 data-nosnippet>126</a>    <span class="doccomment">/// O caso que motiva guardar os filtros: o cliente trocou a busca e
-<a href=#127 id=127 data-nosnippet>127</a>    /// reenviou o cursor antigo.
-<a href=#128 id=128 data-nosnippet>128</a>    ///
-<a href=#129 id=129 data-nosnippet>129</a>    /// Continuar dali entregaria uma página do conjunto anterior.
-<a href=#130 id=130 data-nosnippet>130</a>    </span><span class="attr">#[test]
-<a href=#131 id=131 data-nosnippet>131</a>    </span><span class="kw">fn </span>cursor_de_outro_filtro_e_ignorado() {
-<a href=#132 id=132 data-nosnippet>132</a>        <span class="kw">let </span>token = Cursor::encode(<span class="number">100</span>, <span class="kw-2">&amp;</span>busca(<span class="string">"cimento"</span>));
-<a href=#133 id=133 data-nosnippet>133</a>
-<a href=#134 id=134 data-nosnippet>134</a>        <span class="macro">assert_eq!</span>(Cursor::decode(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>token), <span class="kw-2">&amp;</span>busca(<span class="string">"areia"</span>)), <span class="prelude-val">None</span>);
-<a href=#135 id=135 data-nosnippet>135</a>    }
-<a href=#136 id=136 data-nosnippet>136</a>
-<a href=#137 id=137 data-nosnippet>137</a>    <span class="attr">#[test]
-<a href=#138 id=138 data-nosnippet>138</a>    </span><span class="kw">fn </span>toda_recusa_e_a_mesma_ausencia() {
-<a href=#139 id=139 data-nosnippet>139</a>        <span class="kw">let </span>f = busca(<span class="string">"cimento"</span>);
-<a href=#140 id=140 data-nosnippet>140</a>
-<a href=#141 id=141 data-nosnippet>141</a>        <span class="macro">assert_eq!</span>(Cursor::decode(<span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>f), <span class="prelude-val">None</span>, <span class="string">"sem token"</span>);
-<a href=#142 id=142 data-nosnippet>142</a>        <span class="macro">assert_eq!</span>(Cursor::decode(<span class="prelude-val">Some</span>(<span class="string">""</span>), <span class="kw-2">&amp;</span>f), <span class="prelude-val">None</span>, <span class="string">"token vazio"</span>);
-<a href=#143 id=143 data-nosnippet>143</a>        <span class="macro">assert_eq!</span>(
-<a href=#144 id=144 data-nosnippet>144</a>            Cursor::decode(<span class="prelude-val">Some</span>(<span class="string">"!!não é base64!!"</span>), <span class="kw-2">&amp;</span>f),
-<a href=#145 id=145 data-nosnippet>145</a>            <span class="prelude-val">None</span>,
-<a href=#146 id=146 data-nosnippet>146</a>            <span class="string">"não é base64url"
-<a href=#147 id=147 data-nosnippet>147</a>        </span>);
-<a href=#148 id=148 data-nosnippet>148</a>        <span class="macro">assert_eq!</span>(
-<a href=#149 id=149 data-nosnippet>149</a>            Cursor::decode(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>URL_SAFE_NO_PAD.encode(<span class="string">"nem json"</span>)), <span class="kw-2">&amp;</span>f),
-<a href=#150 id=150 data-nosnippet>150</a>            <span class="prelude-val">None</span>,
-<a href=#151 id=151 data-nosnippet>151</a>            <span class="string">"não é o JSON esperado"
-<a href=#152 id=152 data-nosnippet>152</a>        </span>);
-<a href=#153 id=153 data-nosnippet>153</a>    }
-<a href=#154 id=154 data-nosnippet>154</a>
-<a href=#155 id=155 data-nosnippet>155</a>    <span class="attr">#[test]
-<a href=#156 id=156 data-nosnippet>156</a>    </span><span class="kw">fn </span>sem_cursor_a_varredura_comeca_do_zero() {
-<a href=#157 id=157 data-nosnippet>157</a>        <span class="macro">assert_eq!</span>(Cursor::last_id_or_start(<span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>busca(<span class="string">"cimento"</span>)), <span class="number">0</span>);
-<a href=#158 id=158 data-nosnippet>158</a>    }
-<a href=#159 id=159 data-nosnippet>159</a>
-<a href=#160 id=160 data-nosnippet>160</a>    <span class="doccomment">/// Veio menos que o limite, então acabou.
-<a href=#161 id=161 data-nosnippet>161</a>    ///
-<a href=#162 id=162 data-nosnippet>162</a>    /// Emitir cursor aqui custaria ao cliente uma requisição a mais para
-<a href=#163 id=163 data-nosnippet>163</a>    /// descobrir que não há nada.
-<a href=#164 id=164 data-nosnippet>164</a>    </span><span class="attr">#[test]
-<a href=#165 id=165 data-nosnippet>165</a>    </span><span class="kw">fn </span>pagina_incompleta_nao_emite_proximo_cursor() {
-<a href=#166 id=166 data-nosnippet>166</a>        <span class="macro">assert_eq!</span>(Cursor::next(<span class="number">7</span>, <span class="number">20</span>, <span class="number">500</span>, <span class="kw-2">&amp;</span>busca(<span class="string">"cimento"</span>)), <span class="prelude-val">None</span>);
-<a href=#167 id=167 data-nosnippet>167</a>    }
-<a href=#168 id=168 data-nosnippet>168</a>
-<a href=#169 id=169 data-nosnippet>169</a>    <span class="attr">#[test]
-<a href=#170 id=170 data-nosnippet>170</a>    </span><span class="kw">fn </span>pagina_cheia_emite_o_proximo_cursor() {
-<a href=#171 id=171 data-nosnippet>171</a>        <span class="kw">let </span>f = busca(<span class="string">"cimento"</span>);
-<a href=#172 id=172 data-nosnippet>172</a>        <span class="kw">let </span>token = Cursor::next(<span class="number">20</span>, <span class="number">20</span>, <span class="number">500</span>, <span class="kw-2">&amp;</span>f).expect(<span class="string">"página cheia deveria emitir cursor"</span>);
-<a href=#173 id=173 data-nosnippet>173</a>
-<a href=#174 id=174 data-nosnippet>174</a>        <span class="macro">assert_eq!</span>(
-<a href=#175 id=175 data-nosnippet>175</a>            Cursor::decode(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>token), <span class="kw-2">&amp;</span>f),
-<a href=#176 id=176 data-nosnippet>176</a>            <span class="prelude-val">Some</span>(Cursor { last_id: <span class="number">500 </span>})
-<a href=#177 id=177 data-nosnippet>177</a>        );
-<a href=#178 id=178 data-nosnippet>178</a>    }
-<a href=#179 id=179 data-nosnippet>179</a>
-<a href=#180 id=180 data-nosnippet>180</a>    <span class="doccomment">/// Dois mapas com os mesmos pares têm que gerar o mesmo token, senão um
-<a href=#181 id=181 data-nosnippet>181</a>    /// cursor válido seria recusado por acidente de iteração.
-<a href=#182 id=182 data-nosnippet>182</a>    </span><span class="attr">#[test]
-<a href=#183 id=183 data-nosnippet>183</a>    </span><span class="kw">fn </span>a_ordem_dos_filtros_nao_muda_o_token() {
-<a href=#184 id=184 data-nosnippet>184</a>        <span class="kw">let </span>a = CursorFilters::of([(<span class="string">"limit"</span>, <span class="string">"20"</span>.to_owned()), (<span class="string">"search"</span>, <span class="string">"cal"</span>.to_owned())]);
-<a href=#185 id=185 data-nosnippet>185</a>        <span class="kw">let </span>b = CursorFilters::of([(<span class="string">"search"</span>, <span class="string">"cal"</span>.to_owned()), (<span class="string">"limit"</span>, <span class="string">"20"</span>.to_owned())]);
-<a href=#186 id=186 data-nosnippet>186</a>
-<a href=#187 id=187 data-nosnippet>187</a>        <span class="macro">assert_eq!</span>(Cursor::encode(<span class="number">42</span>, <span class="kw-2">&amp;</span>a), Cursor::encode(<span class="number">42</span>, <span class="kw-2">&amp;</span>b));
-<a href=#188 id=188 data-nosnippet>188</a>    }
-<a href=#189 id=189 data-nosnippet>189</a>}
+<a href=#91 id=91 data-nosnippet>91</a>#[path = <span class="string">"tests/cursor_test.rs"</span>]
+<a href=#92 id=92 data-nosnippet>92</a></span><span class="kw">mod </span>tests;
 </code></pre></div></section></main></body></html>

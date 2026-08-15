@@ -3,7 +3,7 @@
 <a href=#3 id=3 data-nosnippet>3</a></span><span class="kw">use </span>axum::http::StatusCode;
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span>portmaster_app::commands::manifest::MoveItemCommand;
 <a href=#5 id=5 data-nosnippet>5</a><span class="kw">use </span>portmaster_app::error::ManifestError;
-<a href=#6 id=6 data-nosnippet>6</a><span class="kw">use </span>portmaster_app::services::ManifestUseCase;
+<a href=#6 id=6 data-nosnippet>6</a><span class="kw">use </span>portmaster_app::services::ManifestService;
 <a href=#7 id=7 data-nosnippet>7</a>
 <a href=#8 id=8 data-nosnippet>8</a><span class="kw">use </span><span class="kw">crate</span>::controllers::manifest_controller::ManifestController;
 <a href=#9 id=9 data-nosnippet>9</a><span class="kw">use </span><span class="kw">crate</span>::middleware::session_port::SessionPort;
@@ -21,23 +21,23 @@
 <a href=#21 id=21 data-nosnippet>21</a><span class="doccomment">/// O que a resposta de desembarque diz.
 <a href=#22 id=22 data-nosnippet>22</a></span><span class="kw">const </span>UNLOADED: <span class="kw-2">&amp;</span>str = <span class="string">"Item unloaded successfully."</span>;
 <a href=#23 id=23 data-nosnippet>23</a>
-<a href=#24 id=24 data-nosnippet>24</a><span class="doccomment">/// Os handlers de carga, genéricos sobre o caso de uso.
+<a href=#24 id=24 data-nosnippet>24</a><span class="doccomment">/// Os handlers de carga, genéricos sobre o service.
 <a href=#25 id=25 data-nosnippet>25</a></span><span class="attr">#[derive(Clone)]
 <a href=#26 id=26 data-nosnippet>26</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>ManifestControllerImpl&lt;M, S&gt; {
-<a href=#27 id=27 data-nosnippet>27</a>    <span class="doccomment">/// O caso de uso de carga.
+<a href=#27 id=27 data-nosnippet>27</a>    <span class="doccomment">/// O service de carga.
 <a href=#28 id=28 data-nosnippet>28</a>    </span>manifest: M,
 <a href=#29 id=29 data-nosnippet>29</a>    <span class="doccomment">/// Quem diz se há sessão, e quem a apresenta.
 <a href=#30 id=30 data-nosnippet>30</a>    </span>session: S,
 <a href=#31 id=31 data-nosnippet>31</a>}
 <a href=#32 id=32 data-nosnippet>32</a>
-<a href=#33 id=33 data-nosnippet>33</a><span class="kw">impl</span>&lt;M: ManifestUseCase, S: SessionPort&gt; ManifestControllerImpl&lt;M, S&gt; {
+<a href=#33 id=33 data-nosnippet>33</a><span class="kw">impl</span>&lt;M: ManifestService, S: SessionPort&gt; ManifestControllerImpl&lt;M, S&gt; {
 <a href=#34 id=34 data-nosnippet>34</a>    <span class="doccomment">/// Monta o controller.
 <a href=#35 id=35 data-nosnippet>35</a>    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const fn </span>new(manifest: M, session: S) -&gt; <span class="self">Self </span>{
 <a href=#36 id=36 data-nosnippet>36</a>        <span class="self">Self </span>{ manifest, session }
 <a href=#37 id=37 data-nosnippet>37</a>    }
 <a href=#38 id=38 data-nosnippet>38</a>}
 <a href=#39 id=39 data-nosnippet>39</a>
-<a href=#40 id=40 data-nosnippet>40</a><span class="kw">impl</span>&lt;M: ManifestUseCase + Clone + Send + Sync + <span class="lifetime">'static</span>, S: SessionPort&gt; ManifestController
+<a href=#40 id=40 data-nosnippet>40</a><span class="kw">impl</span>&lt;M: ManifestService + Clone + Send + Sync + <span class="lifetime">'static</span>, S: SessionPort&gt; ManifestController
 <a href=#41 id=41 data-nosnippet>41</a>    <span class="kw">for </span>ManifestControllerImpl&lt;M, S&gt;
 <a href=#42 id=42 data-nosnippet>42</a>{
 <a href=#43 id=43 data-nosnippet>43</a>    <span class="kw">async fn </span>load(<span class="self">self</span>, Body(request): Body&lt;LoadItemXRequest&gt;) -&gt; ApiResponse&lt;ManifestXResponse&gt; {

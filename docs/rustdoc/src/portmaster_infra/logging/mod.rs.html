@@ -7,22 +7,29 @@
 <a href=#7 id=7 data-nosnippet>7</a>//! Para os pontos sem construtor onde injetar — pânico, função associada — há o
 <a href=#8 id=8 data-nosnippet>8</a>//! [`SystemLogger`].
 <a href=#9 id=9 data-nosnippet>9</a>//!
-<a href=#10 id=10 data-nosnippet>10</a>//! ## O que correlaciona as linhas de uma requisição não está aqui
+<a href=#10 id=10 data-nosnippet>10</a>//! ## O que atravessa as camadas é o span, e não o logger
 <a href=#11 id=11 data-nosnippet>11</a>//!
-<a href=#12 id=12 data-nosnippet>12</a>//! É o span do `tracing`, aberto por quem sabe o que é uma requisição: o
-<a href=#13 id=13 data-nosnippet>13</a>//! middleware do transporte. Toda linha que sair enquanto ele estiver aberto —
-<a href=#14 id=14 data-nosnippet>14</a>//! do `app`, da `infra`, de qualquer profundidade — sai com o `request_id`
-<a href=#15 id=15 data-nosnippet>15</a>//! dentro, sem que nada disso precise recebê-lo por parâmetro. Era o que um
-<a href=#16 id=16 data-nosnippet>16</a>//! logger carimbado não conseguia fazer: ele só alcançava quem o tivesse em mãos,
-<a href=#17 id=17 data-nosnippet>17</a>//! e o `request_id` morria no middleware que o criou.
-<a href=#18 id=18 data-nosnippet>18</a>
-<a href=#19 id=19 data-nosnippet>19</a></span><span class="kw">pub mod </span>logger;
-<a href=#20 id=20 data-nosnippet>20</a><span class="kw">pub mod </span>logger_factory;
-<a href=#21 id=21 data-nosnippet>21</a><span class="kw">pub mod </span>system_logger;
-<a href=#22 id=22 data-nosnippet>22</a>
-<a href=#23 id=23 data-nosnippet>23</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>intern;
-<a href=#24 id=24 data-nosnippet>24</a>
-<a href=#25 id=25 data-nosnippet>25</a><span class="kw">pub use </span>logger::Logger;
-<a href=#26 id=26 data-nosnippet>26</a><span class="kw">pub use </span>logger_factory::LoggerFactory;
-<a href=#27 id=27 data-nosnippet>27</a><span class="kw">pub use </span>system_logger::SystemLogger;
+<a href=#12 id=12 data-nosnippet>12</a>//! Quem correlaciona é o span do `tracing`, aberto por quem sabe o que é uma
+<a href=#13 id=13 data-nosnippet>13</a>//! requisição: o middleware do transporte. Toda linha que sair enquanto ele
+<a href=#14 id=14 data-nosnippet>14</a>//! estiver aberto — do `app`, da `infra`, de qualquer profundidade — sai com o
+<a href=#15 id=15 data-nosnippet>15</a>//! `request_id` dentro, sem que nada disso precise recebê-lo por parâmetro. Era
+<a href=#16 id=16 data-nosnippet>16</a>//! o que um logger carimbado não conseguia fazer: ele só alcançava quem o
+<a href=#17 id=17 data-nosnippet>17</a>//! tivesse em mãos, e o `request_id` morria no middleware que o criou.
+<a href=#18 id=18 data-nosnippet>18</a>//!
+<a href=#19 id=19 data-nosnippet>19</a>//! [`Logger::with_field`] escreve **nesse mesmo span**, e não no logger. O que a
+<a href=#20 id=20 data-nosnippet>20</a>//! macro do span declara é fixado na expansão; o que chega depois vai para as
+<a href=#21 id=21 data-nosnippet>21</a>//! *extensions* do span, que aceitam chave decidida em tempo de execução. O
+<a href=#22 id=22 data-nosnippet>22</a>//! efeito é o que se espera de um contexto de tarefa: o campo que um componente
+<a href=#23 id=23 data-nosnippet>23</a>//! acrescenta aparece nas linhas que outro componente escrever, com outro
+<a href=#24 id=24 data-nosnippet>24</a>//! logger, enquanto os dois correrem sob o mesmo span.
+<a href=#25 id=25 data-nosnippet>25</a>
+<a href=#26 id=26 data-nosnippet>26</a></span><span class="kw">pub mod </span>logger;
+<a href=#27 id=27 data-nosnippet>27</a><span class="kw">pub mod </span>logger_factory;
+<a href=#28 id=28 data-nosnippet>28</a><span class="kw">pub mod </span>system_logger;
+<a href=#29 id=29 data-nosnippet>29</a>
+<a href=#30 id=30 data-nosnippet>30</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>intern;
+<a href=#31 id=31 data-nosnippet>31</a>
+<a href=#32 id=32 data-nosnippet>32</a><span class="kw">pub use </span>logger::Logger;
+<a href=#33 id=33 data-nosnippet>33</a><span class="kw">pub use </span>logger_factory::LoggerFactory;
+<a href=#34 id=34 data-nosnippet>34</a><span class="kw">pub use </span>system_logger::SystemLogger;
 </code></pre></div></section></main></body></html>

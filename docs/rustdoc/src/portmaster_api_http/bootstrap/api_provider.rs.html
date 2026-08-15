@@ -52,7 +52,7 @@
 <a href=#52 id=52 data-nosnippet>52</a>/// A configuração continua morrendo no boot, só que junto com o provider: os
 <a href=#53 id=53 data-nosnippet>53</a>/// dois são consumidos ao montar o router e nada os mantém vivos depois.
 <a href=#54 id=54 data-nosnippet>54</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>ApiProviderImpl&lt;P&gt; {
-<a href=#55 id=55 data-nosnippet>55</a>    <span class="doccomment">/// De onde saem os casos de uso.
+<a href=#55 id=55 data-nosnippet>55</a>    <span class="doccomment">/// De onde saem os services.
 <a href=#56 id=56 data-nosnippet>56</a>    </span>app: P,
 <a href=#57 id=57 data-nosnippet>57</a>    <span class="doccomment">/// Onde o servidor escuta e como se comporta.
 <a href=#58 id=58 data-nosnippet>58</a>    </span>config: ApiConfig,
@@ -69,13 +69,13 @@
 <a href=#69 id=69 data-nosnippet>69</a>
 <a href=#70 id=70 data-nosnippet>70</a><span class="kw">impl</span>&lt;P: AppProvider&gt; ApiProvider <span class="kw">for </span>ApiProviderImpl&lt;P&gt; {
 <a href=#71 id=71 data-nosnippet>71</a>    <span class="kw">fn </span>account_controller(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl </span>AccountController + <span class="kw">use</span>&lt;P&gt; + <span class="lifetime">'static </span>{
-<a href=#72 id=72 data-nosnippet>72</a>        AccountControllerImpl::new(<span class="self">self</span>.app.account_use_case(), SessionContext)
+<a href=#72 id=72 data-nosnippet>72</a>        AccountControllerImpl::new(<span class="self">self</span>.app.account_service(), SessionContext)
 <a href=#73 id=73 data-nosnippet>73</a>    }
 <a href=#74 id=74 data-nosnippet>74</a>
 <a href=#75 id=75 data-nosnippet>75</a>    <span class="kw">fn </span>auth_controller(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl </span>AuthController + <span class="kw">use</span>&lt;P&gt; + <span class="lifetime">'static </span>{
 <a href=#76 id=76 data-nosnippet>76</a>        AuthControllerImpl::new(
-<a href=#77 id=77 data-nosnippet>77</a>            <span class="self">self</span>.app.session_use_case(),
-<a href=#78 id=78 data-nosnippet>78</a>            <span class="self">self</span>.app.mark_use_case(),
+<a href=#77 id=77 data-nosnippet>77</a>            <span class="self">self</span>.app.session_service(),
+<a href=#78 id=78 data-nosnippet>78</a>            <span class="self">self</span>.app.mark_service(),
 <a href=#79 id=79 data-nosnippet>79</a>            <span class="self">self</span>.app.random_id_generator(),
 <a href=#80 id=80 data-nosnippet>80</a>            <span class="self">self</span>.token_service(),
 <a href=#81 id=81 data-nosnippet>81</a>            CookieContext,
@@ -85,27 +85,27 @@
 <a href=#85 id=85 data-nosnippet>85</a>    }
 <a href=#86 id=86 data-nosnippet>86</a>
 <a href=#87 id=87 data-nosnippet>87</a>    <span class="kw">fn </span>container_controller(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl </span>ContainerController + <span class="kw">use</span>&lt;P&gt; + <span class="lifetime">'static </span>{
-<a href=#88 id=88 data-nosnippet>88</a>        ContainerControllerImpl::new(<span class="self">self</span>.app.container_use_case(), SessionContext)
+<a href=#88 id=88 data-nosnippet>88</a>        ContainerControllerImpl::new(<span class="self">self</span>.app.container_service(), SessionContext)
 <a href=#89 id=89 data-nosnippet>89</a>    }
 <a href=#90 id=90 data-nosnippet>90</a>
 <a href=#91 id=91 data-nosnippet>91</a>    <span class="kw">fn </span>manifest_controller(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl </span>ManifestController + <span class="kw">use</span>&lt;P&gt; + <span class="lifetime">'static </span>{
-<a href=#92 id=92 data-nosnippet>92</a>        ManifestControllerImpl::new(<span class="self">self</span>.app.manifest_use_case(), SessionContext)
+<a href=#92 id=92 data-nosnippet>92</a>        ManifestControllerImpl::new(<span class="self">self</span>.app.manifest_service(), SessionContext)
 <a href=#93 id=93 data-nosnippet>93</a>    }
 <a href=#94 id=94 data-nosnippet>94</a>
 <a href=#95 id=95 data-nosnippet>95</a>    <span class="kw">fn </span>metadata_controller(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl </span>MetadataController + <span class="kw">use</span>&lt;P&gt; + <span class="lifetime">'static </span>{
-<a href=#96 id=96 data-nosnippet>96</a>        MetadataControllerImpl::new(<span class="self">self</span>.app.metadata_use_case(), SessionContext)
+<a href=#96 id=96 data-nosnippet>96</a>        MetadataControllerImpl::new(<span class="self">self</span>.app.metadata_service(), SessionContext)
 <a href=#97 id=97 data-nosnippet>97</a>    }
 <a href=#98 id=98 data-nosnippet>98</a>
 <a href=#99 id=99 data-nosnippet>99</a>    <span class="kw">fn </span>metrics_controller(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl </span>MetricsController + <span class="kw">use</span>&lt;P&gt; + <span class="lifetime">'static </span>{
-<a href=#100 id=100 data-nosnippet>100</a>        MetricsControllerImpl::new(<span class="self">self</span>.app.metrics_use_case(), SessionContext)
+<a href=#100 id=100 data-nosnippet>100</a>        MetricsControllerImpl::new(<span class="self">self</span>.app.metrics_service(), SessionContext)
 <a href=#101 id=101 data-nosnippet>101</a>    }
 <a href=#102 id=102 data-nosnippet>102</a>
 <a href=#103 id=103 data-nosnippet>103</a>    <span class="kw">fn </span>product_controller(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl </span>ProductController + <span class="kw">use</span>&lt;P&gt; + <span class="lifetime">'static </span>{
-<a href=#104 id=104 data-nosnippet>104</a>        ProductControllerImpl::new(<span class="self">self</span>.app.product_use_case(), SessionContext)
+<a href=#104 id=104 data-nosnippet>104</a>        ProductControllerImpl::new(<span class="self">self</span>.app.product_service(), SessionContext)
 <a href=#105 id=105 data-nosnippet>105</a>    }
 <a href=#106 id=106 data-nosnippet>106</a>
 <a href=#107 id=107 data-nosnippet>107</a>    <span class="kw">fn </span>role_controller(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl </span>RoleController + <span class="kw">use</span>&lt;P&gt; + <span class="lifetime">'static </span>{
-<a href=#108 id=108 data-nosnippet>108</a>        RoleControllerImpl::new(<span class="self">self</span>.app.role_use_case(), SessionContext)
+<a href=#108 id=108 data-nosnippet>108</a>        RoleControllerImpl::new(<span class="self">self</span>.app.role_service(), SessionContext)
 <a href=#109 id=109 data-nosnippet>109</a>    }
 <a href=#110 id=110 data-nosnippet>110</a>
 <a href=#111 id=111 data-nosnippet>111</a>    <span class="kw">fn </span>server_controller(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl </span>ServerController + <span class="kw">use</span>&lt;P&gt; + <span class="lifetime">'static </span>{
@@ -113,7 +113,7 @@
 <a href=#113 id=113 data-nosnippet>113</a>    }
 <a href=#114 id=114 data-nosnippet>114</a>
 <a href=#115 id=115 data-nosnippet>115</a>    <span class="kw">fn </span>user_controller(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl </span>UserController + <span class="kw">use</span>&lt;P&gt; + <span class="lifetime">'static </span>{
-<a href=#116 id=116 data-nosnippet>116</a>        UserControllerImpl::new(<span class="self">self</span>.app.user_use_case(), SessionContext)
+<a href=#116 id=116 data-nosnippet>116</a>        UserControllerImpl::new(<span class="self">self</span>.app.user_service(), SessionContext)
 <a href=#117 id=117 data-nosnippet>117</a>    }
 <a href=#118 id=118 data-nosnippet>118</a>
 <a href=#119 id=119 data-nosnippet>119</a>    <span class="doccomment">/// Construído a cada chamada, e não guardado.

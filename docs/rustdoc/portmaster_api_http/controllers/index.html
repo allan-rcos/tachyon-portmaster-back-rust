@@ -22,7 +22,7 @@ esta camada lê o token. Permissão (403), validação (422), ausência (404) e
 conflito (409) vêm todos do <code>app</code>, traduzidos em <code>ports::error</code>.</p>
 <h3 id="cada-recurso-são-três-arquivos"><a class="doc-anchor" href="#cada-recurso-são-três-arquivos">§</a>Cada recurso são três arquivos</h3>
 <p>O <strong>trait</strong> declara os handlers: que extractors cada rota consome e o que ela
-responde. A <strong>impl</strong> em <code>intern</code> é genérica sobre os casos de uso que o
+responde. A <strong>impl</strong> em <code>intern</code> é genérica sobre os services que o
 <code>AppProvider</code> entrega, cujos tipos são innomeáveis, e sobre as portas de
 contexto que ela consome. E o módulo de <strong>rotas</strong> é a tabela: caminho, verbo,
 método.</p>

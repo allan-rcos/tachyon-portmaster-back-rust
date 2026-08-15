@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["CACHE_GROUP","CHANGE_PASSWORD","CREATE","DELETE","GET","LIST","UPDATE","UPDATE_ROLES"],"struct":["UserUseCaseImpl"]};

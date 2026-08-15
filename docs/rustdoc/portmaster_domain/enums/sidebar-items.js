@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["container_status","risk_class","telemetry_event"]};
+window.SIDEBAR_ITEMS = {"mod":["container_status","risk_class","telemetry_event","unknown_index"]};
