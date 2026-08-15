@@ -44,7 +44,7 @@ const SUMMARY: &str = "container:summary";
 /// Alterar um contêiner.
 const UPDATE: &str = "container:update";
 
-/// O prefixo de toda leitura deste serviço — é o que uma escrita derruba.
+/// O prefixo das listagens deste serviço — é o que uma escrita derruba.
 ///
 /// Cobre também o resumo de carga e telemetria: é leitura de contêiner, e sai
 /// obsoleta pelas mesmas escritas.
@@ -231,17 +231,13 @@ where
             .await
     }
 
+    /// Um contêiner, direto da consulta — a leitura por id não passa pelo cache.
     async fn get(&self, query: GetContainerQuery) -> Result<ContainerViewItem, ContainerError> {
         if !query.context.has_permission(READ) {
             return Err(AppError::permission_denied(READ).into());
         }
 
         let dql = dql::get_container(&query.id)?;
-        let key = dql.cache_key();
-
-        if let Some(hit) = self.views.get(CACHE_GROUP, &key).await? {
-            return Ok(hit);
-        }
 
         let missing = query.id.clone();
 
@@ -255,10 +251,6 @@ where
             Ok(view)
         })
         .await?;
-
-        // Falhar ao guardar não invalida a resposta: o cliente já tem o
-        // dado correto, e o único prejuízo é o próximo pedido recalcular.
-        self.views.put(CACHE_GROUP, &key, &view).await?;
 
         Ok(view)
     }

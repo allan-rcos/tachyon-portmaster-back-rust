@@ -32,7 +32,7 @@ const LIST: &str = "role:list";
 /// Trocar as permissões de um papel.
 const UPDATE_PERMISSIONS: &str = "role:update-permissions";
 
-/// O prefixo de toda leitura deste serviço — é o que uma escrita derruba.
+/// O prefixo das listagens deste serviço — é o que uma escrita derruba.
 ///
 /// Trocar as permissões de um papel muda o que toda conta que o carrega pode
 /// fazer, e `user:`/`account:` **não** são derrubados por isso: cada serviço
@@ -138,17 +138,13 @@ where
         Ok(role)
     }
 
+    /// Um papel, direto da consulta — a leitura por id não passa pelo cache.
     async fn get(&self, query: GetRoleQuery) -> Result<RoleViewItem, RoleError> {
         if !query.context.has_permission(LIST) {
             return Err(AppError::permission_denied(LIST).into());
         }
 
         let dql = dql::get_role(&query.id)?;
-        let key = dql.cache_key();
-
-        if let Some(hit) = self.views.get(CACHE_GROUP, &key).await? {
-            return Ok(hit);
-        }
 
         let missing = query.id.clone();
 
@@ -162,10 +158,6 @@ where
             Ok(view)
         })
         .await?;
-
-        // Falhar ao guardar não invalida a resposta: o cliente já tem o
-        // dado correto, e o único prejuízo é o próximo pedido recalcular.
-        self.views.put(CACHE_GROUP, &key, &view).await?;
 
         Ok(view)
     }

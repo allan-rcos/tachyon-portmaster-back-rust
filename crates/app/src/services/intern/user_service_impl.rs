@@ -44,7 +44,7 @@ const UPDATE: &str = "user:update";
 /// Trocar os papéis de um usuário.
 const UPDATE_ROLES: &str = "user:update-roles";
 
-/// O prefixo de toda leitura deste serviço — é o que uma escrita derruba.
+/// O prefixo das listagens deste serviço — é o que uma escrita derruba.
 const CACHE_GROUP: &str = "user";
 
 /// A implementação, genérica sobre os ports que consome.
@@ -292,19 +292,14 @@ where
     /// Um usuário com os papéis dele, pelo lado de leitura.
     ///
     /// Usa a mesma consulta de `GET /account`: um usuário com os papéis dele é o
-    /// mesmo recorte, seja o próprio ou outro. A chave é outra — `user:` e não
-    /// `account:` — porque é este serviço que a derruba.
+    /// mesmo recorte, seja o próprio ou outro. A leitura por id não passa pelo
+    /// cache; a de `GET /account` ainda passa, sob o grupo `account`.
     async fn get(&self, query: GetUserQuery) -> Result<AccountView, UserError> {
         if !query.context.has_permission(GET) {
             return Err(AppError::permission_denied(GET).into());
         }
 
         let dql = dql::get_account(&query.id)?;
-        let key = dql.cache_key();
-
-        if let Some(hit) = self.views.get(CACHE_GROUP, &key).await? {
-            return Ok(hit);
-        }
 
         let missing = query.id.clone();
 
@@ -318,10 +313,6 @@ where
             Ok(view)
         })
         .await?;
-
-        // Falhar ao guardar não invalida a resposta: o cliente já tem o
-        // dado correto, e o único prejuízo é o próximo pedido recalcular.
-        self.views.put(CACHE_GROUP, &key, &view).await?;
 
         Ok(view)
     }
