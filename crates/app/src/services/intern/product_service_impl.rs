@@ -40,7 +40,7 @@ const READ: &str = "product:read";
 /// Alterar um produto.
 const UPDATE: &str = "product:update";
 
-/// O prefixo de toda leitura deste serviço — é o que uma escrita derruba.
+/// O prefixo das listagens deste serviço — é o que uma escrita derruba.
 ///
 /// A invalidação alcança **só** este prefixo. Uma escrita de produto muda o
 /// `registered_products` do painel, e o painel não é derrubado por isso: ele
@@ -193,23 +193,13 @@ where
         Ok(())
     }
 
-    /// Um produto, atrás do cache de leitura.
-    ///
-    /// O cache é consultado **depois** de autorizar: antes, ele entregaria dado
-    /// a quem não pode vê-lo, porque o cache não sabe quem está perguntando. Um
-    /// valor que não desserializa é tratado como ausência — ele é de um formato
-    /// anterior, e recalcular em silêncio evita que um deploy vire incidente.
+    /// Um produto, direto da consulta — a leitura por id não passa pelo cache.
     async fn get(&self, query: GetProductQuery) -> Result<ProductViewItem, ProductError> {
         if !query.context.has_permission(READ) {
             return Err(AppError::permission_denied(READ).into());
         }
 
         let dql = dql::get_product(&query.id)?;
-        let key = dql.cache_key();
-
-        if let Some(hit) = self.views.get(CACHE_GROUP, &key).await? {
-            return Ok(hit);
-        }
 
         let missing = query.id.clone();
 
@@ -224,10 +214,6 @@ where
         })
         .await?;
 
-        // Falhar ao guardar não invalida a resposta: o cliente já tem o
-        // dado correto, e o único prejuízo é o próximo pedido recalcular.
-        self.views.put(CACHE_GROUP, &key, &view).await?;
-
         Ok(view)
     }
 
@@ -236,6 +222,11 @@ where
     /// A chave sai do próprio DQL, que é quem conhece todos os filtros. Antes
     /// era montada aqui, e um filtro novo que ninguém somasse à ela faria duas
     /// consultas diferentes lerem a mesma entrada.
+    ///
+    /// O cache é consultado **depois** de autorizar: antes, ele entregaria dado
+    /// a quem não pode vê-lo, porque o cache não sabe quem está perguntando. Um
+    /// valor que não desserializa é tratado como ausência — ele é de um formato
+    /// anterior, e recalcular em silêncio evita que um deploy vire incidente.
     async fn list(&self, query: ListProductsQuery) -> Result<ProductListView, ProductError> {
         if !query.context.has_permission(READ) {
             return Err(AppError::permission_denied(READ).into());
