@@ -10,11 +10,10 @@ on:
   pull_request:
     branches: [main]
 
-env:
-  CARGO_TERM_COLOR: always
-  # A warning that only appears locally is a warning nobody fixes.
-  RUSTFLAGS: -D warnings
-
+# O `CARGO_TERM_COLOR` e o `RUSTFLAGS: -D warnings` que moravam aqui saíram: o
+# cargo não roda mais no runner, e o env do runner não atravessa para dentro de
+# um contêiner do Dagger. O `-D warnings` que vale é o da linha de comando em
+# dagger/clippy.go, e o do `RUSTDOCFLAGS` em dagger/doc.go.
 env:
   # Fixado na versão que os módulos de dagger/ declaram no dagger.json. Um CLI
   # mais novo que o engine contra o qual eles foram gerados reexecuta o codegen
