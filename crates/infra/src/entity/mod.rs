@@ -19,9 +19,9 @@
 //! O ganho não é o tamanho: é que uma coluna nova passa a ser um campo, e não um
 //! campo mais uma linha de leitura que pode ficar para trás.
 //!
-//! A identidade é um [`EntityId`](entity_id::EntityId) e não dois campos. Antes
-//! cada entity guardava `id: String` e `raw_id: i64` lado a lado, mantidos em
-//! sincronia à mão nos dois construtores.
+//! A identidade é um [`EntityId`](entity_id::EntityId) e não dois campos:
+//! guardar `id: String` e `raw_id: i64` lado a lado deixaria os dois para serem
+//! mantidos em sincronia à mão em cada construtor.
 
 pub(crate) mod codec;
 pub(crate) mod container_entity;

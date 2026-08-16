@@ -24,9 +24,24 @@ use crate::wire::vo::admin::user_roles_update_x_request::UserRolesUpdateXRequest
 use crate::wire::vo::admin::user_update_x_request::UserUpdateXRequest;
 use axum::extract::{Path, Query};
 
+/// Monta o controller de usuário.
+///
+/// O service e o acesso à sessão chegam injetados, e o que sai é o contrato: o
+/// tipo concreto não tem nome fora deste arquivo.
+pub(crate) fn user_controller<U, S>(
+    users: U,
+    session: S,
+) -> impl UserController + use<U, S> + 'static
+where
+    U: UserService + Clone + Send + Sync + 'static,
+    S: SessionPort + Clone + Send + Sync + 'static,
+{
+    UserControllerImpl { users, session }
+}
+
 /// Os handlers de usuário, genéricos sobre o service.
 #[derive(Clone)]
-pub(crate) struct UserControllerImpl<U, S> {
+struct UserControllerImpl<U, S> {
     /// O service de usuário.
     users: U,
     /// Quem diz se há sessão, e quem a apresenta.
@@ -34,11 +49,6 @@ pub(crate) struct UserControllerImpl<U, S> {
 }
 
 impl<U: UserService, S: SessionPort> UserControllerImpl<U, S> {
-    /// Monta o controller.
-    pub(crate) const fn new(users: U, session: S) -> Self {
-        Self { users, session }
-    }
-
     /// O usuário pelo lado de leitura, já na forma do fio.
     async fn read(&self, context: UserContext, id: String) -> Result<UserAdminXResponse, ApiError> {
         let view = self

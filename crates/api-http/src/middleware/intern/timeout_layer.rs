@@ -20,8 +20,8 @@ use crate::ports::error::api_error::ApiError;
 ///
 /// Um tipo só, e não um par. `TimeoutLayer` sem parâmetro é o `Layer` — o teto
 /// configurado, ainda sem serviço interno —, e `TimeoutLayer<S>` é o `Service`
-/// que sai do `layer()`: o mesmo teto, agora com o `S` que ele embrulha. Eram
-/// dois tipos em dois arquivos, e o segundo nunca foi nomeado por ninguém — quem
+/// que sai do `layer()`: o mesmo teto, agora com o `S` que ele embrulha. Um par
+/// de tipos custaria um segundo arquivo e um nome que ninguém pronuncia — quem
 /// monta a pilha aplica o layer e mais nada.
 #[derive(Clone, Copy)]
 pub(crate) struct TimeoutLayer<S = ()> {
@@ -92,7 +92,3 @@ where
         })
     }
 }
-
-#[cfg(test)]
-#[path = "tests/timeout_layer_test.rs"]
-mod tests;

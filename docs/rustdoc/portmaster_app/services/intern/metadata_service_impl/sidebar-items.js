@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["PERMISSION_LIST"],"struct":["MetadataServiceImpl"]};
+window.SIDEBAR_ITEMS = {"constant":["PERMISSION_LIST"],"fn":["metadata_service"],"struct":["MetadataServiceImpl"]};

@@ -16,6 +16,7 @@ pub mod view_cache_repository;
 
 pub(crate) mod mariadb;
 pub(crate) mod memory;
+pub(crate) mod repository_provider;
 
 pub use container_repository::ContainerRepository;
 pub use manifest_repository::ManifestRepository;
@@ -26,3 +27,5 @@ pub use product_repository::ProductRepository;
 pub use role_repository::RoleRepository;
 pub use user_repository::UserRepository;
 pub use view_cache_repository::ViewCacheRepository;
+
+pub(crate) use repository_provider::RepositoryProvider;

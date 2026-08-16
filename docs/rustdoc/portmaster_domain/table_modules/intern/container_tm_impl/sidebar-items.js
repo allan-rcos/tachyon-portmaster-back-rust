@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["MAX_CODE_LENGTH","MIN_SEAL_FILL_RATIO"],"fn":["code_refused"],"struct":["ContainerTMImpl"]};
+window.SIDEBAR_ITEMS = {"constant":["MAX_CODE_LENGTH","MIN_SEAL_FILL_RATIO"],"fn":["code_refused","container_tm"],"struct":["ContainerTMImpl"]};

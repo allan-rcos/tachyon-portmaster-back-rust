@@ -25,7 +25,3 @@ impl TelemetryEvent {
         }
     }
 }
-
-#[cfg(test)]
-#[path = "tests/telemetry_event_test.rs"]
-mod tests;

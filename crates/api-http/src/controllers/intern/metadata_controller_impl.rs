@@ -12,20 +12,28 @@ use crate::wire::api_response::ApiResponse;
 use crate::wire::vo::metadata::permission_list_x_response::PermissionListXResponse;
 use axum::extract::Query;
 
+/// Monta o controller de metadados.
+///
+/// O service e o acesso à sessão chegam injetados, e o que sai é o contrato: o
+/// tipo concreto não tem nome fora deste arquivo.
+pub(crate) fn metadata_controller<M, S>(
+    metadata: M,
+    session: S,
+) -> impl MetadataController + use<M, S> + 'static
+where
+    M: MetadataService + Clone + Send + Sync + 'static,
+    S: SessionPort + Clone + Send + Sync + 'static,
+{
+    MetadataControllerImpl { metadata, session }
+}
+
 /// Os handlers de metadado, genéricos sobre o service.
 #[derive(Clone)]
-pub(crate) struct MetadataControllerImpl<M, S> {
+struct MetadataControllerImpl<M, S> {
     /// O service de metadado.
     metadata: M,
     /// Quem diz se há sessão, e quem a apresenta.
     session: S,
-}
-
-impl<M: MetadataService, S: SessionPort> MetadataControllerImpl<M, S> {
-    /// Monta o controller.
-    pub(crate) const fn new(metadata: M, session: S) -> Self {
-        Self { metadata, session }
-    }
 }
 
 impl<M: MetadataService + Clone + Send + Sync + 'static, S: SessionPort> MetadataController

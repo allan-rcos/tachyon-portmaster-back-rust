@@ -71,9 +71,9 @@ where
     /// navegador nenhum.
     ///
     /// O carimbo acontece **depois** do handler, e por isso vale para toda
-    /// resposta — inclusive a de erro. Antes cada rota que emitia cookie
-    /// dobrava um `Vec<Cookie>` sobre a resposta com um `fold`, e um caminho de
-    /// falha que precisasse limpar a sessão tinha de lembrar de fazer o mesmo.
+    /// resposta — inclusive a de erro. Deixá-lo a cargo de cada rota que emite
+    /// cookie faria todo caminho de falha que precisa limpar a sessão lembrar de
+    /// repetir o mesmo `fold`.
     fn call(&mut self, request: Request) -> Self::Future {
         let clone = self.inner.clone();
         let mut inner = std::mem::replace(&mut self.inner, clone);

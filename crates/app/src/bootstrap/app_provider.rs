@@ -1,145 +1,172 @@
-//! A implementação do provider da aplicação.
+//! A borda do `app`: tudo que a apresentação alcança sai por aqui, e o boot do
+//! processo começa aqui.
 
+use anyhow::Context as _;
 use portmaster_domain::id::{RandomIdGenerator, SequentialIdGenerator};
 use portmaster_domain::DomainProvider;
 use portmaster_infra::logging::LoggerFactory;
 use portmaster_infra::InfraProvider;
 
-use crate::bootstrap::provider::AppProvider;
-use crate::services::intern::account_service_impl::AccountServiceImpl;
-use crate::services::intern::container_service_impl::ContainerServiceImpl;
-use crate::services::intern::manifest_service_impl::ManifestServiceImpl;
-use crate::services::intern::mark_service_impl::MarkServiceImpl;
-use crate::services::intern::metadata_service_impl::MetadataServiceImpl;
-use crate::services::intern::metrics_service_impl::MetricsServiceImpl;
-use crate::services::intern::product_service_impl::ProductServiceImpl;
-use crate::services::intern::role_service_impl::RoleServiceImpl;
-use crate::services::intern::session_service_impl::SessionServiceImpl;
-use crate::services::intern::user_service_impl::UserServiceImpl;
+use crate::config::AppSecrets;
+use crate::services::ServicesProvider;
 use crate::services::{
     AccountService, ContainerService, ManifestService, MarkService, MetadataService,
     MetricsService, ProductService, RoleService, SessionService, UserService,
 };
 
-/// A implementação do provider. Privada: nenhum crate exporta impl.
-pub(crate) struct AppProviderImpl<D, I> {
-    /// O provider do `domain`, de onde saem os `TableModules`.
-    domain: D,
-    /// O provider da `infra`, de onde saem repositories, cache e leitura.
-    infra: I,
-}
+/// Os factories dos services.
+///
+/// A apresentação recebe **contrato**: nenhum tipo concreto de service
+/// atravessa esta fronteira. Ver
+/// `docs/adr/0011-static-providers-one-per-directory.md`.
+///
+/// Oito dos dez devolvem `Result`, e dois não. A divisão vem de baixo: quem
+/// depende do pool pode falhar se o boot ainda não tiver instalado os segredos
+/// do banco, e quem só toca memória não tem como. Todas as chamadas acontecem
+/// no boot, dentro de funções que já devolvem `anyhow::Result`.
+pub struct AppProvider;
 
-impl<D, I> AppProviderImpl<D, I> {
-    /// Guarda os subproviders das camadas de baixo.
+impl AppProvider {
+    /// Inicializa o sistema inteiro.
     ///
-    /// Não há recurso caro aqui: o pool e os caches nasceram no `register` da
-    /// `infra` e chegam dentro do `I`.
-    pub(crate) const fn new(domain: D, infra: I) -> Self {
-        Self { domain, infra }
-    }
-}
+    /// Instala a configuração das camadas de baixo em quem a consome, confirma
+    /// que o banco responde e declara o catálogo. O `main` chama isto e depois
+    /// monta o router, sem conhecer `domain` nem `infra`.
+    ///
+    /// ## O catálogo de permissões nasce aqui, e esta função não conhece um slug
+    ///
+    /// Cada serviço declara as suas, e o que este boot faz é pedir que declarem.
+    /// É o molde do `declarePermission` do PHP: a permissão pertence a exatamente
+    /// um caso de uso, e é ele quem a nomeia. Acrescentar um serviço é acrescentar
+    /// uma linha aqui — não editar uma lista central que ninguém lembra de manter.
+    ///
+    /// O catálogo precisa existir antes da primeira requisição: o `POST /setup`
+    /// concede ao primeiro papel tudo que estiver registrado. Falhar aqui derruba o
+    /// boot de propósito — um sistema que subiu com o catálogo pela metade daria 403
+    /// em endpoints que deveriam funcionar, e a causa seria invisível.
+    ///
+    /// Registrar no boot, e não no construtor de cada caso de uso como o PHP fazia,
+    /// evita repetir o registro a cada requisição: os services são reconstruídos
+    /// o tempo todo, o catálogo não.
+    ///
+    /// **Grupo de marcador não entra aqui.** Quem usa um grupo é a apresentação, e é
+    /// ela quem o declara — esta camada não sabe o que é sessão.
+    ///
+    /// É o único ponto em que um erro tipado vira `anyhow`: aqui é wiring de root, e
+    /// o que sai daqui vai para o `main`.
+    pub async fn boot(secrets: &AppSecrets) -> anyhow::Result<()> {
+        DomainProvider::install_identity(secrets.domain);
+        InfraProvider::install_database(&secrets.infra)?;
+        InfraProvider::check_database().await?;
 
-impl<D: DomainProvider, I: InfraProvider> AppProvider for AppProviderImpl<D, I> {
-    fn account_service(&self) -> impl AccountService + Clone + use<D, I> + 'static {
-        AccountServiceImpl::new(
-            self.infra.user_repository(),
-            self.domain.user_table_module(),
-            self.domain.auth_table_module(),
-            self.infra.query_repository(),
-            self.infra.view_cache_repository(),
-        )
-    }
+        let metadata = Self::metadata_service();
 
-    fn container_service(&self) -> impl ContainerService + Clone + use<D, I> + 'static {
-        ContainerServiceImpl::new(
-            self.infra.container_repository(),
-            self.domain.container_table_module(),
-            self.infra.query_repository(),
-            self.infra.view_cache_repository(),
-        )
-    }
+        metadata
+            .declare_permissions()
+            .await
+            .context("falha ao registrar as permissões de metadados")?;
 
-    fn manifest_service(&self) -> impl ManifestService + Clone + use<D, I> + 'static {
-        ManifestServiceImpl::new(
-            self.infra.container_repository(),
-            self.infra.product_repository(),
-            self.infra.manifest_repository(),
-            self.domain.manifest_table_module(),
-            self.infra.view_cache_repository(),
-        )
-    }
+        Self::container_service()?
+            .declare_permissions(&metadata)
+            .await
+            .context("falha ao registrar as permissões de contêiner")?;
 
-    fn mark_service(&self) -> impl MarkService + Clone + use<D, I> + 'static {
-        MarkServiceImpl::new(
-            self.domain.marker_table_module(),
-            self.domain.marker_group_table_module(),
-            self.infra.marker_repository(),
-            self.infra.marker_group_repository(),
-        )
-    }
+        Self::manifest_service()?
+            .declare_permissions(&metadata)
+            .await
+            .context("falha ao registrar as permissões de manifesto")?;
 
-    fn metadata_service(&self) -> impl MetadataService + Clone + use<D, I> + 'static {
-        MetadataServiceImpl::new(
-            self.infra.permission_repository(),
-            self.domain.permission_table_module(),
-        )
-    }
+        Self::metrics_service()?
+            .declare_permissions(&metadata)
+            .await
+            .context("falha ao registrar as permissões do painel")?;
 
-    fn metrics_service(&self) -> impl MetricsService + Clone + use<D, I> + 'static {
-        MetricsServiceImpl::new(
-            self.infra.query_repository(),
-            self.infra.view_cache_repository(),
-        )
-    }
+        Self::product_service()?
+            .declare_permissions(&metadata)
+            .await
+            .context("falha ao registrar as permissões de produto")?;
 
-    fn product_service(&self) -> impl ProductService + Clone + use<D, I> + 'static {
-        ProductServiceImpl::new(
-            self.infra.product_repository(),
-            self.domain.product_table_module(),
-            self.infra.query_repository(),
-            self.infra.view_cache_repository(),
-        )
-    }
+        Self::role_service()?
+            .declare_permissions(&metadata)
+            .await
+            .context("falha ao registrar as permissões de papel")?;
 
-    fn role_service(&self) -> impl RoleService + Clone + use<D, I> + 'static {
-        RoleServiceImpl::new(
-            self.infra.role_repository(),
-            self.domain.role_table_module(),
-            self.infra.query_repository(),
-            self.infra.view_cache_repository(),
-        )
+        Self::user_service()?
+            .declare_permissions(&metadata)
+            .await
+            .context("falha ao registrar as permissões de usuário")?;
+
+        Ok(())
     }
 
-    fn session_service(&self) -> impl SessionService + Clone + use<D, I> + 'static {
-        SessionServiceImpl::new(
-            self.infra.user_repository(),
-            self.infra.role_repository(),
-            self.infra.permission_repository(),
-            self.domain.user_table_module(),
-            self.domain.role_table_module(),
-            self.domain.auth_table_module(),
-        )
+    /// A conta do próprio usuário.
+    pub fn account_service() -> anyhow::Result<impl AccountService + Sync + Clone + use<> + 'static>
+    {
+        ServicesProvider::account()
     }
 
-    fn user_service(&self) -> impl UserService + Clone + use<D, I> + 'static {
-        UserServiceImpl::new(
-            self.infra.user_repository(),
-            self.infra.role_repository(),
-            self.domain.user_table_module(),
-            self.infra.query_repository(),
-            self.infra.view_cache_repository(),
-        )
+    /// Contêineres.
+    pub fn container_service(
+    ) -> anyhow::Result<impl ContainerService + Sync + Clone + use<> + 'static> {
+        ServicesProvider::container()
     }
 
-    fn logger_factory(&self) -> impl LoggerFactory + use<D, I> + 'static {
-        self.infra.logger_factory()
+    /// Carga e telemetria.
+    pub fn manifest_service(
+    ) -> anyhow::Result<impl ManifestService + Sync + Clone + use<> + 'static> {
+        ServicesProvider::manifest()
     }
 
-    fn random_id_generator(&self) -> impl RandomIdGenerator + use<D, I> {
-        self.domain.random_id_generator()
+    /// A primitiva de marcação — sessão de refresh é um uso dela.
+    pub fn mark_service() -> impl MarkService + Sync + Clone + use<> + 'static {
+        ServicesProvider::mark()
     }
 
-    fn sequential_id_generator(&self) -> impl SequentialIdGenerator + use<D, I> {
-        self.domain.sequential_id_generator()
+    /// Metadados de sistema.
+    pub fn metadata_service() -> impl MetadataService + Sync + Clone + use<> + 'static {
+        ServicesProvider::metadata()
+    }
+
+    /// O painel do pátio.
+    pub fn metrics_service() -> anyhow::Result<impl MetricsService + Sync + Clone + use<> + 'static>
+    {
+        ServicesProvider::metrics()
+    }
+
+    /// Produtos.
+    pub fn product_service() -> anyhow::Result<impl ProductService + Sync + Clone + use<> + 'static>
+    {
+        ServicesProvider::product()
+    }
+
+    /// Papéis.
+    pub fn role_service() -> anyhow::Result<impl RoleService + Sync + Clone + use<> + 'static> {
+        ServicesProvider::role()
+    }
+
+    /// Login, validação de sessão e o setup inicial.
+    pub fn session_service() -> anyhow::Result<impl SessionService + Sync + Clone + use<> + 'static>
+    {
+        ServicesProvider::session()
+    }
+
+    /// Usuários.
+    pub fn user_service() -> anyhow::Result<impl UserService + Sync + Clone + use<> + 'static> {
+        ServicesProvider::user()
+    }
+
+    /// Fábrica de loggers, para a apresentação.
+    pub fn logger_factory() -> impl LoggerFactory + use<> {
+        InfraProvider::logger_factory()
+    }
+
+    /// Gerador de id opaco, para o refresh token.
+    pub fn random_id_generator() -> impl RandomIdGenerator + use<> {
+        DomainProvider::random_id_generator()
+    }
+
+    /// Gerador de id ordenável, para o `request_id`.
+    pub fn sequential_id_generator() -> impl SequentialIdGenerator + use<> {
+        DomainProvider::sequential_id_generator()
     }
 }

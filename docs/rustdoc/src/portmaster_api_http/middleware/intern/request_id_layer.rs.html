@@ -20,16 +20,16 @@
 <a href=#20 id=20 data-nosnippet>20</a>///
 <a href=#21 id=21 data-nosnippet>21</a>/// Um tipo só, e não um par. `RequestIdLayer&lt;G&gt;` é o `Layer` — o gerador, ainda
 <a href=#22 id=22 data-nosnippet>22</a>/// sem serviço interno —, e `RequestIdLayer&lt;G, S&gt;` é o `Service` que sai do
-<a href=#23 id=23 data-nosnippet>23</a>/// `layer()`. Eram dois tipos em dois arquivos, e o segundo nunca foi nomeado
-<a href=#24 id=24 data-nosnippet>24</a>/// por ninguém.
+<a href=#23 id=23 data-nosnippet>23</a>/// `layer()`. Um par de tipos custaria um segundo arquivo e um nome que ninguém
+<a href=#24 id=24 data-nosnippet>24</a>/// pronuncia: quem monta a pilha aplica o layer e mais nada.
 <a href=#25 id=25 data-nosnippet>25</a>///
 <a href=#26 id=26 data-nosnippet>26</a>/// ## O id é sempre nosso
 <a href=#27 id=27 data-nosnippet>27</a>///
-<a href=#28 id=28 data-nosnippet>28</a>/// Um `X-Request-Id` que chegue de fora é **ignorado**. Antes ele era aceito se
-<a href=#29 id=29 data-nosnippet>29</a>/// tivesse até 128 bytes, o que deixava o cliente escolher o que apareceria em
-<a href=#30 id=30 data-nosnippet>30</a>/// toda linha de log daquela requisição — e num agregador de log, um valor
-<a href=#31 id=31 data-nosnippet>31</a>/// escolhido por quem faz a chamada é um valor que dá para forjar, colidir com o
-<a href=#32 id=32 data-nosnippet>32</a>/// de outra requisição ou usar para injetar conteúdo em quem lê os campos.
+<a href=#28 id=28 data-nosnippet>28</a>/// Um `X-Request-Id` que chegue de fora é **ignorado**. Aceitá-lo deixaria o
+<a href=#29 id=29 data-nosnippet>29</a>/// cliente escolher o que aparece em toda linha de log daquela requisição — e
+<a href=#30 id=30 data-nosnippet>30</a>/// num agregador de log, um valor escolhido por quem faz a chamada é um valor
+<a href=#31 id=31 data-nosnippet>31</a>/// que dá para forjar, colidir com o de outra requisição ou usar para injetar
+<a href=#32 id=32 data-nosnippet>32</a>/// conteúdo em quem lê os campos.
 <a href=#33 id=33 data-nosnippet>33</a>///
 <a href=#34 id=34 data-nosnippet>34</a>/// A resposta continua trazendo o id no cabeçalho, então quem chamou consegue
 <a href=#35 id=35 data-nosnippet>35</a>/// correlacionar. O que ele não consegue é **escolhê-lo** — nem quando a API
@@ -38,11 +38,11 @@
 <a href=#38 id=38 data-nosnippet>38</a>///
 <a href=#39 id=39 data-nosnippet>39</a>/// ## O id não viaja na requisição
 <a href=#40 id=40 data-nosnippet>40</a>///
-<a href=#41 id=41 data-nosnippet>41</a>/// Ele viaja no escopo da tarefa. Antes era carimbado num cabeçalho da
-<a href=#42 id=42 data-nosnippet>42</a>/// requisição para o log encontrá-lo logo adiante — um dado nosso dando a volta
-<a href=#43 id=43 data-nosnippet>43</a>/// por uma estrutura do cliente, no mesmo campo em que o cliente podia ter
-<a href=#44 id=44 data-nosnippet>44</a>/// escrito. Quem quer o id agora pede ao
-<a href=#45 id=45 data-nosnippet>45</a>/// [`RequestIdPort`](crate::middleware::request_id_port::RequestIdPort).
+<a href=#41 id=41 data-nosnippet>41</a>/// Ele viaja no escopo da tarefa, e quem o quer pede ao
+<a href=#42 id=42 data-nosnippet>42</a>/// [`RequestIdPort`](crate::middleware::request_id_port::RequestIdPort).
+<a href=#43 id=43 data-nosnippet>43</a>/// Carimbá-lo num cabeçalho da requisição para o log encontrá-lo adiante seria
+<a href=#44 id=44 data-nosnippet>44</a>/// um dado nosso dando a volta por uma estrutura do cliente, no mesmo campo em
+<a href=#45 id=45 data-nosnippet>45</a>/// que o cliente podia ter escrito.
 <a href=#46 id=46 data-nosnippet>46</a></span><span class="attr">#[derive(Clone)]
 <a href=#47 id=47 data-nosnippet>47</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>RequestIdLayer&lt;G, S = ()&gt; {
 <a href=#48 id=48 data-nosnippet>48</a>    <span class="doccomment">/// O serviço interno, que este envolve; `()` enquanto é só layer.

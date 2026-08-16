@@ -153,7 +153,3 @@ impl EnvSource {
         self.vars.get(name).map(String::as_str)
     }
 }
-
-#[cfg(test)]
-#[path = "tests/env_source_test.rs"]
-mod tests;

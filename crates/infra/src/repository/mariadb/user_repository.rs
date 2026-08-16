@@ -40,13 +40,28 @@ const CLEAR_ROLES: &str = "DELETE FROM `user_roles` WHERE user_id = ?";
 /// Liga um papel ao usuário.
 const LINK_ROLE: &str = "INSERT INTO `user_roles` (user_id, role_id) VALUES (?, ?)";
 
-/// O repositório de usuários.
+/// Monta o repositório de usuários sobre o de papéis.
 ///
-/// Genérico sobre o repositório de papéis porque um usuário não está completo
-/// sem eles: os papéis decidem o que ele pode fazer, e devolvê-lo sem papéis
-/// faria toda verificação de autorização falhar em silêncio.
+/// O de papéis chega injetado porque um usuário não está completo sem eles: os
+/// papéis decidem o que ele pode fazer, e devolvê-lo sem papéis faria toda
+/// verificação de autorização falhar em silêncio.
+pub(super) fn user_repository<R, T>(
+    roles: R,
+    transactions: T,
+) -> impl UserRepository + Sync + Clone + use<R, T> + 'static
+where
+    R: RoleRepository + Send + Sync + Clone + 'static,
+    T: MySqlTransaction + Send + Sync + Clone + 'static,
+{
+    UserMariadbRepository {
+        roles,
+        transactions,
+    }
+}
+
+/// O repositório de usuários, genérico sobre o de papéis.
 #[derive(Clone)]
-pub struct UserMariadbRepository<R, T> {
+struct UserMariadbRepository<R, T> {
     /// De onde os papéis do usuário são lidos, na mesma leitura.
     roles: R,
     /// De onde a transação da tarefa vem.
@@ -54,14 +69,6 @@ pub struct UserMariadbRepository<R, T> {
 }
 
 impl<R: RoleRepository, T> UserMariadbRepository<R, T> {
-    /// Monta o repositório sobre o de papéis.
-    pub(crate) const fn new(roles: R, transactions: T) -> Self {
-        Self {
-            roles,
-            transactions,
-        }
-    }
-
     /// Completa a entity buscando os papéis do usuário.
     ///
     /// A busca dos papéis acontece **depois** de soltar o empréstimo da

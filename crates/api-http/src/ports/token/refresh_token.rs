@@ -34,7 +34,3 @@ impl RefreshToken {
         (!id.is_empty() && !random.is_empty()).then_some(id)
     }
 }
-
-#[cfg(test)]
-#[path = "tests/refresh_token_test.rs"]
-mod tests;

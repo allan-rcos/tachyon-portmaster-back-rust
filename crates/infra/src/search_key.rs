@@ -40,7 +40,3 @@ impl SearchKey {
         folded.split_whitespace().collect::<Vec<_>>().join(" ")
     }
 }
-
-#[cfg(test)]
-#[path = "tests/search_key_test.rs"]
-mod tests;

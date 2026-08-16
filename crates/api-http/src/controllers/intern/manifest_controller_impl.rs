@@ -21,20 +21,28 @@ const LOADED: &str = "Item loaded successfully.";
 /// O que a resposta de desembarque diz.
 const UNLOADED: &str = "Item unloaded successfully.";
 
+/// Monta o controller de manifesto.
+///
+/// O service e o acesso à sessão chegam injetados, e o que sai é o contrato: o
+/// tipo concreto não tem nome fora deste arquivo.
+pub(crate) fn manifest_controller<M, S>(
+    manifest: M,
+    session: S,
+) -> impl ManifestController + use<M, S> + 'static
+where
+    M: ManifestService + Clone + Send + Sync + 'static,
+    S: SessionPort + Clone + Send + Sync + 'static,
+{
+    ManifestControllerImpl { manifest, session }
+}
+
 /// Os handlers de carga, genéricos sobre o service.
 #[derive(Clone)]
-pub(crate) struct ManifestControllerImpl<M, S> {
+struct ManifestControllerImpl<M, S> {
     /// O service de carga.
     manifest: M,
     /// Quem diz se há sessão, e quem a apresenta.
     session: S,
-}
-
-impl<M: ManifestService, S: SessionPort> ManifestControllerImpl<M, S> {
-    /// Monta o controller.
-    pub(crate) const fn new(manifest: M, session: S) -> Self {
-        Self { manifest, session }
-    }
 }
 
 impl<M: ManifestService + Clone + Send + Sync + 'static, S: SessionPort> ManifestController

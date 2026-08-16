@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["index_hasher","intern","password_hasher"]};
+window.SIDEBAR_ITEMS = {"mod":["index_hasher","intern","password_hasher","security_provider"]};

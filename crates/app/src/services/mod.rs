@@ -26,6 +26,7 @@ pub mod session_service;
 pub mod user_service;
 
 pub(crate) mod intern;
+pub(crate) mod services_provider;
 
 pub use account_service::AccountService;
 pub use container_service::ContainerService;
@@ -37,3 +38,5 @@ pub use product_service::ProductService;
 pub use role_service::RoleService;
 pub use session_service::SessionService;
 pub use user_service::UserService;
+
+pub(crate) use services_provider::ServicesProvider;

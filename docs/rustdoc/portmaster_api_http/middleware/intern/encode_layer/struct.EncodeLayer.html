@@ -16,9 +16,9 @@ that has been decorated with the middleware.</div></details></div></details><det
     S: Service&lt;Request, Response = Response&gt; + <a class="trait" href="https://doc.rust-lang.org/1.96.0/core/clone/trait.Clone.html" title="trait core::clone::Clone">Clone</a> + <a class="trait" href="https://doc.rust-lang.org/1.96.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'static,
     S::Future: <a class="trait" href="https://doc.rust-lang.org/1.96.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'static,</div></h3></section></summary><div class="impl-items"><details class="toggle method-toggle" open><summary><section id="method.call" class="method trait-impl"><a class="src rightside" href="../../../../src/portmaster_api_http/middleware/intern/encode_layer.rs.html#72-94">Source</a><a href="#method.call" class="anchor">§</a><h4 class="code-header">fn <a class="fn">call</a>(&amp;mut self, request: Request) -&gt; Self::Future</h4></section></summary><div class="docblock"><p>Resolve o formato, ou recusa com <code>406</code>.</p>
 <p><code>406 Not Acceptable</code> é literalmente o que aconteceu: o cliente listou o
-que aceita e não há interseção com o que sabemos escrever. Antes isto
-caía em JSON calado, e quem pedira XML recebia um <code>200</code> com um corpo que
-não sabe ler — nem recebe o que pediu, nem descobre que não vai receber.</p>
+que aceita e não há interseção com o que sabemos escrever. Cair em JSON
+calado daria a quem pediu XML um <code>200</code> com um corpo que ele não sabe ler
+— nem recebe o que pediu, nem descobre que não vai receber.</p>
 <p>O corpo da própria recusa sai em JSON, que é o padrão do
 <a href="../encode_context/struct.EncodeContext.html" title="struct portmaster_api_http::middleware::intern::encode_context::EncodeContext"><code>EncodeContext</code></a> fora do escopo. Não há alternativa: acabamos de
 declarar que não sabemos escrever no que ele pediu.</p>

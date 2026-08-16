@@ -49,8 +49,7 @@ pub mod error;
 pub mod queries;
 pub mod services;
 
-pub use bootstrap::provider::AppProvider;
-pub use bootstrap::register::register;
+pub use bootstrap::app_provider::AppProvider;
 pub use config::AppSecrets;
 
 // --- Reexports para a apresentação -----------------------------------------

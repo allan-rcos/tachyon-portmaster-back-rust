@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["DomainProviderImpl"]};
+window.SIDEBAR_ITEMS = {"struct":["DomainProvider"]};

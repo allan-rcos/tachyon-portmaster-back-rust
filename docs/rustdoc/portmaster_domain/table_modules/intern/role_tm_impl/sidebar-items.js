@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["MAX_NAME_LENGTH"],"fn":["name_refused"],"struct":["RoleTMImpl"]};
+window.SIDEBAR_ITEMS = {"constant":["MAX_NAME_LENGTH"],"fn":["name_refused","role_tm"],"struct":["RoleTMImpl"]};

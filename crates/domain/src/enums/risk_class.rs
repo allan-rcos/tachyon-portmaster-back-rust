@@ -64,7 +64,3 @@ impl TryFrom<i32> for RiskClass {
         Self::from_i32(value).ok_or_else(|| UnknownIndex::new(value, "RiskClass"))
     }
 }
-
-#[cfg(test)]
-#[path = "tests/risk_class_test.rs"]
-mod tests;

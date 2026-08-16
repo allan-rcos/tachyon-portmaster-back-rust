@@ -6,9 +6,9 @@
 //! [`Secrets::load`](crate::config::secrets::Secrets::load()) não importa
 //! nenhum.
 //!
-//! Antes disto havia uma função de noventa linhas lendo o ambiente inteiro de
-//! uma vez — o tipo de função que só cresce. Um grupo novo agora é um arquivo
-//! novo aqui e um campo no rascunho; nada existente é editado.
+//! A alternativa seria uma função lendo o ambiente inteiro de uma vez — o tipo
+//! de função que só cresce. Aqui um grupo novo é um arquivo novo e um campo no
+//! rascunho; nada existente é editado.
 
 pub(crate) mod api_chain;
 pub(crate) mod database_chain;

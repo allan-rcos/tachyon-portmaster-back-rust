@@ -35,17 +35,25 @@ const SOFT_DELETE: &str =
     "UPDATE `roles` SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL";
 
 /// O repositório de papéis.
-#[derive(Clone)]
-pub struct RoleMariadbRepository<T> {
-    /// De onde a transação da tarefa vem.
+/// Monta o repositório de papéis.
+///
+/// Não guarda estado: a transação vem do escopo da tarefa, não de um campo — o
+/// que permite ao provider reconstruí-lo a cada chamada por custo praticamente
+/// zero.
+pub(super) fn role_repository<T>(
     transactions: T,
+) -> impl RoleRepository + Sync + Clone + use<T> + 'static
+where
+    T: MySqlTransaction + Send + Sync + Clone + 'static,
+{
+    RoleMariadbRepository { transactions }
 }
 
-impl<T> RoleMariadbRepository<T> {
-    /// Monta o repositório.
-    pub(crate) const fn new(transactions: T) -> Self {
-        Self { transactions }
-    }
+/// O repositório de papéis, sobre o `MariaDB`.
+#[derive(Clone)]
+struct RoleMariadbRepository<T> {
+    /// De onde a transação da tarefa vem.
+    transactions: T,
 }
 
 impl<T: MySqlTransaction + Send + Sync> RoleRepository for RoleMariadbRepository<T> {

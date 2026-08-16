@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["AUTH_CHANNEL"],"static":["ENVIRONMENT"],"struct":["ControllersProvider"]};

@@ -49,22 +49,24 @@ impl Expiry<EntryKey, EntryValue> for EntryExpiry {
     }
 }
 
+/// Monta o mapa com o teto dado e a expiração por entrada instalada.
+///
+/// `support_invalidation_closures` é o que permite descartar um grupo inteiro
+/// sem conhecer as chaves dele.
+///
+/// Devolve o tipo concreto porque não há contrato a devolver: um mapa não é um
+/// port, é o recurso que os stores compartilham. Quem o guarda uma vez por
+/// recorte é o `MemoryScopeProvider`.
+pub(in crate::scope::memory) fn moka_cache(capacity: u64) -> MokaCache {
+    MokaCache(Arc::new(
+        Cache::builder()
+            .max_capacity(capacity)
+            .expire_after(EntryExpiry)
+            .support_invalidation_closures()
+            .build(),
+    ))
+}
+
 /// Um mapa em memória com política própria.
 #[derive(Clone)]
-pub(crate) struct MokaCache(pub(super) Arc<Cache<EntryKey, EntryValue>>);
-
-impl MokaCache {
-    /// Monta o mapa com o teto dado e a expiração por entrada instalada.
-    ///
-    /// `support_invalidation_closures` é o que permite descartar um grupo
-    /// inteiro sem conhecer as chaves dele.
-    pub(crate) fn new(capacity: u64) -> Self {
-        Self(Arc::new(
-            Cache::builder()
-                .max_capacity(capacity)
-                .expire_after(EntryExpiry)
-                .support_invalidation_closures()
-                .build(),
-        ))
-    }
-}
+pub(in crate::scope::memory) struct MokaCache(pub(super) Arc<Cache<EntryKey, EntryValue>>);

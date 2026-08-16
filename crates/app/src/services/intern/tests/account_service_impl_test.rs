@@ -21,8 +21,8 @@ fn service(
     user_rules: MockUserRules,
     auth_rules: MockAuthRules,
     views: MockViewCache,
-) -> AccountServiceImpl<MockUsers, MockUserRules, MockAuthRules, StubQueries, MockViewCache> {
-    AccountServiceImpl::new(users, user_rules, auth_rules, StubQueries::never(), views)
+) -> impl AccountService {
+    account_service(users, user_rules, auth_rules, StubQueries::never(), views)
 }
 
 /// O comando de troca de senha, com a senha atual que o teste escolheu.

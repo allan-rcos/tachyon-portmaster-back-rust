@@ -9,5 +9,9 @@
 //! operação que precisa do pool, e ela acontece no handle, que o recebeu por
 //! injeção. O que a slice do escopo constrói não precisa de nada em mãos.
 
+pub(crate) mod database_scope_provider;
 pub(crate) mod intern;
 pub(crate) mod mysql_transaction;
+
+pub(crate) use database_scope_provider::DatabaseScopeProvider;
+pub(crate) use mysql_transaction::MySqlTransaction;

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["XidGenerator"]};
+window.SIDEBAR_ITEMS = {"fn":["xid_generator"],"struct":["XidGenerator"]};

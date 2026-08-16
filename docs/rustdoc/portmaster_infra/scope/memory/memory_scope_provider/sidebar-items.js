@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"static":["MARKERS","MARKER_GROUPS","PERMISSIONS","VIEWS"],"struct":["MemoryScopeProvider"]};

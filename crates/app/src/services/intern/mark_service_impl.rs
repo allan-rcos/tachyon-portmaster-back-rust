@@ -8,9 +8,34 @@ use crate::error::MarkerError;
 use crate::queries::marker::GetMarkerQuery;
 use crate::services::MarkService;
 
+/// Monta o caso de uso de marcação.
+///
+/// Os ports chegam injetados e o que sai é o contrato: o tipo concreto não tem
+/// nome fora deste arquivo, então nada além do provider consegue depender do
+/// formato dele.
+pub(crate) fn mark_service<T, G, R, GR>(
+    marker_tm: T,
+    marker_group_tm: G,
+    markers: R,
+    groups: GR,
+) -> impl MarkService + Sync + Clone + use<T, G, R, GR> + 'static
+where
+    T: MarkerTM + Send + Sync + Clone + 'static,
+    G: MarkerGroupTM + Send + Sync + Clone + 'static,
+    R: MarkerRepository + Send + Sync + Clone + 'static,
+    GR: MarkerGroupRepository + Send + Sync + Clone + 'static,
+{
+    MarkServiceImpl {
+        marker_tm,
+        marker_group_tm,
+        markers,
+        groups,
+    }
+}
+
 /// A implementação, genérica sobre os ports que consome.
 #[derive(Clone)]
-pub(crate) struct MarkServiceImpl<T, G, R, GR> {
+struct MarkServiceImpl<T, G, R, GR> {
     /// As regras de marcador.
     marker_tm: T,
     /// As regras de grupo de marcador.
@@ -19,18 +44,6 @@ pub(crate) struct MarkServiceImpl<T, G, R, GR> {
     markers: R,
     /// Persistência dos grupos.
     groups: GR,
-}
-
-impl<T, G, R, GR> MarkServiceImpl<T, G, R, GR> {
-    /// Monta o caso de uso.
-    pub(crate) const fn new(marker_tm: T, marker_group_tm: G, markers: R, groups: GR) -> Self {
-        Self {
-            marker_tm,
-            marker_group_tm,
-            markers,
-            groups,
-        }
-    }
 }
 
 impl<T, G, R, GR> MarkService for MarkServiceImpl<T, G, R, GR>

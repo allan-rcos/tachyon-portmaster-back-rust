@@ -31,17 +31,25 @@ const SOFT_DELETE: &str =
     "UPDATE `containers` SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL";
 
 /// O repositório de contêineres.
-#[derive(Clone)]
-pub struct ContainerMariadbRepository<T> {
-    /// De onde a transação da tarefa vem.
+/// Monta o repositório de contêineres.
+///
+/// Não guarda estado: a transação vem do escopo da tarefa, não de um campo — o
+/// que permite ao provider reconstruí-lo a cada chamada por custo praticamente
+/// zero.
+pub(super) fn container_repository<T>(
     transactions: T,
+) -> impl ContainerRepository + Sync + Clone + use<T> + 'static
+where
+    T: MySqlTransaction + Send + Sync + Clone + 'static,
+{
+    ContainerMariadbRepository { transactions }
 }
 
-impl<T> ContainerMariadbRepository<T> {
-    /// Monta o repositório.
-    pub(crate) const fn new(transactions: T) -> Self {
-        Self { transactions }
-    }
+/// O repositório de contêineres, sobre o `MariaDB`.
+#[derive(Clone)]
+struct ContainerMariadbRepository<T> {
+    /// De onde a transação da tarefa vem.
+    transactions: T,
 }
 
 impl<T: MySqlTransaction + Send + Sync> ContainerRepository for ContainerMariadbRepository<T> {

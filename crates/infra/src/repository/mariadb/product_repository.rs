@@ -31,21 +31,25 @@ const SOFT_DELETE: &str =
     "UPDATE `products` SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL";
 
 /// O repositório de produtos.
-#[derive(Clone)]
-pub struct ProductMariadbRepository<T> {
-    /// De onde a transação da tarefa vem.
+/// Monta o repositório de produtos.
+///
+/// Não guarda estado: a transação vem do escopo da tarefa, não de um campo — o
+/// que permite ao provider reconstruí-lo a cada chamada por custo praticamente
+/// zero.
+pub(super) fn product_repository<T>(
     transactions: T,
+) -> impl ProductRepository + Sync + Clone + use<T> + 'static
+where
+    T: MySqlTransaction + Send + Sync + Clone + 'static,
+{
+    ProductMariadbRepository { transactions }
 }
 
-impl<T> ProductMariadbRepository<T> {
-    /// Monta o repositório.
-    ///
-    /// Não guarda estado: a transação vem do escopo da requisição, não de um
-    /// campo — o que permite ao provider reconstruí-lo a cada chamada por custo
-    /// praticamente zero.
-    pub(crate) const fn new(transactions: T) -> Self {
-        Self { transactions }
-    }
+/// O repositório de produtos, sobre o `MariaDB`.
+#[derive(Clone)]
+struct ProductMariadbRepository<T> {
+    /// De onde a transação da tarefa vem.
+    transactions: T,
 }
 
 impl<T: MySqlTransaction + Send + Sync> ProductRepository for ProductMariadbRepository<T> {

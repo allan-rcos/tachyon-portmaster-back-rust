@@ -20,8 +20,8 @@ fn service(
     group_rules: MockMarkerGroupRules,
     markers: MockMarkers,
     groups: MockMarkerGroups,
-) -> MarkServiceImpl<MockMarkerRules, MockMarkerGroupRules, MockMarkers, MockMarkerGroups> {
-    MarkServiceImpl::new(marker_rules, group_rules, markers, groups)
+) -> impl MarkService {
+    mark_service(marker_rules, group_rules, markers, groups)
 }
 
 /// Um grupo válido é criado pelo table module e registrado.

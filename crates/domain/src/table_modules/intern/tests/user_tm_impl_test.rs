@@ -1,11 +1,12 @@
 //! Os testes de `user_tm_impl`.
 
 use super::*;
-use crate::security::intern::argon2_hasher::Argon2Hasher;
+use crate::security::SecurityProvider;
 use crate::table_modules::intern::helpers::fields_of::fields_of;
 use pretty_assertions::assert_eq;
 
 /// Gerador determinístico: o teste não deve depender de relógio nem de sorte.
+#[derive(Clone)]
 struct FixedIdGenerator;
 impl DatabaseIdGenerator for FixedIdGenerator {
     fn next(&self) -> String {
@@ -13,8 +14,8 @@ impl DatabaseIdGenerator for FixedIdGenerator {
     }
 }
 
-fn table_module() -> UserTMImpl<FixedIdGenerator, Argon2Hasher> {
-    UserTMImpl::new(FixedIdGenerator, Argon2Hasher::new())
+fn table_module() -> impl UserTM {
+    user_tm(FixedIdGenerator, SecurityProvider::password())
 }
 
 fn valid_user() -> Box<dyn User> {

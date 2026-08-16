@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"static":["UNIT_OF_WORK"],"struct":["DatabaseScopeProvider"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["infra_provider","provider","register"]};
+window.SIDEBAR_ITEMS = {"mod":["infra_provider"]};

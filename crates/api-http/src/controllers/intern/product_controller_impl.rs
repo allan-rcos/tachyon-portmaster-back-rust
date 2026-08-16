@@ -22,20 +22,28 @@ use crate::wire::vo::product::product_update_x_request::ProductUpdateXRequest;
 use crate::wire::vo::product::product_x_response::ProductXResponse;
 use axum::extract::{Path, Query};
 
+/// Monta o controller de produto.
+///
+/// O service e o acesso à sessão chegam injetados, e o que sai é o contrato: o
+/// tipo concreto não tem nome fora deste arquivo.
+pub(crate) fn product_controller<U, S>(
+    products: U,
+    session: S,
+) -> impl ProductController + use<U, S> + 'static
+where
+    U: ProductService + Clone + Send + Sync + 'static,
+    S: SessionPort + Clone + Send + Sync + 'static,
+{
+    ProductControllerImpl { products, session }
+}
+
 /// Os handlers de produto, genéricos sobre o service.
 #[derive(Clone)]
-pub(crate) struct ProductControllerImpl<U, S> {
+struct ProductControllerImpl<U, S> {
     /// O service de produto.
     products: U,
     /// Quem diz se há sessão, e quem a apresenta.
     session: S,
-}
-
-impl<U: ProductService, S: SessionPort> ProductControllerImpl<U, S> {
-    /// Monta o controller.
-    pub(crate) const fn new(products: U, session: S) -> Self {
-        Self { products, session }
-    }
 }
 
 impl<U: ProductService + Clone + Send + Sync + 'static, S: SessionPort> ProductController

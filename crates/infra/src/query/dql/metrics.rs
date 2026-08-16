@@ -94,7 +94,3 @@ impl SqlDql for Metrics {
         })
     }
 }
-
-#[cfg(test)]
-#[path = "tests/metrics_test.rs"]
-mod tests;

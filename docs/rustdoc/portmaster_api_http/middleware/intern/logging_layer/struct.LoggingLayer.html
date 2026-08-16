@@ -5,11 +5,11 @@
 <h3 id="o-layer-é-o-serviço-antes-de-saber-o-que-envolve"><a class="doc-anchor" href="#o-layer-é-o-serviço-antes-de-saber-o-que-envolve">§</a>O layer é o serviço antes de saber o que envolve</h3>
 <p>Um tipo só, e não um par. <code>LoggingLayer&lt;L&gt;</code> é o <code>Layer</code> — o logger do canal,
 ainda sem serviço interno —, e <code>LoggingLayer&lt;L, S&gt;</code> é o <code>Service</code> que sai do
-<code>layer()</code>. Eram dois tipos em dois arquivos, e o segundo nunca foi nomeado
-por ninguém.</p>
-<p>O logger é criado <strong>uma vez</strong>, na construção do layer, e clonado por serviço.
-Antes o layer guardava a fábrica e criava um logger a cada <code>layer()</code>, que é
-trabalho repetido para produzir sempre o mesmo canal.</p>
+<code>layer()</code>. Um par de tipos custaria um segundo arquivo e um nome que ninguém
+pronuncia: quem monta a pilha aplica o layer e mais nada.</p>
+<p>O logger é criado <strong>uma vez</strong>, na construção do layer, e clonado por serviço
+— guardar a fábrica e criar um por <code>layer()</code> seria trabalho repetido para
+produzir sempre o mesmo canal.</p>
 </div></details><h2 id="fields" class="fields section-header">Fields<a href="#fields" class="anchor">§</a></h2><span id="structfield.inner" class="structfield section-header"><a href="#structfield.inner" class="anchor field">§</a><code>inner: S</code></span><div class="docblock"><p>O serviço interno, que este envolve; <code>()</code> enquanto é só layer.</p>
 </div><span id="structfield.logger" class="structfield section-header"><a href="#structfield.logger" class="anchor field">§</a><code>logger: L</code></span><div class="docblock"><p>O logger do canal HTTP, sem nada de uma requisição em particular.</p>
 </div><h2 id="implementations" class="section-header">Implementations<a href="#implementations" class="anchor">§</a></h2><div id="implementations-list"><details class="toggle implementors-toggle" open><summary><section id="impl-LoggingLayer%3CL%3E" class="impl"><a class="src rightside" href="../../../../src/portmaster_api_http/middleware/intern/logging_layer.rs.html#42-50">Source</a><a href="#impl-LoggingLayer%3CL%3E" class="anchor">§</a><h3 class="code-header">impl&lt;L&gt; <a class="struct" href="struct.LoggingLayer.html" title="struct portmaster_api_http::middleware::intern::logging_layer::LoggingLayer">LoggingLayer</a>&lt;L&gt;</h3></section></summary><div class="impl-items"><details class="toggle method-toggle" open><summary><section id="method.new" class="method"><a class="src rightside" href="../../../../src/portmaster_api_http/middleware/intern/logging_layer.rs.html#44-49">Source</a><h4 class="code-header">pub(crate) fn <a href="#method.new" class="fn">new</a>&lt;F: LoggerFactory&lt;Instance = L&gt;&gt;(factory: <a class="primitive" href="https://doc.rust-lang.org/1.96.0/std/primitive.reference.html">&amp;F</a>) -&gt; Self</h4></section></summary><div class="docblock"><p>Monta o layer com a fábrica que o provider entregou.</p>

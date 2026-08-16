@@ -48,13 +48,38 @@ const UPDATE: &str = "product:update";
 /// serviço faria cada um deles precisar saber quem mais o lê.
 const CACHE_GROUP: &str = "product";
 
+/// Monta o caso de uso de produto.
+///
+/// Os ports chegam injetados e o que sai é o contrato: o tipo concreto não tem
+/// nome fora deste arquivo, então nada além do provider consegue depender do
+/// formato dele.
+pub(crate) fn product_service<R, T, Q, C>(
+    products: R,
+    product_tm: T,
+    queries: Q,
+    views: C,
+) -> impl ProductService + Sync + Clone + use<R, T, Q, C> + 'static
+where
+    R: ProductRepository + Send + Sync + Clone + 'static,
+    T: ProductTM + Send + Sync + Clone + 'static,
+    Q: QueryRepository + Send + Sync + Clone + 'static,
+    C: ViewCacheRepository + Send + Sync + Clone + 'static,
+{
+    ProductServiceImpl {
+        products,
+        product_tm,
+        queries,
+        views,
+    }
+}
+
 /// A implementação, genérica sobre os ports que consome.
 ///
 /// Nada de `Arc<dyn>`: os tipos concretos chegam do provider e o compilador
 /// monomorfiza o grafo inteiro. Um caso de uso que não pudesse ser montado seria
 /// erro de compilação, não surpresa no primeiro request.
 #[derive(Clone)]
-pub(crate) struct ProductServiceImpl<R, T, Q, C> {
+struct ProductServiceImpl<R, T, Q, C> {
     /// Persistência de produtos.
     products: R,
     /// As regras de produto.
@@ -63,18 +88,6 @@ pub(crate) struct ProductServiceImpl<R, T, Q, C> {
     queries: Q,
     /// O cache do lado de leitura.
     views: C,
-}
-
-impl<R, T, Q, C> ProductServiceImpl<R, T, Q, C> {
-    /// Monta o caso de uso.
-    pub(crate) const fn new(products: R, product_tm: T, queries: Q, views: C) -> Self {
-        Self {
-            products,
-            product_tm,
-            queries,
-            views,
-        }
-    }
 }
 
 impl<R, T, Q, C> ProductService for ProductServiceImpl<R, T, Q, C>
@@ -219,9 +232,9 @@ where
 
     /// A listagem, atrás do cache de leitura.
     ///
-    /// A chave sai do próprio DQL, que é quem conhece todos os filtros. Antes
-    /// era montada aqui, e um filtro novo que ninguém somasse à ela faria duas
-    /// consultas diferentes lerem a mesma entrada.
+    /// A chave sai do próprio DQL, que é quem conhece todos os filtros. Montá-la
+    /// aqui faria um filtro novo que ninguém somasse a ela deixar duas consultas
+    /// diferentes lendo a mesma entrada.
     ///
     /// O cache é consultado **depois** de autorizar: antes, ele entregaria dado
     /// a quem não pode vê-lo, porque o cache não sabe quem está perguntando. Um
@@ -255,14 +268,6 @@ where
         Ok(view)
     }
 }
-
-/// Os slugs deste serviço, para o teste do catálogo.
-///
-/// `cfg(test)`: em produção nada além deste arquivo vê um slug, e é isso que se
-/// quer. O teste do catálogo precisa somá-los para afirmar as 25 permissões que
-/// já existem em papéis gravados, e essa é a única razão de a lista existir.
-#[cfg(test)]
-pub(crate) const PERMISSIONS: &[&str] = &[CREATE, DELETE, READ, UPDATE];
 
 #[cfg(test)]
 #[path = "tests/product_service_impl_test.rs"]

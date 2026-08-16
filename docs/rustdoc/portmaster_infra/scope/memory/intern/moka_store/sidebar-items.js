@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["MokaStore"]};
+window.SIDEBAR_ITEMS = {"fn":["moka_store"],"struct":["MokaStore"]};

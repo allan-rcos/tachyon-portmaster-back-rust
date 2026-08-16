@@ -4,6 +4,7 @@ use super::*;
 use crate::table_modules::intern::helpers::fields_of::fields_of;
 use pretty_assertions::assert_eq;
 
+#[derive(Clone)]
 struct FixedIdGenerator;
 impl DatabaseIdGenerator for FixedIdGenerator {
     fn next(&self) -> String {
@@ -11,8 +12,8 @@ impl DatabaseIdGenerator for FixedIdGenerator {
     }
 }
 
-fn table_module() -> ContainerTMImpl<FixedIdGenerator> {
-    ContainerTMImpl::new(FixedIdGenerator)
+fn table_module() -> impl ContainerTM {
+    container_tm(FixedIdGenerator)
 }
 
 /// Contêiner com peso e status arbitrários, para exercitar as transições.

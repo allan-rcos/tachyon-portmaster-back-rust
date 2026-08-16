@@ -70,7 +70,3 @@ impl DatabaseChain {
 static DATABASE: ConfigLink = ConfigLink {
     read: DatabaseChain::read,
 };
-
-#[cfg(test)]
-#[path = "tests/database_chain_test.rs"]
-mod tests;

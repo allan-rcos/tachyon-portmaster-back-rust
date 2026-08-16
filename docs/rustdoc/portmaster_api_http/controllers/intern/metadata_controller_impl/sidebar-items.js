@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["to_api"],"struct":["MetadataControllerImpl"]};
+window.SIDEBAR_ITEMS = {"fn":["metadata_controller","to_api"],"struct":["MetadataControllerImpl"]};

@@ -1,6 +1,6 @@
 //! A primeira versão publicada do contrato REST.
 
-use crate::bootstrap::provider::ApiProvider;
+use crate::bootstrap::api_provider::ApiProvider;
 use crate::controllers::{
     account_routes, auth_routes, container_routes, manifest_routes, metadata_routes,
     metrics_routes, product_routes, role_routes, server_routes, user_routes,
@@ -23,21 +23,21 @@ pub(crate) struct V1Router;
 impl VersionedRouter for V1Router {
     const VERSION: u16 = 1;
 
-    fn routes<P: ApiProvider>(provider: &P) -> Vec<Route> {
-        [
-            server_routes::routes(provider.server_controller()),
-            auth_routes::routes(provider.auth_controller()),
-            account_routes::routes(provider.account_controller()),
-            product_routes::routes(provider.product_controller()),
-            role_routes::routes(provider.role_controller()),
-            container_routes::routes(provider.container_controller()),
-            manifest_routes::routes(provider.manifest_controller()),
-            user_routes::routes(provider.user_controller()),
-            metadata_routes::routes(provider.metadata_controller()),
-            metrics_routes::routes(provider.metrics_controller()),
+    fn routes() -> anyhow::Result<Vec<Route>> {
+        Ok([
+            server_routes::routes(ApiProvider::server_controller()),
+            auth_routes::routes(ApiProvider::auth_controller()?),
+            account_routes::routes(ApiProvider::account_controller()?),
+            product_routes::routes(ApiProvider::product_controller()?),
+            role_routes::routes(ApiProvider::role_controller()?),
+            container_routes::routes(ApiProvider::container_controller()?),
+            manifest_routes::routes(ApiProvider::manifest_controller()?),
+            user_routes::routes(ApiProvider::user_controller()?),
+            metadata_routes::routes(ApiProvider::metadata_controller()),
+            metrics_routes::routes(ApiProvider::metrics_controller()?),
         ]
         .into_iter()
         .flatten()
-        .collect()
+        .collect())
     }
 }

@@ -33,13 +33,29 @@ struct EmailAddress(String);
 #[nutype(validate(predicate = is_strong_password))]
 struct Password(String);
 
-/// A implementação, genérica sobre os helpers que recebe.
+/// Monta as regras de usuário com os seus helpers.
 ///
-/// Nem o gerador de id nem o hasher são instanciados aqui: chegam injetados pelo
-/// factory do provider, o que os torna substituíveis em teste sem que nada além
-/// do domínio saiba que existem.
+/// Nem o gerador de id nem o hasher são instanciados aqui: chegam injetados, o
+/// que os torna substituíveis em teste sem que nada além do domínio saiba que
+/// existem. O que sai é o contrato — o tipo concreto não tem nome fora deste
+/// arquivo, então ninguém consegue depender do formato dele.
+pub(crate) fn user_tm<G, H>(
+    id_generator: G,
+    password_hasher: H,
+) -> impl UserTM + Send + Sync + Clone + use<G, H> + 'static
+where
+    G: DatabaseIdGenerator + Send + Sync + Clone + 'static,
+    H: PasswordHasher + Send + Sync + Clone + 'static,
+{
+    UserTMImpl {
+        id_generator,
+        password_hasher,
+    }
+}
+
+/// A implementação, genérica sobre os helpers que recebe.
 #[derive(Clone)]
-pub(crate) struct UserTMImpl<G, H> {
+struct UserTMImpl<G, H> {
     /// De onde sai a identidade de um usuário novo.
     id_generator: G,
     /// Quem transforma a senha em hash — lento de propósito.
@@ -47,14 +63,6 @@ pub(crate) struct UserTMImpl<G, H> {
 }
 
 impl<G: DatabaseIdGenerator, H: PasswordHasher> UserTMImpl<G, H> {
-    /// Monta o `TableModule` com os seus helpers.
-    pub(crate) const fn new(id_generator: G, password_hasher: H) -> Self {
-        Self {
-            id_generator,
-            password_hasher,
-        }
-    }
-
     /// Produz o usuário com outra senha, validando-a antes.
     fn with_password(
         &self,

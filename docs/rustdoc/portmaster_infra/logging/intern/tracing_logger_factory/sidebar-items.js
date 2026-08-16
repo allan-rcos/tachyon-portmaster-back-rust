@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["TracingLoggerFactory"]};
+window.SIDEBAR_ITEMS = {"fn":["tracing_logger_factory"],"struct":["TracingLoggerFactory"]};

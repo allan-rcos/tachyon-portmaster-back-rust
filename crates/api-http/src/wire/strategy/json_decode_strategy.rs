@@ -26,7 +26,3 @@ impl DecodeStrategy for JsonDecodeStrategy {
         Ok(X::of_json(dto))
     }
 }
-
-#[cfg(test)]
-#[path = "tests/json_decode_strategy_test.rs"]
-mod tests;

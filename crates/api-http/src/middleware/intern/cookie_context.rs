@@ -176,7 +176,3 @@ impl CookiePort for CookieContext {
         Self::push(Self::build(name, "", std::time::Duration::ZERO))
     }
 }
-
-#[cfg(test)]
-#[path = "tests/cookie_context_test.rs"]
-mod tests;

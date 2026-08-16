@@ -20,16 +20,16 @@ const REQUEST_ID_HEADER: HeaderName = HeaderName::from_static("x-request-id");
 ///
 /// Um tipo só, e não um par. `RequestIdLayer<G>` é o `Layer` — o gerador, ainda
 /// sem serviço interno —, e `RequestIdLayer<G, S>` é o `Service` que sai do
-/// `layer()`. Eram dois tipos em dois arquivos, e o segundo nunca foi nomeado
-/// por ninguém.
+/// `layer()`. Um par de tipos custaria um segundo arquivo e um nome que ninguém
+/// pronuncia: quem monta a pilha aplica o layer e mais nada.
 ///
 /// ## O id é sempre nosso
 ///
-/// Um `X-Request-Id` que chegue de fora é **ignorado**. Antes ele era aceito se
-/// tivesse até 128 bytes, o que deixava o cliente escolher o que apareceria em
-/// toda linha de log daquela requisição — e num agregador de log, um valor
-/// escolhido por quem faz a chamada é um valor que dá para forjar, colidir com o
-/// de outra requisição ou usar para injetar conteúdo em quem lê os campos.
+/// Um `X-Request-Id` que chegue de fora é **ignorado**. Aceitá-lo deixaria o
+/// cliente escolher o que aparece em toda linha de log daquela requisição — e
+/// num agregador de log, um valor escolhido por quem faz a chamada é um valor
+/// que dá para forjar, colidir com o de outra requisição ou usar para injetar
+/// conteúdo em quem lê os campos.
 ///
 /// A resposta continua trazendo o id no cabeçalho, então quem chamou consegue
 /// correlacionar. O que ele não consegue é **escolhê-lo** — nem quando a API
@@ -38,11 +38,11 @@ const REQUEST_ID_HEADER: HeaderName = HeaderName::from_static("x-request-id");
 ///
 /// ## O id não viaja na requisição
 ///
-/// Ele viaja no escopo da tarefa. Antes era carimbado num cabeçalho da
-/// requisição para o log encontrá-lo logo adiante — um dado nosso dando a volta
-/// por uma estrutura do cliente, no mesmo campo em que o cliente podia ter
-/// escrito. Quem quer o id agora pede ao
+/// Ele viaja no escopo da tarefa, e quem o quer pede ao
 /// [`RequestIdPort`](crate::middleware::request_id_port::RequestIdPort).
+/// Carimbá-lo num cabeçalho da requisição para o log encontrá-lo adiante seria
+/// um dado nosso dando a volta por uma estrutura do cliente, no mesmo campo em
+/// que o cliente podia ter escrito.
 #[derive(Clone)]
 pub(crate) struct RequestIdLayer<G, S = ()> {
     /// O serviço interno, que este envolve; `()` enquanto é só layer.

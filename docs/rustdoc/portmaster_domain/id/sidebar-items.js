@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["database_id_generator","intern","random_id_generator","sequential_id_generator"]};
+window.SIDEBAR_ITEMS = {"mod":["database_id_generator","id_provider","intern","random_id_generator","sequential_id_generator"]};

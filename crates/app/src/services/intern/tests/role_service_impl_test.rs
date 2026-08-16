@@ -19,12 +19,8 @@ use crate::tests::mocks::role_tm_mock::MockRoleRules;
 use crate::tests::mocks::view_cache_repository_mock::MockViewCache;
 
 /// O service com os quatro mocks que o teste armou.
-fn service(
-    roles: MockRoles,
-    role_rules: MockRoleRules,
-    views: MockViewCache,
-) -> RoleServiceImpl<MockRoles, MockRoleRules, StubQueries, MockViewCache> {
-    RoleServiceImpl::new(roles, role_rules, StubQueries::never(), views)
+fn service(roles: MockRoles, role_rules: MockRoleRules, views: MockViewCache) -> impl RoleService {
+    role_service(roles, role_rules, StubQueries::never(), views)
 }
 
 /// O comando de criação, com o contexto que o teste escolheu.

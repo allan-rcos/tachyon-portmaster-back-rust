@@ -47,9 +47,37 @@ const UPDATE_ROLES: &str = "user:update-roles";
 /// O prefixo das listagens deste serviço — é o que uma escrita derruba.
 const CACHE_GROUP: &str = "user";
 
+/// Monta o caso de uso de usuário.
+///
+/// Os ports chegam injetados e o que sai é o contrato: o tipo concreto não tem
+/// nome fora deste arquivo, então nada além do provider consegue depender do
+/// formato dele.
+pub(crate) fn user_service<UR, RR, T, Q, C>(
+    users: UR,
+    roles: RR,
+    user_tm: T,
+    queries: Q,
+    views: C,
+) -> impl UserService + Sync + Clone + use<UR, RR, T, Q, C> + 'static
+where
+    UR: UserRepository + Send + Sync + Clone + 'static,
+    RR: RoleRepository + Send + Sync + Clone + 'static,
+    T: UserTM + Send + Sync + Clone + 'static,
+    Q: QueryRepository + Send + Sync + Clone + 'static,
+    C: ViewCacheRepository + Send + Sync + Clone + 'static,
+{
+    UserServiceImpl {
+        users,
+        roles,
+        user_tm,
+        queries,
+        views,
+    }
+}
+
 /// A implementação, genérica sobre os ports que consome.
 #[derive(Clone)]
-pub(crate) struct UserServiceImpl<UR, RR, T, Q, C> {
+struct UserServiceImpl<UR, RR, T, Q, C> {
     /// Persistência de usuários.
     users: UR,
     /// Persistência de papéis.
@@ -60,19 +88,6 @@ pub(crate) struct UserServiceImpl<UR, RR, T, Q, C> {
     queries: Q,
     /// O cache do lado de leitura.
     views: C,
-}
-
-impl<UR, RR, T, Q, C> UserServiceImpl<UR, RR, T, Q, C> {
-    /// Monta o caso de uso.
-    pub(crate) const fn new(users: UR, roles: RR, user_tm: T, queries: Q, views: C) -> Self {
-        Self {
-            users,
-            roles,
-            user_tm,
-            queries,
-            views,
-        }
-    }
 }
 
 impl<UR, RR, T, Q, C> UserServiceImpl<UR, RR, T, Q, C>
@@ -345,22 +360,6 @@ where
         Ok(view)
     }
 }
-
-/// Os slugs deste serviço, para o teste do catálogo.
-///
-/// `cfg(test)`: em produção nada além deste arquivo vê um slug, e é isso que se
-/// quer. O teste do catálogo precisa somá-los para afirmar as 25 permissões que
-/// já existem em papéis gravados, e essa é a única razão de a lista existir.
-#[cfg(test)]
-pub(crate) const PERMISSIONS: &[&str] = &[
-    CHANGE_PASSWORD,
-    CREATE,
-    DELETE,
-    GET,
-    LIST,
-    UPDATE,
-    UPDATE_ROLES,
-];
 
 #[cfg(test)]
 #[path = "tests/user_service_impl_test.rs"]

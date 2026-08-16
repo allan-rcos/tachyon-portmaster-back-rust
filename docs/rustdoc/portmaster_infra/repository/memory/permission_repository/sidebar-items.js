@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["GROUP"],"struct":["PermissionMemoryRepository"]};
+window.SIDEBAR_ITEMS = {"constant":["GROUP"],"fn":["permission_repository"],"struct":["PermissionMemoryRepository"]};

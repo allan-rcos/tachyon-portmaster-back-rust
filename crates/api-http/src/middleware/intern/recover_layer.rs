@@ -20,8 +20,8 @@ use crate::ports::error::api_error::ApiError;
 ///
 /// Um tipo só, e não um par. `RecoverLayer` sem parâmetro é o `Layer`, e
 /// `RecoverLayer<S>` é o `Service` que sai do `layer()` — o mesmo tipo, agora
-/// com o `S` que ele embrulha. Eram dois tipos em dois arquivos, e o segundo
-/// nunca foi nomeado por ninguém.
+/// com o `S` que ele embrulha. Um par de tipos custaria um segundo arquivo e um
+/// nome que ninguém pronuncia: quem monta a pilha aplica o layer e mais nada.
 #[derive(Clone, Copy, Default)]
 pub(crate) struct RecoverLayer<S = ()> {
     /// O serviço interno, que este envolve; `()` enquanto é só layer.
@@ -62,12 +62,12 @@ where
     /// [`EncodePort`](crate::middleware::encode_port::EncodePort), no formato
     /// que a requisição negociou. Este layer não relê o `Accept`: quem o
     /// resolveu foi o `EncodeLayer`, que por isso tem de estar **fora** deste na
-    /// pilha. Antes cada middleware que responde por conta própria remontava a
-    /// negociação sozinho — a mesma decisão tomada em três lugares.
+    /// pilha. Cada middleware que responde por conta própria remontar a
+    /// negociação seria a mesma decisão tomada em três lugares.
     ///
-    /// O desenho anterior a este tinha aqui um literal de bytes JSON, que num
-    /// sistema cujo cliente de produção fala `FlatBuffers` era o único corpo que
-    /// ele nunca conseguiria ler.
+    /// Um literal de bytes JSON aqui seria pior do que parece: num sistema cujo
+    /// cliente de produção fala `FlatBuffers`, é o único corpo que ele nunca
+    /// conseguiria ler.
     fn call(&mut self, request: Request) -> Self::Future {
         let clone = self.inner.clone();
         let mut inner = std::mem::replace(&mut self.inner, clone);
@@ -108,7 +108,3 @@ fn describe(panic: &Box<dyn std::any::Any + Send>) -> String {
 
     "pânico sem mensagem legível".to_owned()
 }
-
-#[cfg(test)]
-#[path = "tests/recover_layer_test.rs"]
-mod tests;

@@ -15,16 +15,16 @@ use crate::table_modules::PermissionTM;
 #[nutype(validate(not_empty, len_char_max = 64, predicate = is_domain_action))]
 struct PermissionSlug(String);
 
+/// Monta as regras de permissão.
+///
+/// Sem helpers: é validação de formato e nada mais.
+pub(crate) const fn permission_tm() -> impl PermissionTM + Send + Sync + Clone + use<> + 'static {
+    PermissionTMImpl
+}
+
 /// A implementação. Sem helpers: é validação de formato e nada mais.
 #[derive(Clone)]
-pub(crate) struct PermissionTMImpl;
-
-impl PermissionTMImpl {
-    /// Monta o `TableModule`.
-    pub(crate) const fn new() -> Self {
-        Self
-    }
-}
+struct PermissionTMImpl;
 
 impl PermissionTM for PermissionTMImpl {
     fn create(&self, slug: String) -> Result<Box<dyn Permission>, MetadataError> {

@@ -46,5 +46,4 @@ pub mod scope;
 pub(crate) mod entity;
 pub(crate) mod search_key;
 
-pub use bootstrap::provider::InfraProvider;
-pub use bootstrap::register::register;
+pub use bootstrap::infra_provider::InfraProvider;

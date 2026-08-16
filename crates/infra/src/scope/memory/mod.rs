@@ -16,4 +16,8 @@
 //! O grupo dentro de cada store separa os recortes; o store separa as políticas.
 
 pub(crate) mod intern;
+pub(crate) mod memory_scope_provider;
 pub(crate) mod memory_store;
+
+pub(crate) use memory_scope_provider::MemoryScopeProvider;
+pub(crate) use memory_store::MemoryStore;

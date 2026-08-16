@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["intern","memory_store"]};
+window.SIDEBAR_ITEMS = {"mod":["intern","memory_scope_provider","memory_store"]};

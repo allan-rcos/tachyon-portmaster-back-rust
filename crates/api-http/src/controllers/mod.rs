@@ -37,9 +37,10 @@
 //! contexto que ela consome. E o módulo de **rotas** é a tabela: caminho, verbo,
 //! método.
 //!
-//! É a trait que o [`ApiProvider`](crate::bootstrap::provider::ApiProvider)
-//! devolve — por RPITIT, como todo o resto do grafo.
+//! É a trait que o `ControllersProvider` devolve — `impl Trait`, como todo o
+//! resto do grafo.
 
+pub(crate) mod controllers_provider;
 pub(crate) mod params;
 
 pub(crate) mod account_controller;
@@ -64,3 +65,5 @@ pub(crate) mod user_controller;
 pub(crate) mod user_routes;
 
 pub(crate) mod intern;
+
+pub(crate) use controllers_provider::ControllersProvider;

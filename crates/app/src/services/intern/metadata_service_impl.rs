@@ -19,23 +19,32 @@ use crate::services::MetadataService;
 /// Listar as permissões registradas.
 const PERMISSION_LIST: &str = "permission:list";
 
+/// Monta o caso de uso de metadados.
+///
+/// Os ports chegam injetados e o que sai é o contrato: o tipo concreto não tem
+/// nome fora deste arquivo, então nada além do provider consegue depender do
+/// formato dele.
+pub(crate) fn metadata_service<R, T>(
+    permissions: R,
+    permission_tm: T,
+) -> impl MetadataService + Sync + Clone + use<R, T> + 'static
+where
+    R: PermissionRepository + Send + Sync + Clone + 'static,
+    T: PermissionTM + Send + Sync + Clone + 'static,
+{
+    MetadataServiceImpl {
+        permissions,
+        permission_tm,
+    }
+}
+
 /// A implementação, genérica sobre os ports que consome.
 #[derive(Clone)]
-pub(crate) struct MetadataServiceImpl<R, T> {
+struct MetadataServiceImpl<R, T> {
     /// O catálogo de permissões, em memória.
     permissions: R,
     /// As regras de permissão — quem confere o formato do slug.
     permission_tm: T,
-}
-
-impl<R, T> MetadataServiceImpl<R, T> {
-    /// Monta o caso de uso.
-    pub(crate) const fn new(permissions: R, permission_tm: T) -> Self {
-        Self {
-            permissions,
-            permission_tm,
-        }
-    }
 }
 
 impl<R, T> MetadataService for MetadataServiceImpl<R, T>
@@ -101,14 +110,6 @@ where
             .collect())
     }
 }
-
-/// Os slugs deste serviço, para o teste do catálogo.
-///
-/// `cfg(test)`: em produção nada além deste arquivo vê um slug, e é isso que se
-/// quer. O teste do catálogo precisa somá-los para afirmar as 25 permissões que
-/// já existem em papéis gravados, e essa é a única razão de a lista existir.
-#[cfg(test)]
-pub(crate) const PERMISSIONS: &[&str] = &[PERMISSION_LIST];
 
 #[cfg(test)]
 #[path = "tests/metadata_service_impl_test.rs"]

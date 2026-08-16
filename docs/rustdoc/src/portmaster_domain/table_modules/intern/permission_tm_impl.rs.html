@@ -15,16 +15,16 @@
 <a href=#15 id=15 data-nosnippet>15</a></span><span class="attr">#[nutype(validate(not_empty, len_char_max = <span class="number">64</span>, predicate = is_domain_action))]
 <a href=#16 id=16 data-nosnippet>16</a></span><span class="kw">struct </span>PermissionSlug(String);
 <a href=#17 id=17 data-nosnippet>17</a>
-<a href=#18 id=18 data-nosnippet>18</a><span class="doccomment">/// A implementação. Sem helpers: é validação de formato e nada mais.
-<a href=#19 id=19 data-nosnippet>19</a></span><span class="attr">#[derive(Clone)]
-<a href=#20 id=20 data-nosnippet>20</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>PermissionTMImpl;
-<a href=#21 id=21 data-nosnippet>21</a>
-<a href=#22 id=22 data-nosnippet>22</a><span class="kw">impl </span>PermissionTMImpl {
-<a href=#23 id=23 data-nosnippet>23</a>    <span class="doccomment">/// Monta o `TableModule`.
-<a href=#24 id=24 data-nosnippet>24</a>    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const fn </span>new() -&gt; <span class="self">Self </span>{
-<a href=#25 id=25 data-nosnippet>25</a>        <span class="self">Self
-<a href=#26 id=26 data-nosnippet>26</a>    </span>}
-<a href=#27 id=27 data-nosnippet>27</a>}
+<a href=#18 id=18 data-nosnippet>18</a><span class="doccomment">/// Monta as regras de permissão.
+<a href=#19 id=19 data-nosnippet>19</a>///
+<a href=#20 id=20 data-nosnippet>20</a>/// Sem helpers: é validação de formato e nada mais.
+<a href=#21 id=21 data-nosnippet>21</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const fn </span>permission_tm() -&gt; <span class="kw">impl </span>PermissionTM + Send + Sync + Clone + <span class="kw">use</span>&lt;&gt; + <span class="lifetime">'static </span>{
+<a href=#22 id=22 data-nosnippet>22</a>    PermissionTMImpl
+<a href=#23 id=23 data-nosnippet>23</a>}
+<a href=#24 id=24 data-nosnippet>24</a>
+<a href=#25 id=25 data-nosnippet>25</a><span class="doccomment">/// A implementação. Sem helpers: é validação de formato e nada mais.
+<a href=#26 id=26 data-nosnippet>26</a></span><span class="attr">#[derive(Clone)]
+<a href=#27 id=27 data-nosnippet>27</a></span><span class="kw">struct </span>PermissionTMImpl;
 <a href=#28 id=28 data-nosnippet>28</a>
 <a href=#29 id=29 data-nosnippet>29</a><span class="kw">impl </span>PermissionTM <span class="kw">for </span>PermissionTMImpl {
 <a href=#30 id=30 data-nosnippet>30</a>    <span class="kw">fn </span>create(<span class="kw-2">&amp;</span><span class="self">self</span>, slug: String) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>Permission&gt;, MetadataError&gt; {

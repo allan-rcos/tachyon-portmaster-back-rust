@@ -20,6 +20,7 @@ API documentation useless. The code now states what it does; these state why.
 | [0008](0008-minified-tarball-as-the-release-artifact.md) | A minified tarball as the release artifact, migrations apart |
 | [0009](0009-runtime-registries-in-process.md) | Runtime registries in process; InnoDB rather than MyRocks |
 | [0010](0010-versions-as-types-with-an-unversioned-alias.md) | A published version is a type; the unversioned path is a per-route alias |
+| [0011](0011-static-providers-one-per-directory.md) | Providers are static struct-namespaces, one per constructing directory *(supersedes 0006 for the Rust port)* |
 
 ## Writing one
 

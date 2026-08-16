@@ -16,9 +16,40 @@ use crate::services::SessionService;
 /// O nome do papel que o setup cria.
 const ADMINISTRATOR_ROLE: &str = "Administrator";
 
+/// Monta o caso de uso de sessão.
+///
+/// Os ports chegam injetados e o que sai é o contrato: o tipo concreto não tem
+/// nome fora deste arquivo, então nada além do provider consegue depender do
+/// formato dele.
+pub(crate) fn session_service<UR, RR, PR, UT, RT, A>(
+    users: UR,
+    roles: RR,
+    permissions: PR,
+    user_tm: UT,
+    role_tm: RT,
+    auth_tm: A,
+) -> impl SessionService + Sync + Clone + use<UR, RR, PR, UT, RT, A> + 'static
+where
+    UR: UserRepository + Send + Sync + Clone + 'static,
+    RR: RoleRepository + Send + Sync + Clone + 'static,
+    PR: PermissionRepository + Send + Sync + Clone + 'static,
+    UT: UserTM + Send + Sync + Clone + 'static,
+    RT: RoleTM + Send + Sync + Clone + 'static,
+    A: AuthTM + Send + Sync + Clone + 'static,
+{
+    SessionServiceImpl {
+        users,
+        roles,
+        permissions,
+        user_tm,
+        role_tm,
+        auth_tm,
+    }
+}
+
 /// A implementação, genérica sobre os ports que consome.
 #[derive(Clone)]
-pub(crate) struct SessionServiceImpl<UR, RR, PR, UT, RT, A> {
+struct SessionServiceImpl<UR, RR, PR, UT, RT, A> {
     /// Persistência de usuários.
     users: UR,
     /// Persistência de papéis.
@@ -31,27 +62,6 @@ pub(crate) struct SessionServiceImpl<UR, RR, PR, UT, RT, A> {
     role_tm: RT,
     /// As regras de credencial.
     auth_tm: A,
-}
-
-impl<UR, RR, PR, UT, RT, A> SessionServiceImpl<UR, RR, PR, UT, RT, A> {
-    /// Monta o caso de uso.
-    pub(crate) const fn new(
-        users: UR,
-        roles: RR,
-        permissions: PR,
-        user_tm: UT,
-        role_tm: RT,
-        auth_tm: A,
-    ) -> Self {
-        Self {
-            users,
-            roles,
-            permissions,
-            user_tm,
-            role_tm,
-            auth_tm,
-        }
-    }
 }
 
 impl<UR, RR, PR, UT, RT, A> SessionService for SessionServiceImpl<UR, RR, PR, UT, RT, A>

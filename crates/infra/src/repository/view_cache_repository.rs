@@ -9,9 +9,9 @@ use serde::Serialize;
 /// guarda é sempre a mesma coisa — o que uma consulta devolveu.
 ///
 /// A **chave** vem de [`Dql::cache_key`](crate::query::Dql::cache_key), e é o
-/// DQL quem a escreve porque é ele quem sabe o que a consulta é. Antes cada
-/// serviço a montava à mão, com um prefixo próprio e a lembrança de incluir cada
-/// filtro.
+/// DQL quem a escreve porque é ele quem sabe o que a consulta é — deixá-la a
+/// cargo de cada serviço pediria um prefixo próprio e a lembrança de incluir
+/// cada filtro.
 ///
 /// O **grupo** é o recorte que uma escrita derruba. Quem chama o escolhe, e é
 /// por isso que uma escrita de produto não precisa saber quais listagens

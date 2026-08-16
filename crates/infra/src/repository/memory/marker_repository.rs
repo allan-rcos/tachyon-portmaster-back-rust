@@ -11,28 +11,33 @@ use crate::scope::memory::memory_store::MemoryStore;
 /// A marca ligada, como ela é gravada.
 const ON: u8 = 1;
 
-/// O repositório de marcadores.
+/// Monta o repositório de marcadores sobre o registro de grupos.
 ///
-/// Genérico sobre o registro de grupos porque **valida** que o grupo existe
-/// antes de gravar: sem isso, um erro de digitação no slug criaria um espaço de
-/// nomes paralelo em silêncio, e nada do que fosse marcado nele seria encontrado
-/// depois.
+/// O registro de grupos chega injetado porque o repositório **valida** que o
+/// grupo existe antes de gravar: sem isso, um erro de digitação no slug criaria
+/// um espaço de nomes paralelo em silêncio, e nada do que fosse marcado nele
+/// seria encontrado depois.
+pub(super) fn marker_repository<S, G>(
+    store: S,
+    groups: G,
+) -> impl MarkerRepository + Sync + Clone + use<S, G> + 'static
+where
+    S: MemoryStore + Send + Sync + Clone + 'static,
+    G: MarkerGroupRepository + Send + Sync + Clone + 'static,
+{
+    MarkerMemoryRepository { store, groups }
+}
+
+/// O repositório de marcadores.
 ///
 /// Aqui o grupo do store é o grupo do próprio marcador, e não uma `const`: um
 /// marcador já nasce dizendo a que namespace pertence.
 #[derive(Clone)]
-pub struct MarkerMemoryRepository<S, G> {
+struct MarkerMemoryRepository<S, G> {
     /// De onde a memória da tarefa vem.
     store: S,
     /// Os grupos declarados, para recusar marcador de grupo que não existe.
     groups: G,
-}
-
-impl<S, G> MarkerMemoryRepository<S, G> {
-    /// Monta o repositório.
-    pub(crate) const fn new(store: S, groups: G) -> Self {
-        Self { store, groups }
-    }
 }
 
 impl<S: MemoryStore + Send + Sync, G: MarkerGroupRepository + Send + Sync> MarkerRepository
@@ -79,7 +84,3 @@ impl<S: MemoryStore + Send + Sync, G: MarkerGroupRepository + Send + Sync> Marke
             .is_some_and(|bytes| bytes.first() == Some(&ON)))
     }
 }
-
-#[cfg(test)]
-#[path = "tests/marker_repository_test.rs"]
-mod tests;

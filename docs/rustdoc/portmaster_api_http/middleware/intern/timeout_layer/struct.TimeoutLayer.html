@@ -5,8 +5,8 @@
 <h3 id="o-layer-é-o-serviço-antes-de-saber-o-que-envolve"><a class="doc-anchor" href="#o-layer-é-o-serviço-antes-de-saber-o-que-envolve">§</a>O layer é o serviço antes de saber o que envolve</h3>
 <p>Um tipo só, e não um par. <code>TimeoutLayer</code> sem parâmetro é o <code>Layer</code> — o teto
 configurado, ainda sem serviço interno —, e <code>TimeoutLayer&lt;S&gt;</code> é o <code>Service</code>
-que sai do <code>layer()</code>: o mesmo teto, agora com o <code>S</code> que ele embrulha. Eram
-dois tipos em dois arquivos, e o segundo nunca foi nomeado por ninguém — quem
+que sai do <code>layer()</code>: o mesmo teto, agora com o <code>S</code> que ele embrulha. Um par
+de tipos custaria um segundo arquivo e um nome que ninguém pronuncia — quem
 monta a pilha aplica o layer e mais nada.</p>
 </div></details><h2 id="fields" class="fields section-header">Fields<a href="#fields" class="anchor">§</a></h2><span id="structfield.inner" class="structfield section-header"><a href="#structfield.inner" class="anchor field">§</a><code>inner: S</code></span><div class="docblock"><p>O serviço interno, que este envolve; <code>()</code> enquanto é só layer.</p>
 </div><span id="structfield.limit" class="structfield section-header"><a href="#structfield.limit" class="anchor field">§</a><code>limit: <a class="struct" href="https://doc.rust-lang.org/1.96.0/core/time/struct.Duration.html" title="struct core::time::Duration">Duration</a></code></span><div class="docblock"><p>Teto de tempo de uma requisição.</p>

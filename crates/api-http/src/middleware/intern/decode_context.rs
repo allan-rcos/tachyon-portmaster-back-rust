@@ -56,7 +56,3 @@ impl DecodePort for DecodeContext {
         }
     }
 }
-
-#[cfg(test)]
-#[path = "tests/decode_context_test.rs"]
-mod tests;

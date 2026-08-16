@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["MAX_EMAIL_LENGTH","MAX_NAME_LENGTH","MIN_PASSWORD_LENGTH"],"fn":["email_refused","is_plausible_email","is_strong_password","name_refused","weak"],"struct":["UserTMImpl"]};
+window.SIDEBAR_ITEMS = {"constant":["MAX_EMAIL_LENGTH","MAX_NAME_LENGTH","MIN_PASSWORD_LENGTH"],"fn":["email_refused","is_plausible_email","is_strong_password","name_refused","user_tm","weak"],"struct":["UserTMImpl"]};

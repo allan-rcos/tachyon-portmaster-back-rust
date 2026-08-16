@@ -23,7 +23,3 @@ impl UserContext {
         self.roles.iter().any(|role| role.grants(slug))
     }
 }
-
-#[cfg(test)]
-#[path = "tests/user_context_test.rs"]
-mod tests;

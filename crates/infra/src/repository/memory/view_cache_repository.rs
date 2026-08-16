@@ -9,22 +9,25 @@ use crate::config::cache_limits::CacheLimits;
 use crate::repository::ViewCacheRepository;
 use crate::scope::memory::memory_store::MemoryStore;
 
-/// O cache de leitura, sobre o store em memória.
+/// Monta o cache de leitura sobre um recorte da memória.
 ///
 /// A chave que ele recebe é a do DQL, crua, sem digest no meio: reduzi-la a um
 /// hash só encurtaria o que já é curto, ao preço de uma entrada deixar de dizer
 /// a que consulta pertence quando alguém for depurar.
-#[derive(Clone)]
-pub struct ViewCacheMemoryRepository<S> {
-    /// De onde a memória da tarefa vem.
+pub(super) fn view_cache_repository<S>(
     store: S,
+) -> impl ViewCacheRepository + Sync + Clone + use<S> + 'static
+where
+    S: MemoryStore + Send + Sync + Clone + 'static,
+{
+    ViewCacheMemoryRepository { store }
 }
 
-impl<S> ViewCacheMemoryRepository<S> {
-    /// Monta o repositório.
-    pub(crate) const fn new(store: S) -> Self {
-        Self { store }
-    }
+/// O repositório, sobre o store em memória.
+#[derive(Clone)]
+struct ViewCacheMemoryRepository<S> {
+    /// De onde a memória da tarefa vem.
+    store: S,
 }
 
 impl<S: MemoryStore + Send + Sync> ViewCacheRepository for ViewCacheMemoryRepository<S> {

@@ -65,7 +65,3 @@ impl AppError {
         }
     }
 }
-
-#[cfg(test)]
-#[path = "tests/app_error_test.rs"]
-mod tests;

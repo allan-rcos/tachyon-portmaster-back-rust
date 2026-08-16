@@ -5,18 +5,22 @@ use crate::error::AuthError;
 use crate::security::PasswordHasher;
 use crate::table_modules::AuthTM;
 
-/// A implementação, genérica sobre o hasher.
-#[derive(Clone)]
-pub(crate) struct AuthTMImpl<H> {
-    /// Quem confere a senha apresentada contra o hash gravado.
-    password_hasher: H,
+/// Monta as regras de autenticação com o seu hasher.
+///
+/// O hasher chega injetado e o que sai é o contrato: o tipo concreto não tem
+/// nome fora deste arquivo.
+pub(crate) fn auth_tm<H>(password_hasher: H) -> impl AuthTM + Send + Sync + Clone + use<H> + 'static
+where
+    H: PasswordHasher + Send + Sync + Clone + 'static,
+{
+    AuthTMImpl { password_hasher }
 }
 
-impl<H: PasswordHasher> AuthTMImpl<H> {
-    /// Monta o `TableModule` com o seu hasher.
-    pub(crate) const fn new(password_hasher: H) -> Self {
-        Self { password_hasher }
-    }
+/// A implementação, genérica sobre o hasher.
+#[derive(Clone)]
+struct AuthTMImpl<H> {
+    /// Quem confere a senha apresentada contra o hash gravado.
+    password_hasher: H,
 }
 
 impl<H: PasswordHasher> AuthTM for AuthTMImpl<H> {

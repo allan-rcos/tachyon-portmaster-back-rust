@@ -14,5 +14,3 @@
 
 pub(crate) mod factories;
 pub(crate) mod mocks;
-
-mod lib_test;

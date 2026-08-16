@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["ADMINISTRATOR_ROLE"],"struct":["SessionServiceImpl"]};
+window.SIDEBAR_ITEMS = {"constant":["ADMINISTRATOR_ROLE"],"fn":["session_service"],"struct":["SessionServiceImpl"]};

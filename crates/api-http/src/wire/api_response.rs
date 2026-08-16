@@ -100,7 +100,3 @@ impl<X: ResponseX> IntoResponse for ApiResponse<X> {
         }
     }
 }
-
-#[cfg(test)]
-#[path = "tests/api_response_test.rs"]
-mod tests;

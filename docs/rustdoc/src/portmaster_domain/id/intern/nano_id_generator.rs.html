@@ -8,24 +8,21 @@
 <a href=#8 id=8 data-nosnippet>8</a>/// de qualquer força bruta viável, e ainda cabendo num cookie sem incomodar.
 <a href=#9 id=9 data-nosnippet>9</a></span><span class="kw">const </span>RANDOM_ID_SIZE: usize = <span class="number">21</span>;
 <a href=#10 id=10 data-nosnippet>10</a>
-<a href=#11 id=11 data-nosnippet>11</a><span class="doccomment">/// Gerador de id opaco, sobre `NanoID`.
-<a href=#12 id=12 data-nosnippet>12</a></span><span class="attr">#[derive(Clone, Copy)]
-<a href=#13 id=13 data-nosnippet>13</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>NanoIdGenerator;
-<a href=#14 id=14 data-nosnippet>14</a>
-<a href=#15 id=15 data-nosnippet>15</a><span class="kw">impl </span>NanoIdGenerator {
-<a href=#16 id=16 data-nosnippet>16</a>    <span class="doccomment">/// Monta o gerador.
-<a href=#17 id=17 data-nosnippet>17</a>    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const fn </span>new() -&gt; <span class="self">Self </span>{
-<a href=#18 id=18 data-nosnippet>18</a>        <span class="self">Self
-<a href=#19 id=19 data-nosnippet>19</a>    </span>}
-<a href=#20 id=20 data-nosnippet>20</a>}
-<a href=#21 id=21 data-nosnippet>21</a>
-<a href=#22 id=22 data-nosnippet>22</a><span class="kw">impl </span>RandomIdGenerator <span class="kw">for </span>NanoIdGenerator {
-<a href=#23 id=23 data-nosnippet>23</a>    <span class="kw">fn </span>next(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-<a href=#24 id=24 data-nosnippet>24</a>        <span class="macro">nanoid::nanoid!</span>(RANDOM_ID_SIZE)
-<a href=#25 id=25 data-nosnippet>25</a>    }
-<a href=#26 id=26 data-nosnippet>26</a>}
-<a href=#27 id=27 data-nosnippet>27</a>
-<a href=#28 id=28 data-nosnippet>28</a><span class="attr">#[cfg(test)]
-<a href=#29 id=29 data-nosnippet>29</a>#[path = <span class="string">"tests/nano_id_generator_test.rs"</span>]
-<a href=#30 id=30 data-nosnippet>30</a></span><span class="kw">mod </span>tests;
+<a href=#11 id=11 data-nosnippet>11</a><span class="doccomment">/// Monta o gerador de id opaco.
+<a href=#12 id=12 data-nosnippet>12</a>///
+<a href=#13 id=13 data-nosnippet>13</a>/// O que sai é o contrato, não o tipo: o `NanoID` é detalhe deste arquivo, e
+<a href=#14 id=14 data-nosnippet>14</a>/// quem pede um id opaco só precisa saber que ele é imprevisível.
+<a href=#15 id=15 data-nosnippet>15</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const fn </span>nano_id_generator() -&gt; <span class="kw">impl </span>RandomIdGenerator + <span class="kw">use</span>&lt;&gt; {
+<a href=#16 id=16 data-nosnippet>16</a>    NanoIdGenerator
+<a href=#17 id=17 data-nosnippet>17</a>}
+<a href=#18 id=18 data-nosnippet>18</a>
+<a href=#19 id=19 data-nosnippet>19</a><span class="doccomment">/// Gerador de id opaco, sobre `NanoID`.
+<a href=#20 id=20 data-nosnippet>20</a></span><span class="attr">#[derive(Clone, Copy)]
+<a href=#21 id=21 data-nosnippet>21</a></span><span class="kw">struct </span>NanoIdGenerator;
+<a href=#22 id=22 data-nosnippet>22</a>
+<a href=#23 id=23 data-nosnippet>23</a><span class="kw">impl </span>RandomIdGenerator <span class="kw">for </span>NanoIdGenerator {
+<a href=#24 id=24 data-nosnippet>24</a>    <span class="kw">fn </span>next(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+<a href=#25 id=25 data-nosnippet>25</a>        <span class="macro">nanoid::nanoid!</span>(RANDOM_ID_SIZE)
+<a href=#26 id=26 data-nosnippet>26</a>    }
+<a href=#27 id=27 data-nosnippet>27</a>}
 </code></pre></div></section></main></body></html>

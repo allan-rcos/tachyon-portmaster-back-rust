@@ -21,8 +21,8 @@ fn service(
     containers: MockContainers,
     container_rules: MockContainerRules,
     views: MockViewCache,
-) -> ContainerServiceImpl<MockContainers, MockContainerRules, StubQueries, MockViewCache> {
-    ContainerServiceImpl::new(containers, container_rules, StubQueries::never(), views)
+) -> impl ContainerService {
+    container_service(containers, container_rules, StubQueries::never(), views)
 }
 
 /// O comando que carrega só id e contexto.

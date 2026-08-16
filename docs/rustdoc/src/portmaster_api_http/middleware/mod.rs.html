@@ -15,8 +15,8 @@
 <a href=#15 id=15 data-nosnippet>15</a>//! ## Cada middleware é um arquivo
 <a href=#16 id=16 data-nosnippet>16</a>//!
 <a href=#17 id=17 data-nosnippet>17</a>//! O `tower::Service` que faz o trabalho e o `tower::Layer` que o aplica moram
-<a href=#18 id=18 data-nosnippet>18</a>//! juntos. Eram dois arquivos, e o `Service` nunca foi nomeado de fora: quem
-<a href=#19 id=19 data-nosnippet>19</a>//! monta a pilha aplica o `Layer`. A pilha continua composta por generics — cada
+<a href=#18 id=18 data-nosnippet>18</a>//! juntos, num tipo só: o `Service` nunca é nomeado de fora, porque quem monta a
+<a href=#19 id=19 data-nosnippet>19</a>//! pilha aplica o `Layer`. A pilha é composta por generics — cada
 <a href=#20 id=20 data-nosnippet>20</a>//! `.layer()` embrulha o serviço num tipo novo —, então não há `dyn` nem
 <a href=#21 id=21 data-nosnippet>21</a>//! `middleware::from_fn` solto em ponto nenhum dela.
 <a href=#22 id=22 data-nosnippet>22</a>
@@ -26,5 +26,9 @@
 <a href=#26 id=26 data-nosnippet>26</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>request_id_port;
 <a href=#27 id=27 data-nosnippet>27</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>session_port;
 <a href=#28 id=28 data-nosnippet>28</a>
-<a href=#29 id=29 data-nosnippet>29</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>intern;
+<a href=#29 id=29 data-nosnippet>29</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>middleware_provider;
+<a href=#30 id=30 data-nosnippet>30</a>
+<a href=#31 id=31 data-nosnippet>31</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>intern;
+<a href=#32 id=32 data-nosnippet>32</a>
+<a href=#33 id=33 data-nosnippet>33</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">use </span>middleware_provider::MiddlewareProvider;
 </code></pre></div></section></main></body></html>

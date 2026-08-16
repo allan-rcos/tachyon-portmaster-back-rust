@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["Claims","JwtTokenService"]};
+window.SIDEBAR_ITEMS = {"fn":["jwt_token_service"],"struct":["Claims","JwtTokenService"]};

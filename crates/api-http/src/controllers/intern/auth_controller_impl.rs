@@ -37,12 +37,44 @@ const TOKEN_TYPE: &str = "cookie";
 /// ela um marcador é um booleano com prazo, e quem lhe dá nome é quem o usa.
 const REFRESH_TOKEN_GROUP: &str = "refresh-token";
 
+/// Monta o controller de sessão.
+///
+/// Sete dependências, e é o controller mais costurado do sistema: ele emite
+/// duas coisas com prazos diferentes — o access token e o refresh —, escreve os
+/// dois em cookie e ainda registra o grupo de marcador que guarda o refresh.
+pub(crate) fn auth_controller<S, M, R, T, A, L>(
+    sessions: S,
+    marks: M,
+    random: R,
+    tokens: T,
+    cookies: A,
+    logger: L,
+    refresh_ttl_seconds: u64,
+) -> impl AuthController + use<S, M, R, T, A, L> + 'static
+where
+    S: SessionService + Clone + Send + Sync + 'static,
+    M: MarkService + Clone + Send + Sync + 'static,
+    R: RandomIdGenerator + Clone + Send + Sync + 'static,
+    T: TokenService + Clone + Send + Sync + 'static,
+    A: CookiePort + Clone + Send + Sync + 'static,
+    L: Logger + Clone + Send + Sync + 'static,
+{
+    AuthControllerImpl {
+        sessions,
+        marks,
+        random,
+        tokens,
+        cookies,
+        logger,
+        refresh_ttl_seconds,
+    }
+}
+
 /// Os handlers de sessão, genéricos sobre tudo que consomem.
 ///
-/// Repare que `T`, `A` e `L` são parâmetros de tipo e não structs concretas.
-/// Antes o controller declarava `tokens: TokenService` e `cookies: AuthCookie`
-/// com as impls, e a hierarquia que as traits desenham valia para fora do crate
-/// mas não para dentro dele.
+/// Repare que `T`, `A` e `L` são parâmetros de tipo e não structs concretas:
+/// declarar os campos com as impls faria a hierarquia que as traits desenham
+/// valer para fora do crate mas não para dentro dele.
 ///
 /// É o único controller que injeta a [`CookiePort`], e é a razão de ela existir:
 /// a sessão **é** um par de cookies, e quem decide o que entra neles é quem
@@ -50,7 +82,7 @@ const REFRESH_TOKEN_GROUP: &str = "refresh-token";
 /// sem escolher `Path` nem `Max-Age`, e sem que o tipo interno do crate `cookie`
 /// apareça na assinatura de contrato nenhum.
 #[derive(Clone)]
-pub(crate) struct AuthControllerImpl<S, M, R, T, A, L> {
+struct AuthControllerImpl<S, M, R, T, A, L> {
     /// O service de sessão.
     sessions: S,
     /// O service de marcador, que guarda o refresh.
@@ -76,27 +108,6 @@ where
     A: CookiePort,
     L: Logger,
 {
-    /// Monta o controller.
-    pub(crate) const fn new(
-        sessions: S,
-        marks: M,
-        random: R,
-        tokens: T,
-        cookies: A,
-        logger: L,
-        refresh_ttl_seconds: u64,
-    ) -> Self {
-        Self {
-            sessions,
-            marks,
-            random,
-            tokens,
-            cookies,
-            logger,
-            refresh_ttl_seconds,
-        }
-    }
-
     /// Emite access e refresh, publica os cookies e monta o corpo da sessão.
     async fn issue_session(&self, user: &dyn User) -> Result<LoginXResponse, ApiError> {
         let refresh = self.mint_refresh(user).await?;

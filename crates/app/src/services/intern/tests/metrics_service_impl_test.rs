@@ -12,11 +12,8 @@ use crate::tests::mocks::query_repository_stub::StubQueries;
 use crate::tests::mocks::view_cache_repository_mock::MockViewCache;
 
 /// O service com os dois mocks que o teste armou.
-fn service(
-    queries: StubQueries,
-    views: MockViewCache,
-) -> MetricsServiceImpl<StubQueries, MockViewCache> {
-    MetricsServiceImpl::new(queries, views)
+fn service(queries: StubQueries, views: MockViewCache) -> impl MetricsService {
+    metrics_service(queries, views)
 }
 
 /// Um painel reconhecível, para a asserção não depender de zeros.

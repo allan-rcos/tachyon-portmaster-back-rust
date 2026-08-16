@@ -28,14 +28,8 @@ fn service(
     manifests: MockManifests,
     manifest_rules: MockManifestRules,
     views: MockViewCache,
-) -> ManifestServiceImpl<
-    MockContainers,
-    MockProducts,
-    MockManifests,
-    MockManifestRules,
-    MockViewCache,
-> {
-    ManifestServiceImpl::new(containers, products, manifests, manifest_rules, views)
+) -> impl ManifestService {
+    manifest_service(containers, products, manifests, manifest_rules, views)
 }
 
 /// O comando de embarque.

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["MariadbQueryRepository"]};
+window.SIDEBAR_ITEMS = {"fn":["mariadb_query_repository"],"struct":["MariadbQueryRepository"]};

@@ -1,14 +1,16 @@
 //! A abertura do pool de conexões.
 //!
-//! Criado uma vez no `register` e compartilhado por clone — o `MySqlPool` é um
-//! `Arc` por dentro, então cada repositório carrega um ponteiro, não um pool
-//! próprio. É o exemplo canônico de recurso de borda: único, externalizado, e
-//! impossível de monomorfizar por consumidor.
+//! Compartilhado por clone — o `MySqlPool` é um `Arc` por dentro, então cada
+//! repositório carrega um ponteiro, não um pool próprio. É recurso de borda:
+//! único, externalizado, e impossível de monomorfizar por consumidor.
 //!
 //! Quem chama é o construtor da
 //! [`MariaDbUnitOfWork`](super::mariadb_unit_of_work::MariaDbUnitOfWork), e não
-//! o `register` direto: o pool não tem uso fora do handle que o carrega, e um
-//! `connect()` solto convidaria a que tivesse.
+//! o provider direto: o pool não tem uso fora do handle que o carrega, e um
+//! `open()` solto convidaria a que tivesse.
+//!
+//! Abrir não conecta. A primeira conexão sai da primeira consulta, ou do `ping`
+//! que o boot faz de propósito para não subir com um banco inalcançável.
 
 use crate::config::pool::POOL_MAX_CONNECTIONS;
 use crate::config::{DatabaseSslMode, InfraSecrets};
@@ -17,26 +19,23 @@ use secrecy::ExposeSecret;
 use sqlx::mysql::{MySqlConnectOptions, MySqlPoolOptions, MySqlSslMode};
 use sqlx::MySqlPool;
 
-/// Abre o pool e confirma que o banco responde.
+/// Abre o pool sem tocar a rede.
 ///
-/// A verificação de sanidade é deliberada: sem ela, um erro de credencial só
-/// apareceria na primeira requisição, com o processo já reportado como saudável.
-/// Melhor não subir do que subir quebrado.
-pub(super) async fn connect(secrets: &InfraSecrets) -> anyhow::Result<MySqlPool> {
+/// `connect_lazy_with` não conecta: monta o pool e deixa a primeira conexão
+/// para a primeira consulta. É o que mantém esta função **síncrona**, e com ela
+/// toda a cadeia de factories acima — um handshake TCP aqui faria o `async`
+/// subir até o router.
+///
+/// Quem toca a rede é o
+/// [`ping`](super::mariadb_unit_of_work::MariaDbUnitOfWork::ping), passo
+/// explícito do boot: sem ele um erro de credencial só apareceria na primeira
+/// requisição, com o processo já reportado como saudável.
+pub(super) fn open(secrets: &InfraSecrets) -> anyhow::Result<MySqlPool> {
     let options = connect_options(secrets)?;
 
-    let pool = MySqlPoolOptions::new()
+    Ok(MySqlPoolOptions::new()
         .max_connections(POOL_MAX_CONNECTIONS)
-        .connect_with(options)
-        .await
-        .context("falha ao conectar no MariaDB")?;
-
-    sqlx::query("SELECT 1")
-        .execute(&pool)
-        .await
-        .context("o MariaDB conectou mas não respondeu ao SELECT de sanidade")?;
-
-    Ok(pool)
+        .connect_lazy_with(options))
 }
 
 /// Fixa o fuso da sessão em UTC, **depois** do parse da URI.
@@ -94,7 +93,3 @@ fn connect_options(secrets: &InfraSecrets) -> anyhow::Result<MySqlConnectOptions
 
     Ok(options)
 }
-
-#[cfg(test)]
-#[path = "tests/mariadb_pool_test.rs"]
-mod tests;

@@ -22,10 +22,9 @@ const MAX_BODY_BYTES: usize = 1024 * 1024;
 /// um DTO, não uma factory.
 ///
 /// Ele **não decide** o formato. Quem decidiu foi o middleware, uma vez, no
-/// começo da requisição; aqui só se aplica o que ele escolheu. Antes este
-/// extractor relia o `Content-Type`, montava um decoder e ainda extraía um
-/// encoder de reserva para anexar à recusa — três decisões de negociação dentro
-/// de um extractor de corpo.
+/// começo da requisição; aqui só se aplica o que ele escolheu. Reler o
+/// `Content-Type` aqui, montar um decoder e extrair um encoder de reserva para
+/// a recusa seriam três decisões de negociação dentro de um extractor de corpo.
 pub(crate) struct Body<X: RequestX>(pub(crate) X);
 
 impl<S, X> FromRequest<S> for Body<X>

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["cursor","default_limit","dql","dql_trait","intern","query_repository","sql_dql","views"]};
+window.SIDEBAR_ITEMS = {"mod":["cursor","default_limit","dql","dql_trait","intern","query_provider","query_repository","sql_dql","views"]};

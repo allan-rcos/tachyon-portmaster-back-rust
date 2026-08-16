@@ -1,10 +1,7 @@
 //! Como esta camada é montada.
 //!
-//! O contrato dos factories, a implementação que os atende e a função que abre
-//! o pool e devolve a camada pronta. Os três só fazem sentido lidos juntos, e
-//! nenhum é chamado depois do boot.
+//! Um arquivo só: o provider da camada, que é a borda do crate. Os providers de
+//! diretório — `scope/`, `repository/`, `query/`, `logging/` — ficam privados
+//! atrás dele.
 
-pub mod provider;
-pub mod register;
-
-pub(crate) mod infra_provider;
+pub mod infra_provider;

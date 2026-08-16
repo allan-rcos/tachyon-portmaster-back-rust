@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["to_api"],"struct":["RoleControllerImpl"]};
+window.SIDEBAR_ITEMS = {"fn":["role_controller","to_api"],"struct":["RoleControllerImpl"]};

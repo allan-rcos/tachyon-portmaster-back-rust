@@ -10,14 +10,22 @@ use crate::scope::memory::intern::moka_context::MokaContext;
 use crate::scope::memory::intern::pending_write::{Operation, PendingWrite};
 use crate::scope::memory::memory_store::MemoryStore;
 
-/// Um recorte da memória do processo.
+/// Monta o handle sobre um mapa do processo.
 ///
 /// O `name` não é enfeite: ele é o que distingue duas escritas na fila da
 /// tarefa. Dois stores podem ter grupo e chave iguais e significar coisas
 /// diferentes — é exatamente o caso da permissão e do grupo de marcador, que o
 /// schema anterior separava em duas tabelas.
+pub(in crate::scope::memory) fn moka_store(
+    name: &'static str,
+    cache: MokaCache,
+) -> impl MemoryStore + Sync + Clone + use<> + 'static {
+    MokaStore { name, cache }
+}
+
+/// Um recorte da memória do processo.
 #[derive(Clone)]
-pub(crate) struct MokaStore {
+struct MokaStore {
     /// Que recorte este store guarda.
     name: &'static str,
     /// O mapa e a política dele.
@@ -25,11 +33,6 @@ pub(crate) struct MokaStore {
 }
 
 impl MokaStore {
-    /// Monta o handle sobre um mapa do processo.
-    pub(crate) const fn new(name: &'static str, cache: MokaCache) -> Self {
-        Self { name, cache }
-    }
-
     /// Enfileira a escrita, ou a publica direto se não houver escopo.
     ///
     /// Fora de um escopo a escrita vale na hora, e é isso que mantém o boot

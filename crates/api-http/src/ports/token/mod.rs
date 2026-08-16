@@ -5,6 +5,9 @@
 //! o seu arquivo.
 
 pub(crate) mod refresh_token;
+pub(crate) mod token_provider;
 pub(crate) mod token_service;
 
 pub(crate) mod adapter;
+
+pub(crate) use token_provider::TokenProvider;

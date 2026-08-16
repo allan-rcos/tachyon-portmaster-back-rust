@@ -20,8 +20,8 @@
 <a href=#20 id=20 data-nosnippet>20</a>///
 <a href=#21 id=21 data-nosnippet>21</a>/// Um tipo só, e não um par. `RecoverLayer` sem parâmetro é o `Layer`, e
 <a href=#22 id=22 data-nosnippet>22</a>/// `RecoverLayer&lt;S&gt;` é o `Service` que sai do `layer()` — o mesmo tipo, agora
-<a href=#23 id=23 data-nosnippet>23</a>/// com o `S` que ele embrulha. Eram dois tipos em dois arquivos, e o segundo
-<a href=#24 id=24 data-nosnippet>24</a>/// nunca foi nomeado por ninguém.
+<a href=#23 id=23 data-nosnippet>23</a>/// com o `S` que ele embrulha. Um par de tipos custaria um segundo arquivo e um
+<a href=#24 id=24 data-nosnippet>24</a>/// nome que ninguém pronuncia: quem monta a pilha aplica o layer e mais nada.
 <a href=#25 id=25 data-nosnippet>25</a></span><span class="attr">#[derive(Clone, Copy, Default)]
 <a href=#26 id=26 data-nosnippet>26</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>RecoverLayer&lt;S = ()&gt; {
 <a href=#27 id=27 data-nosnippet>27</a>    <span class="doccomment">/// O serviço interno, que este envolve; `()` enquanto é só layer.
@@ -62,12 +62,12 @@
 <a href=#62 id=62 data-nosnippet>62</a>    /// [`EncodePort`](crate::middleware::encode_port::EncodePort), no formato
 <a href=#63 id=63 data-nosnippet>63</a>    /// que a requisição negociou. Este layer não relê o `Accept`: quem o
 <a href=#64 id=64 data-nosnippet>64</a>    /// resolveu foi o `EncodeLayer`, que por isso tem de estar **fora** deste na
-<a href=#65 id=65 data-nosnippet>65</a>    /// pilha. Antes cada middleware que responde por conta própria remontava a
-<a href=#66 id=66 data-nosnippet>66</a>    /// negociação sozinho — a mesma decisão tomada em três lugares.
+<a href=#65 id=65 data-nosnippet>65</a>    /// pilha. Cada middleware que responde por conta própria remontar a
+<a href=#66 id=66 data-nosnippet>66</a>    /// negociação seria a mesma decisão tomada em três lugares.
 <a href=#67 id=67 data-nosnippet>67</a>    ///
-<a href=#68 id=68 data-nosnippet>68</a>    /// O desenho anterior a este tinha aqui um literal de bytes JSON, que num
-<a href=#69 id=69 data-nosnippet>69</a>    /// sistema cujo cliente de produção fala `FlatBuffers` era o único corpo que
-<a href=#70 id=70 data-nosnippet>70</a>    /// ele nunca conseguiria ler.
+<a href=#68 id=68 data-nosnippet>68</a>    /// Um literal de bytes JSON aqui seria pior do que parece: num sistema cujo
+<a href=#69 id=69 data-nosnippet>69</a>    /// cliente de produção fala `FlatBuffers`, é o único corpo que ele nunca
+<a href=#70 id=70 data-nosnippet>70</a>    /// conseguiria ler.
 <a href=#71 id=71 data-nosnippet>71</a>    </span><span class="kw">fn </span>call(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: Request) -&gt; <span class="self">Self</span>::Future {
 <a href=#72 id=72 data-nosnippet>72</a>        <span class="kw">let </span>clone = <span class="self">self</span>.inner.clone();
 <a href=#73 id=73 data-nosnippet>73</a>        <span class="kw">let </span><span class="kw-2">mut </span>inner = std::mem::replace(<span class="kw-2">&amp;mut </span><span class="self">self</span>.inner, clone);
@@ -108,8 +108,4 @@
 <a href=#108 id=108 data-nosnippet>108</a>
 <a href=#109 id=109 data-nosnippet>109</a>    <span class="string">"pânico sem mensagem legível"</span>.to_owned()
 <a href=#110 id=110 data-nosnippet>110</a>}
-<a href=#111 id=111 data-nosnippet>111</a>
-<a href=#112 id=112 data-nosnippet>112</a><span class="attr">#[cfg(test)]
-<a href=#113 id=113 data-nosnippet>113</a>#[path = <span class="string">"tests/recover_layer_test.rs"</span>]
-<a href=#114 id=114 data-nosnippet>114</a></span><span class="kw">mod </span>tests;
 </code></pre></div></section></main></body></html>

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["group_refused"],"struct":["MarkerTMImpl"]};
+window.SIDEBAR_ITEMS = {"fn":["group_refused","marker_tm"],"struct":["MarkerTMImpl"]};

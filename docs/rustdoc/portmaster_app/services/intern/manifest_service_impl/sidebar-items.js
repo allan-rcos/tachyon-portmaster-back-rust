@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["CONTAINER_CACHE_GROUP","LOAD","UNLOAD"],"struct":["ManifestServiceImpl"]};
+window.SIDEBAR_ITEMS = {"constant":["CONTAINER_CACHE_GROUP","LOAD","UNLOAD"],"fn":["manifest_service"],"struct":["ManifestServiceImpl"]};

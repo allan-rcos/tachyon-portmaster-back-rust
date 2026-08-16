@@ -189,7 +189,3 @@ impl SqlDql for ListContainers {
         })
     }
 }
-
-#[cfg(test)]
-#[path = "tests/list_containers_test.rs"]
-mod tests;

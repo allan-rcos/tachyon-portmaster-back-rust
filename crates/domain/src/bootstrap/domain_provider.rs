@@ -1,98 +1,88 @@
-//! A implementação do provider da camada.
+//! A borda do `domain`: tudo que sai deste crate sai por aqui.
 
-use crate::bootstrap::provider::DomainProvider;
 use crate::config::DomainSecrets;
-use crate::id::intern::nano_id_generator::NanoIdGenerator;
-use crate::id::intern::xid_generator::XidGenerator;
-use crate::id::{DatabaseIdGenerator, RandomIdGenerator, SequentialIdGenerator};
-use crate::security::intern::argon2_hasher::Argon2Hasher;
-use crate::security::intern::xx_index_hasher::XxIndexHasher;
-use crate::table_modules::intern::auth_tm_impl::AuthTMImpl;
-use crate::table_modules::intern::container_tm_impl::ContainerTMImpl;
-use crate::table_modules::intern::manifest_tm_impl::ManifestTMImpl;
-use crate::table_modules::intern::marker_group_tm_impl::MarkerGroupTMImpl;
-use crate::table_modules::intern::marker_tm_impl::MarkerTMImpl;
-use crate::table_modules::intern::permission_tm_impl::PermissionTMImpl;
-use crate::table_modules::intern::product_tm_impl::ProductTMImpl;
-use crate::table_modules::intern::role_tm_impl::RoleTMImpl;
-use crate::table_modules::intern::user_tm_impl::UserTMImpl;
+use crate::id::IdProvider;
+use crate::id::{RandomIdGenerator, SequentialIdGenerator};
+use crate::table_modules::TableModulesProvider;
 use crate::table_modules::{
     AuthTM, ContainerTM, ManifestTM, MarkerGroupTM, MarkerTM, PermissionTM, ProductTM, RoleTM,
     UserTM,
 };
 
-#[cfg(feature = "id-snowflake")]
-use crate::id::intern::snowflake_id_generator::SnowflakeIdGenerator;
+/// Os factories do `domain`.
+///
+/// O que ele serve, o `app` recebe como **contrato**: nenhum tipo concreto do
+/// domínio atravessa esta fronteira. Ver
+/// `docs/adr/0011-static-providers-one-per-directory.md`.
+///
+/// O gerador de **identidade de entidade** não aparece aqui, e é o único que
+/// não aparece: servi-lo daria a quem está de fora o poder de nomear uma linha
+/// sem passar pelo `TableModule` que a valida. Os outros dois emitem id que
+/// nunca vira chave, e por isso atravessam.
+pub struct DomainProvider;
 
-/// A implementação do provider. Privada: nenhum crate exporta impl.
-pub(crate) struct DomainProviderImpl {
-    /// Quem é este servidor na composição do Snowflake.
-    secrets: DomainSecrets,
-}
-
-impl DomainProviderImpl {
-    /// Guarda a identidade de deploy e nada mais — não há recurso caro aqui.
-    pub(crate) const fn new(secrets: DomainSecrets) -> Self {
-        Self { secrets }
-    }
-
-    /// Serve o gerador de id de entidade.
+impl DomainProvider {
+    /// Instala a identidade de deploy desta instância.
     ///
-    /// A impl é escolhida por **feature de compilação** — decisão de
-    /// arquitetura, resolvida no build, sem ramo em runtime. Os parâmetros de
-    /// identidade vêm dos segredos.
-    ///
-    /// Não está no [`DomainProvider`] de propósito: quem emite identidade de
-    /// entidade é o `TableModule`, e um gerador destes fora do crate permitiria
-    /// montar uma linha sem passar pela regra que a valida.
-    fn database_id_generator(&self) -> impl DatabaseIdGenerator + Clone + use<> + 'static {
-        #[cfg(feature = "id-snowflake")]
-        SnowflakeIdGenerator::new(self.secrets.cluster_id, self.secrets.server_id)
-    }
-}
-
-impl DomainProvider for DomainProviderImpl {
-    fn sequential_id_generator(&self) -> impl SequentialIdGenerator + use<> {
-        XidGenerator::new()
+    /// É a única configuração que o `domain` tem, e por isso o único `install`
+    /// daqui. Instalar de novo troca; o lugar normal de chamar isto é o boot.
+    pub fn install_identity(secrets: DomainSecrets) {
+        IdProvider::install(secrets);
     }
 
-    fn random_id_generator(&self) -> impl RandomIdGenerator + use<> {
-        NanoIdGenerator::new()
+    /// O gerador de id ordenável, para o `request_id`.
+    pub fn sequential_id_generator() -> impl SequentialIdGenerator + use<> {
+        IdProvider::sequential()
     }
 
-    fn user_table_module(&self) -> impl UserTM + Clone + use<> + 'static {
-        UserTMImpl::new(self.database_id_generator(), Argon2Hasher::new())
+    /// O gerador de id opaco, para o refresh token.
+    pub fn random_id_generator() -> impl RandomIdGenerator + use<> {
+        IdProvider::random()
     }
 
-    fn role_table_module(&self) -> impl RoleTM + Clone + use<> + 'static {
-        RoleTMImpl::new(self.database_id_generator())
+    /// As regras de usuário.
+    pub fn user_table_module() -> impl UserTM + Send + Sync + Clone + use<> + 'static {
+        TableModulesProvider::user()
     }
 
-    fn product_table_module(&self) -> impl ProductTM + Clone + use<> + 'static {
-        ProductTMImpl::new(self.database_id_generator())
+    /// As regras de papel.
+    pub fn role_table_module() -> impl RoleTM + Send + Sync + Clone + use<> + 'static {
+        TableModulesProvider::role()
     }
 
-    fn container_table_module(&self) -> impl ContainerTM + Clone + use<> + 'static {
-        ContainerTMImpl::new(self.database_id_generator())
+    /// As regras de produto.
+    pub fn product_table_module() -> impl ProductTM + Send + Sync + Clone + use<> + 'static {
+        TableModulesProvider::product()
     }
 
-    fn manifest_table_module(&self) -> impl ManifestTM + Clone + use<> + 'static {
-        ManifestTMImpl::new()
+    /// As regras de contêiner.
+    pub fn container_table_module() -> impl ContainerTM + Send + Sync + Clone + use<> + 'static {
+        TableModulesProvider::container()
     }
 
-    fn auth_table_module(&self) -> impl AuthTM + Clone + use<> + 'static {
-        AuthTMImpl::new(Argon2Hasher::new())
+    /// As regras de manifesto.
+    pub fn manifest_table_module() -> impl ManifestTM + Send + Sync + Clone + use<> + 'static {
+        TableModulesProvider::manifest()
     }
 
-    fn permission_table_module(&self) -> impl PermissionTM + Clone + use<> + 'static {
-        PermissionTMImpl::new()
+    /// As regras de autenticação.
+    pub fn auth_table_module() -> impl AuthTM + Send + Sync + Clone + use<> + 'static {
+        TableModulesProvider::auth()
     }
 
-    fn marker_group_table_module(&self) -> impl MarkerGroupTM + Clone + use<> + 'static {
-        MarkerGroupTMImpl::new()
+    /// As regras de permissão.
+    pub fn permission_table_module() -> impl PermissionTM + Send + Sync + Clone + use<> + 'static {
+        TableModulesProvider::permission()
     }
 
-    fn marker_table_module(&self) -> impl MarkerTM + Clone + use<> + 'static {
-        MarkerTMImpl::new(XxIndexHasher::new())
+    /// As regras de grupo de marcador.
+    pub fn marker_group_table_module() -> impl MarkerGroupTM + Send + Sync + Clone + use<> + 'static
+    {
+        TableModulesProvider::marker_group()
+    }
+
+    /// As regras de marcador.
+    pub fn marker_table_module() -> impl MarkerTM + Send + Sync + Clone + use<> + 'static {
+        TableModulesProvider::marker()
     }
 }

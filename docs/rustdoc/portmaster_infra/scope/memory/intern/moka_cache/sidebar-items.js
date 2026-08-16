@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["EntryExpiry","MokaCache"],"type":["EntryKey","EntryValue"]};
+window.SIDEBAR_ITEMS = {"fn":["moka_cache"],"struct":["EntryExpiry","MokaCache"],"type":["EntryKey","EntryValue"]};

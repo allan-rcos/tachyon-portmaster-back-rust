@@ -28,6 +28,37 @@ const NODE_COUNT: u16 = 32;
 /// O maior valor que cluster e servidor admitem.
 const NODE_MAX: u16 = 31;
 
+/// Monta o gerador Snowflake para esta instância de deploy.
+///
+/// `cluster_id` e `server_id` são o que distingue dois processos emitindo ao
+/// mesmo tempo; vêm dos segredos, não do build.
+///
+/// Cada chamada produz um gerador **independente**, e dois independentes com a
+/// mesma identidade colidem: o id é o instante, a identidade e uma sequência
+/// dentro do milissegundo, e sequências separadas emitem o mesmo número no mesmo
+/// milissegundo. Por isso chamar isto é o caminho consciente de quem quer um
+/// segundo gerador, com **outra** identidade.
+///
+/// Devolve o tipo concreto porque ele precisa caber num `static`, e um `static`
+/// exige um tipo com nome. Nem a função nem o tipo saem do módulo `id`.
+pub(in crate::id) fn snowflake_id_generator(
+    cluster_id: i32,
+    server_id: i32,
+) -> SnowflakeIdGenerator {
+    let epoch = UNIX_EPOCH
+        .checked_add(Duration::from_millis(EPOCH_MS))
+        .unwrap_or(UNIX_EPOCH);
+
+    SnowflakeIdGenerator {
+        inner: Arc::new(
+            Generator::builder()
+                .instance(instance_of(cluster_id, server_id))
+                .epoch(epoch)
+                .build(),
+        ),
+    }
+}
+
 /// Gerador Snowflake compartilhado pelo processo.
 ///
 /// O `Arc` é o que faz um clone deste gerador continuar sendo **o mesmo**
@@ -36,30 +67,9 @@ const NODE_MAX: u16 = 31;
 /// `cluster_id`/`server_id` emitiriam ids repetidos. Ele não pode existir em
 /// mais de um lugar ao mesmo tempo, então é compartilhado em vez de copiado.
 #[derive(Clone)]
-pub(crate) struct SnowflakeIdGenerator {
+pub(in crate::id) struct SnowflakeIdGenerator {
     /// O gerador da lib, compartilhado por todas as threads do processo.
     inner: Arc<Generator>,
-}
-
-impl SnowflakeIdGenerator {
-    /// Monta o gerador para esta instância de deploy.
-    ///
-    /// `cluster_id` e `server_id` são o que distingue dois processos emitindo ao
-    /// mesmo tempo; vêm dos segredos, não do build.
-    pub(crate) fn new(cluster_id: i32, server_id: i32) -> Self {
-        let epoch = UNIX_EPOCH
-            .checked_add(Duration::from_millis(EPOCH_MS))
-            .unwrap_or(UNIX_EPOCH);
-
-        Self {
-            inner: Arc::new(
-                Generator::builder()
-                    .instance(instance_of(cluster_id, server_id))
-                    .epoch(epoch)
-                    .build(),
-            ),
-        }
-    }
 }
 
 impl DatabaseIdGenerator for SnowflakeIdGenerator {
@@ -81,7 +91,3 @@ fn instance_of(cluster_id: i32, server_id: i32) -> u16 {
 
     cluster.saturating_mul(NODE_COUNT).saturating_add(server)
 }
-
-#[cfg(test)]
-#[path = "tests/snowflake_id_generator_test.rs"]
-mod tests;

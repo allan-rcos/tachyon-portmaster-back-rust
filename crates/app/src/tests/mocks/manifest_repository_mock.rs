@@ -14,6 +14,16 @@ mock! {
     /// A persistência do manifesto, sob controle do teste.
     pub(crate) Manifests {}
 
+    /// O `Clone` que o factory do service exige.
+    ///
+    /// Nenhum teste clona um mock: quem clona é o controller, uma vez por
+    /// requisição, e o bound sobe daí até aqui. Sem `expect_clone`, chamar
+    /// `clone` falha — que é o que se quer, porque um mock clonado não
+    /// levaria as expectativas do original junto.
+    impl Clone for Manifests {
+        fn clone(&self) -> Self;
+    }
+
     #[trait_variant::make(Send)]
     impl ManifestRepository for Manifests {
         async fn find_cargo(&self, container_id: &str, product_id: &str)

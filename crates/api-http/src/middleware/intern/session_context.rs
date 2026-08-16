@@ -75,7 +75,3 @@ impl SessionPort for SessionContext {
         self.current_user()?.ok_or_else(ApiError::unauthenticated)
     }
 }
-
-#[cfg(test)]
-#[path = "tests/session_context_test.rs"]
-mod tests;

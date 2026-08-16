@@ -5,7 +5,6 @@ use std::collections::HashSet;
 use axum::http::Method;
 use axum::Router;
 
-use crate::bootstrap::provider::ApiProvider;
 use crate::router::intern::v1_router::V1Router;
 use crate::router::versioned_router::VersionedRouter;
 
@@ -33,19 +32,16 @@ impl RouterHub {
     /// fica, e percorrer nesta ordem é o que a faz ser a mais nova.
     ///
     /// Uma versão nova é uma linha aqui e um arquivo em `intern`.
-    pub(crate) fn build<P: ApiProvider>(provider: &P) -> anyhow::Result<Router> {
+    pub(crate) fn build() -> anyhow::Result<Router> {
         let mut mounted = Mounted::default();
 
-        Self::mount::<V1Router, P>(&mut mounted, provider)?;
+        Self::mount::<V1Router>(&mut mounted)?;
 
         Ok(mounted.router)
     }
 
     /// Monta uma versão sob o prefixo dela, e o que sobrar dela na raiz.
-    fn mount<V: VersionedRouter, P: ApiProvider>(
-        mounted: &mut Mounted,
-        provider: &P,
-    ) -> anyhow::Result<()> {
+    fn mount<V: VersionedRouter>(mounted: &mut Mounted) -> anyhow::Result<()> {
         anyhow::ensure!(
             mounted.versions.insert(V::VERSION),
             "duas tabelas declaram a versão {}: um número endereça exatamente uma delas",
@@ -55,13 +51,13 @@ impl RouterHub {
         let prefix = format!("/v{}", V::VERSION);
         let mut versioned = Router::new();
 
-        for route in V::routes(provider) {
+        for route in V::routes()? {
             versioned = versioned.route(route.path, route.handler);
         }
 
         let mut router = std::mem::take(&mut mounted.router).nest(&prefix, versioned);
 
-        for route in V::routes(provider) {
+        for route in V::routes()? {
             if mounted.published.insert((route.method, route.path)) {
                 router = router.route(route.path, route.handler);
             }

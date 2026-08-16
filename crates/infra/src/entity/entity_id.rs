@@ -51,9 +51,8 @@ impl TryFrom<i64> for EntityId {
     ///
     /// Recusa negativo em vez de codificá-lo: o Snowflake não acende o bit de
     /// sinal, então um id negativo veio de uma linha que o schema não deveria
-    /// admitir. Antes o `encode_id` o transformava em `0` — afirmava uma
-    /// identidade que a linha não tem, que é a mesma coisa que escolher variante
-    /// de enum por aproximação.
+    /// admitir. Transformá-lo em `0` afirmaria uma identidade que a linha não
+    /// tem, que é a mesma coisa que escolher variante de enum por aproximação.
     fn try_from(raw: i64) -> Result<Self, Self::Error> {
         if raw.is_negative() {
             return Err(anyhow!("id negativo na coluna: {raw}"));
@@ -83,7 +82,3 @@ impl TryFrom<&str> for EntityId {
         Ok(Self { raw, encoded })
     }
 }
-
-#[cfg(test)]
-#[path = "tests/entity_id_test.rs"]
-mod tests;

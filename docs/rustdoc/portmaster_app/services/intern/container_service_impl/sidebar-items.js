@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["CACHE_GROUP","CREATE","DELETE","DISPATCH","READ","SEAL","SUMMARY","UPDATE"],"struct":["ContainerServiceImpl"]};
+window.SIDEBAR_ITEMS = {"constant":["CACHE_GROUP","CREATE","DELETE","DISPATCH","READ","SEAL","SUMMARY","UPDATE"],"fn":["container_service"],"struct":["ContainerServiceImpl"]};

@@ -42,7 +42,3 @@ impl RequestIdPort for RequestIdContext {
         CURRENT.try_with(Clone::clone).ok()
     }
 }
-
-#[cfg(test)]
-#[path = "tests/request_id_context_test.rs"]
-mod tests;

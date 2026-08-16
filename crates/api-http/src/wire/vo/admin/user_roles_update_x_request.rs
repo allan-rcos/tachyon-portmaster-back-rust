@@ -8,10 +8,9 @@ use planus::ReadAsRoot as _;
 
 /// O conjunto de papéis que um usuário passa a ter.
 ///
-/// Esta rota já foi a única do sistema que recusava o formato binário: a
-/// mensagem não tinha tabela no schema publicado, e o VO respondia 400 a quem
-/// negociasse `application/x-flatbuffers` — que é o que o cliente de produção
-/// fala. A tabela entrou no contrato, e com ela a rota deixou de ser exceção.
+/// A mensagem tem tabela no schema publicado, como todas as outras: sem ela, o
+/// VO teria de responder 400 a quem negociasse `application/x-flatbuffers` —
+/// que é o que o cliente de produção fala.
 #[derive(Debug, Clone, Default)]
 pub(crate) struct UserRolesUpdateXRequest {
     /// O conjunto **final** de papéis; o que ficar de fora é retirado.

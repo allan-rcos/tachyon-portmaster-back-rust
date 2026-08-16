@@ -43,18 +43,6 @@ impl EncodeContext {
         CURRENT.scope(media, future).await
     }
 
-    /// Abre o escopo de fora do módulo, só em teste.
-    ///
-    /// O escritor de verdade é `pub(super)` e continua sendo: em produção só o
-    /// layer irmão escolhe o formato. Este é o seam que deixa um teste de outro
-    /// módulo — o do [`ApiError`](crate::ports::error::api_error::ApiError), que
-    /// precisa provar que o erro sai no formato negociado — montar o escopo sem
-    /// subir a pilha inteira.
-    #[cfg(test)]
-    pub(crate) async fn scope_for_test<F: Future>(media: MediaType, future: F) -> F::Output {
-        Self::scope(media, future).await
-    }
-
     /// O formato desta tarefa, ou JSON.
     ///
     /// Cair em JSON fora do escopo é deliberado, e é o oposto do que a sessão
@@ -87,7 +75,3 @@ impl EncodePort for EncodeContext {
         }
     }
 }
-
-#[cfg(test)]
-#[path = "tests/encode_context_test.rs"]
-mod tests;

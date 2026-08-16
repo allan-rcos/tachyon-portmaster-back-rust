@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["Argon2Hasher"]};
+window.SIDEBAR_ITEMS = {"fn":["argon2_hasher"],"struct":["Argon2Hasher"]};

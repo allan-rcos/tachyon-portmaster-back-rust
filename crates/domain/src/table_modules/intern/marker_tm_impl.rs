@@ -7,18 +7,22 @@ use crate::table_modules::intern::helpers::slug::{Slug, SlugError};
 use crate::table_modules::intern::models::marker_model::MarkerModel;
 use crate::table_modules::MarkerTM;
 
-/// A implementação, genérica sobre o hasher de indexação.
-#[derive(Clone)]
-pub(crate) struct MarkerTMImpl<H> {
-    /// Quem transforma a chave do marcador em índice — rápido de propósito.
-    hasher: H,
+/// Monta as regras de marcador com o seu hasher de indexação.
+///
+/// O hasher chega injetado e o que sai é o contrato: o tipo concreto não tem
+/// nome fora deste arquivo.
+pub(crate) fn marker_tm<H>(hasher: H) -> impl MarkerTM + Send + Sync + Clone + use<H> + 'static
+where
+    H: IndexHasher + Send + Sync + Clone + 'static,
+{
+    MarkerTMImpl { hasher }
 }
 
-impl<H: IndexHasher> MarkerTMImpl<H> {
-    /// Monta o `TableModule` com o seu hasher.
-    pub(crate) const fn new(hasher: H) -> Self {
-        Self { hasher }
-    }
+/// A implementação, genérica sobre o hasher de indexação.
+#[derive(Clone)]
+struct MarkerTMImpl<H> {
+    /// Quem transforma a chave do marcador em índice — rápido de propósito.
+    hasher: H,
 }
 
 impl<H: IndexHasher> MarkerTM for MarkerTMImpl<H> {

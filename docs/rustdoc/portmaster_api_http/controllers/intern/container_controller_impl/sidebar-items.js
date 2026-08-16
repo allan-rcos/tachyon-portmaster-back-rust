@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["status_of","to_api"],"struct":["ContainerControllerImpl"]};
+window.SIDEBAR_ITEMS = {"fn":["container_controller","status_of","to_api"],"struct":["ContainerControllerImpl"]};

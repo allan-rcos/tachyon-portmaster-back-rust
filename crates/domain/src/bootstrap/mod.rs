@@ -1,10 +1,6 @@
 //! Como esta camada é montada.
 //!
-//! O contrato dos factories, a implementação que os atende e a função que
-//! devolve a camada pronta. Os três só fazem sentido lidos juntos, e nenhum é
-//! chamado depois do boot.
+//! Um arquivo só: o provider da camada, que é a borda do crate. Os providers de
+//! diretório — `id/`, `security/`, `table_modules/` — ficam privados atrás dele.
 
-pub mod provider;
-pub mod register;
-
-pub(crate) mod domain_provider;
+pub mod domain_provider;

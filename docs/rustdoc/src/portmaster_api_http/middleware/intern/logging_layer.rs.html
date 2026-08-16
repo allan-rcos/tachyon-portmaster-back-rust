@@ -25,12 +25,12 @@
 <a href=#25 id=25 data-nosnippet>25</a>///
 <a href=#26 id=26 data-nosnippet>26</a>/// Um tipo só, e não um par. `LoggingLayer&lt;L&gt;` é o `Layer` — o logger do canal,
 <a href=#27 id=27 data-nosnippet>27</a>/// ainda sem serviço interno —, e `LoggingLayer&lt;L, S&gt;` é o `Service` que sai do
-<a href=#28 id=28 data-nosnippet>28</a>/// `layer()`. Eram dois tipos em dois arquivos, e o segundo nunca foi nomeado
-<a href=#29 id=29 data-nosnippet>29</a>/// por ninguém.
+<a href=#28 id=28 data-nosnippet>28</a>/// `layer()`. Um par de tipos custaria um segundo arquivo e um nome que ninguém
+<a href=#29 id=29 data-nosnippet>29</a>/// pronuncia: quem monta a pilha aplica o layer e mais nada.
 <a href=#30 id=30 data-nosnippet>30</a>///
-<a href=#31 id=31 data-nosnippet>31</a>/// O logger é criado **uma vez**, na construção do layer, e clonado por serviço.
-<a href=#32 id=32 data-nosnippet>32</a>/// Antes o layer guardava a fábrica e criava um logger a cada `layer()`, que é
-<a href=#33 id=33 data-nosnippet>33</a>/// trabalho repetido para produzir sempre o mesmo canal.
+<a href=#31 id=31 data-nosnippet>31</a>/// O logger é criado **uma vez**, na construção do layer, e clonado por serviço
+<a href=#32 id=32 data-nosnippet>32</a>/// — guardar a fábrica e criar um por `layer()` seria trabalho repetido para
+<a href=#33 id=33 data-nosnippet>33</a>/// produzir sempre o mesmo canal.
 <a href=#34 id=34 data-nosnippet>34</a></span><span class="attr">#[derive(Clone)]
 <a href=#35 id=35 data-nosnippet>35</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>LoggingLayer&lt;L, S = ()&gt; {
 <a href=#36 id=36 data-nosnippet>36</a>    <span class="doccomment">/// O serviço interno, que este envolve; `()` enquanto é só layer.

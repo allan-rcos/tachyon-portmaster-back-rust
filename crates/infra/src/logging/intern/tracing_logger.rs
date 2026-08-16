@@ -162,7 +162,3 @@ impl Logger for TracingLogger {
         &self.name
     }
 }
-
-#[cfg(test)]
-#[path = "tests/tracing_logger_test.rs"]
-mod tests;

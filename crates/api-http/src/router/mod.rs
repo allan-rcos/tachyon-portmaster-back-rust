@@ -4,20 +4,12 @@ use axum::http::{HeaderValue, Method};
 use axum::Router;
 use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 
-use crate::bootstrap::provider::ApiProvider;
+use crate::bootstrap::api_provider::ApiProvider;
 use crate::config::api_config::ApiConfig;
 use crate::config::jwt_config::JwtConfig;
 use crate::controllers::auth_controller::AuthController;
-use crate::middleware::intern::cookie_layer::CookieLayer;
-use crate::middleware::intern::decode_layer::DecodeLayer;
-use crate::middleware::intern::encode_layer::EncodeLayer;
-use crate::middleware::intern::logging_layer::LoggingLayer;
-use crate::middleware::intern::recover_layer::RecoverLayer;
-use crate::middleware::intern::request_id_layer::RequestIdLayer;
-use crate::middleware::intern::session_layer::SessionLayer;
-use crate::middleware::intern::timeout_layer::TimeoutLayer;
+use crate::middleware::MiddlewareProvider;
 use crate::router::router_hub::RouterHub;
-use portmaster_app::AppProvider;
 
 pub(crate) mod route;
 pub(crate) mod router_hub;
@@ -32,35 +24,30 @@ const CORS_MAX_AGE_SECONDS: u64 = 3600;
 ///
 /// As rotas vêm do `RouterHub`, que junta as versões publicadas; este arquivo
 /// só acrescenta a pilha em volta. É o que faz ele caber numa tela.
-pub async fn router<P: AppProvider>(
-    app: P,
-    config: ApiConfig,
-    jwt: JwtConfig,
-) -> anyhow::Result<Router> {
-    let provider = crate::bootstrap::register::register(app, config, jwt);
+pub async fn router(config: ApiConfig, jwt: JwtConfig) -> anyhow::Result<Router> {
+    ApiProvider::install_environment(config.environment.clone());
+    ApiProvider::install_jwt(&jwt);
 
     // O grupo de marcador da sessão precisa existir antes da primeira
     // requisição, e quem sabe o nome dele é o controller que o usa.
-    provider
-        .auth_controller()
+    ApiProvider::auth_controller()?
         .register_marker_group()
         .await
         .map_err(|error| anyhow::anyhow!("{error:?}"))?;
 
-    let cors = cors_layer(provider.cors_origins());
-    let timeout = provider.request_timeout();
+    let cors = cors_layer(&config.cors_origins);
 
-    Ok(RouterHub::build(&provider)?
+    Ok(RouterHub::build()?
         // De dentro para fora: o último `.layer` é o mais externo.
-        .layer(SessionLayer::new(provider.token_service()))
-        .layer(CookieLayer::new())
+        .layer(MiddlewareProvider::session()?)
+        .layer(MiddlewareProvider::cookies())
         .layer(cors)
-        .layer(TimeoutLayer::new(timeout))
-        .layer(RecoverLayer::new())
-        .layer(DecodeLayer::new())
-        .layer(EncodeLayer::new())
-        .layer(LoggingLayer::new(&provider.logger_factory()))
-        .layer(RequestIdLayer::new(provider.sequential_id_generator())))
+        .layer(MiddlewareProvider::timeout(config.request_timeout))
+        .layer(MiddlewareProvider::recover())
+        .layer(MiddlewareProvider::decode())
+        .layer(MiddlewareProvider::encode())
+        .layer(MiddlewareProvider::logging())
+        .layer(MiddlewareProvider::request_id()))
 }
 
 /// A política de CORS.

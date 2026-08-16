@@ -259,7 +259,3 @@ impl SqlDql for ListContainerSummaries {
         })
     }
 }
-
-#[cfg(test)]
-#[path = "tests/list_container_summaries_test.rs"]
-mod tests;

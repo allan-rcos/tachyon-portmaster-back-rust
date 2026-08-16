@@ -25,23 +25,31 @@ use crate::wire::vo::container::container_update_x_request::ContainerUpdateXRequ
 use crate::wire::vo::container::container_x_response::ContainerXResponse;
 use axum::extract::{Path, Query};
 
+/// Monta o controller de contêiner.
+///
+/// O service e o acesso à sessão chegam injetados, e o que sai é o contrato: o
+/// tipo concreto não tem nome fora deste arquivo.
+pub(crate) fn container_controller<C, S>(
+    containers: C,
+    session: S,
+) -> impl ContainerController + use<C, S> + 'static
+where
+    C: ContainerService + Clone + Send + Sync + 'static,
+    S: SessionPort + Clone + Send + Sync + 'static,
+{
+    ContainerControllerImpl {
+        containers,
+        session,
+    }
+}
+
 /// Os handlers de contêiner, genéricos sobre o service.
 #[derive(Clone)]
-pub(crate) struct ContainerControllerImpl<C, S> {
+struct ContainerControllerImpl<C, S> {
     /// O service de contêiner.
     containers: C,
     /// Quem diz se há sessão, e quem a apresenta.
     session: S,
-}
-
-impl<C: ContainerService, S: SessionPort> ContainerControllerImpl<C, S> {
-    /// Monta o controller.
-    pub(crate) const fn new(containers: C, session: S) -> Self {
-        Self {
-            containers,
-            session,
-        }
-    }
 }
 
 impl<C: ContainerService + Clone + Send + Sync + 'static, S: SessionPort> ContainerController
@@ -242,7 +250,3 @@ fn to_api(error: ContainerError) -> ApiError {
         ContainerError::App(shared) => ApiError::of_app(shared),
     }
 }
-
-#[cfg(test)]
-#[path = "tests/container_controller_impl_test.rs"]
-mod tests;

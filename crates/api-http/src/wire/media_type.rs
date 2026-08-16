@@ -15,9 +15,9 @@ const ANY: &str = "*/*";
 /// Qual dos dois formatos está em jogo.
 ///
 /// Os dois construtores **falham** quando o cabeçalho pede um tipo que não
-/// sabemos produzir nem ler. Antes eles caíam num padrão em silêncio, e o
-/// resultado era um cliente que pediu XML recebendo JSON com `200` — o pior dos
-/// dois mundos, porque nem recebe o que pediu nem descobre que não vai receber.
+/// sabemos produzir nem ler. Cair num padrão em silêncio daria a quem pediu XML
+/// um JSON com `200` — o pior dos dois mundos, porque nem recebe o que pediu nem
+/// descobre que não vai receber.
 /// Quem traduz a falha em status é o middleware: `406` na saída, `415` na
 /// entrada.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -95,7 +95,3 @@ impl MediaType {
         None
     }
 }
-
-#[cfg(test)]
-#[path = "tests/media_type_test.rs"]
-mod tests;

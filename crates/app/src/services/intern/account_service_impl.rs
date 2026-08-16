@@ -17,10 +17,38 @@ use crate::services::AccountService;
 /// O prefixo de toda leitura deste serviço.
 const CACHE_GROUP: &str = "account";
 
+/// Monta o caso de uso de conta.
+///
+/// Os ports chegam injetados e o que sai é o contrato: o tipo concreto não tem
+/// nome fora deste arquivo, então nada além do provider consegue depender do
+/// formato dele.
+pub(crate) fn account_service<R, T, A, Q, C>(
+    users: R,
+    user_tm: T,
+    auth_tm: A,
+    queries: Q,
+    views: C,
+) -> impl AccountService + Sync + Clone + use<R, T, A, Q, C> + 'static
+where
+    R: UserRepository + Send + Sync + Clone + 'static,
+    T: UserTM + Send + Sync + Clone + 'static,
+    A: AuthTM + Send + Sync + Clone + 'static,
+    Q: QueryRepository + Send + Sync + Clone + 'static,
+    C: ViewCacheRepository + Send + Sync + Clone + 'static,
+{
+    AccountServiceImpl {
+        users,
+        user_tm,
+        auth_tm,
+        queries,
+        views,
+    }
+}
+
 /// A chave do perfil de quem está na sessão.
 /// A implementação, genérica sobre os ports que consome.
 #[derive(Clone)]
-pub(crate) struct AccountServiceImpl<R, T, A, Q, C> {
+struct AccountServiceImpl<R, T, A, Q, C> {
     /// Persistência de usuários.
     users: R,
     /// As regras de usuário — quem constrói e valida.
@@ -31,19 +59,6 @@ pub(crate) struct AccountServiceImpl<R, T, A, Q, C> {
     queries: Q,
     /// O cache do lado de leitura.
     views: C,
-}
-
-impl<R, T, A, Q, C> AccountServiceImpl<R, T, A, Q, C> {
-    /// Monta o caso de uso.
-    pub(crate) const fn new(users: R, user_tm: T, auth_tm: A, queries: Q, views: C) -> Self {
-        Self {
-            users,
-            user_tm,
-            auth_tm,
-            queries,
-            views,
-        }
-    }
 }
 
 impl<R, T, A, Q, C> AccountService for AccountServiceImpl<R, T, A, Q, C>

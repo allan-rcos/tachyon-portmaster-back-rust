@@ -4,6 +4,7 @@ use super::*;
 use crate::table_modules::intern::helpers::fields_of::fields_of;
 use pretty_assertions::assert_eq;
 
+#[derive(Clone)]
 struct FixedIdGenerator;
 impl DatabaseIdGenerator for FixedIdGenerator {
     fn next(&self) -> String {
@@ -11,8 +12,8 @@ impl DatabaseIdGenerator for FixedIdGenerator {
     }
 }
 
-fn table_module() -> ProductTMImpl<FixedIdGenerator> {
-    ProductTMImpl::new(FixedIdGenerator)
+fn table_module() -> impl ProductTM {
+    product_tm(FixedIdGenerator)
 }
 
 #[test]

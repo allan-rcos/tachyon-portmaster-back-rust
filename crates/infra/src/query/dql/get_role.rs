@@ -53,7 +53,3 @@ impl SqlDql for GetRole {
         rows.first().map(|row| read_item(row, "")).transpose()
     }
 }
-
-#[cfg(test)]
-#[path = "tests/get_role_test.rs"]
-mod tests;

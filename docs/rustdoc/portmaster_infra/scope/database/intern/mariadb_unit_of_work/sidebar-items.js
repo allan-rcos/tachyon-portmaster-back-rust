@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["MariaDbUnitOfWork"]};
+window.SIDEBAR_ITEMS = {"fn":["mariadb_unit_of_work"],"struct":["MariaDbUnitOfWork"]};

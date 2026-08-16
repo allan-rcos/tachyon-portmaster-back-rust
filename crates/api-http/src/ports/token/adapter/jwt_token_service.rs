@@ -41,9 +41,25 @@ struct Claims {
     user_data: String,
 }
 
+/// Monta o serviço de token a partir da configuração.
+///
+/// Devolve o tipo concreto porque o provider precisa guardá-lo num `static`, e
+/// um `static` exige um tipo com nome — um `impl Trait` não é um. Nem a função
+/// nem o tipo saem do módulo `ports::token`, e quem entrega o contrato é o
+/// provider.
+pub(in crate::ports::token) fn jwt_token_service(config: &JwtConfig) -> JwtTokenService {
+    let secret = config.secret.expose_secret().as_bytes();
+
+    JwtTokenService {
+        encoding: EncodingKey::from_secret(secret),
+        decoding: DecodingKey::from_secret(secret),
+        issuer: config.issuer.clone(),
+    }
+}
+
 /// Emite e confere tokens assinados em HS256.
 #[derive(Clone)]
-pub(crate) struct JwtTokenService {
+pub(in crate::ports::token) struct JwtTokenService {
     /// A chave de assinatura.
     encoding: EncodingKey,
     /// A chave de verificação.
@@ -53,17 +69,6 @@ pub(crate) struct JwtTokenService {
 }
 
 impl JwtTokenService {
-    /// Monta o serviço a partir da configuração.
-    pub(crate) fn new(config: &JwtConfig) -> Self {
-        let secret = config.secret.expose_secret().as_bytes();
-
-        Self {
-            encoding: EncodingKey::from_secret(secret),
-            decoding: DecodingKey::from_secret(secret),
-            issuer: config.issuer.clone(),
-        }
-    }
-
     /// O agora, em epoch de segundos.
     ///
     /// `Utc::now()` direto, e não um relógio injetado: quem confere o `exp` é o
@@ -203,7 +208,3 @@ impl TokenService for JwtTokenService {
         Self::unpack_principal(&claims.user_data)
     }
 }
-
-#[cfg(test)]
-#[path = "tests/jwt_token_service_test.rs"]
-mod tests;

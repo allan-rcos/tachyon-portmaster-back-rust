@@ -36,7 +36,7 @@ fn embarcar_converte_quantidade_em_peso_e_abre_o_carregamento() {
     let container = container_at(0.0, 1000.0, ContainerStatus::Empty);
     let product = product();
 
-    let change = ManifestTMImpl::new()
+    let change = manifest_tm()
         .load(container.as_ref(), product.as_ref(), 10.0, None)
         .expect("10 unidades de 2 kg cabem em 1000 kg");
 
@@ -57,7 +57,7 @@ fn embarcar_soma_ao_que_ja_estava_no_manifesto() {
     let product = product();
     let existing = cargo_of(10.0, 20.0);
 
-    let change = ManifestTMImpl::new()
+    let change = manifest_tm()
         .load(container.as_ref(), product.as_ref(), 5.0, Some(&existing))
         .expect("cabe");
 
@@ -76,7 +76,7 @@ fn a_carga_que_cabe_exatamente_e_aceita() {
     let container = container_at(0.0, 20.0, ContainerStatus::Empty);
     let product = product();
 
-    let change = ManifestTMImpl::new()
+    let change = manifest_tm()
         .load(container.as_ref(), product.as_ref(), 10.0, None)
         .expect("20 kg em 20 kg de capacidade cabe");
 
@@ -88,7 +88,7 @@ fn recusa_carga_que_nao_cabe() {
     let container = container_at(0.0, 10.0, ContainerStatus::Empty);
     let product = product();
 
-    let error = ManifestTMImpl::new()
+    let error = manifest_tm()
         .load(container.as_ref(), product.as_ref(), 10.0, None)
         .err()
         .expect("20 kg não cabem em 10 kg");
@@ -102,7 +102,7 @@ fn nao_embarca_em_conteiner_fechado() {
         let container = container_at(100.0, 1000.0, status);
         let product = product();
 
-        let error = ManifestTMImpl::new()
+        let error = manifest_tm()
             .load(container.as_ref(), product.as_ref(), 1.0, None)
             .err()
             .expect("contêiner fechado não recebe carga");
@@ -120,7 +120,7 @@ fn recusa_quantidade_nao_positiva() {
     let product = product();
 
     for bad in [0.0, -1.0, f64::NAN] {
-        let error = ManifestTMImpl::new()
+        let error = manifest_tm()
             .load(container.as_ref(), product.as_ref(), bad, None)
             .err()
             .unwrap_or_else(|| panic!("quantidade {bad} deveria ser recusada"));
@@ -139,7 +139,7 @@ fn desembarcar_tudo_esvazia_o_conteiner_e_limpa_o_manifesto() {
     let product = product();
     let existing = cargo_of(10.0, 20.0);
 
-    let change = ManifestTMImpl::new()
+    let change = manifest_tm()
         .unload(container.as_ref(), product.as_ref(), 10.0, Some(&existing))
         .expect("há 10 unidades embarcadas");
 
@@ -159,7 +159,7 @@ fn desembarcar_um_produto_por_completo_derruba_so_a_linha_dele() {
     let product = product();
     let existing = cargo_of(10.0, 20.0);
 
-    let change = ManifestTMImpl::new()
+    let change = manifest_tm()
         .unload(container.as_ref(), product.as_ref(), 10.0, Some(&existing))
         .expect("há 10 unidades embarcadas");
 
@@ -175,7 +175,7 @@ fn desembarcar_parcialmente_reduz_a_linha() {
     let product = product();
     let existing = cargo_of(10.0, 20.0);
 
-    let change = ManifestTMImpl::new()
+    let change = manifest_tm()
         .unload(container.as_ref(), product.as_ref(), 4.0, Some(&existing))
         .expect("há o bastante embarcado");
 
@@ -191,7 +191,7 @@ fn recusa_desembarcar_mais_do_que_esta_embarcado() {
     let product = product();
     let existing = cargo_of(10.0, 20.0);
 
-    let error = ManifestTMImpl::new()
+    let error = manifest_tm()
         .unload(container.as_ref(), product.as_ref(), 11.0, Some(&existing))
         .err()
         .expect("não há 11 unidades");
@@ -204,7 +204,7 @@ fn recusa_desembarcar_o_que_nunca_foi_embarcado() {
     let container = container_at(20.0, 1000.0, ContainerStatus::Loading);
     let product = product();
 
-    let error = ManifestTMImpl::new()
+    let error = manifest_tm()
         .unload(container.as_ref(), product.as_ref(), 1.0, None)
         .err()
         .expect("sem linha de manifesto não há o que tirar");
@@ -223,7 +223,7 @@ fn so_desembarca_o_que_esta_carregando() {
         let product = product();
         let existing = cargo_of(10.0, 20.0);
 
-        let error = ManifestTMImpl::new()
+        let error = manifest_tm()
             .unload(container.as_ref(), product.as_ref(), 1.0, Some(&existing))
             .err()
             .unwrap_or_else(|| panic!("{status} não pode ser descarregado"));

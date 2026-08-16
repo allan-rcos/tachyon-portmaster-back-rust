@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["CACHE_GROUP","READ"],"struct":["MetricsServiceImpl"]};
+window.SIDEBAR_ITEMS = {"constant":["CACHE_GROUP","READ"],"fn":["metrics_service"],"struct":["MetricsServiceImpl"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["LOADED","UNLOADED"],"fn":["to_api"],"struct":["ManifestControllerImpl"]};
+window.SIDEBAR_ITEMS = {"constant":["LOADED","UNLOADED"],"fn":["manifest_controller","to_api"],"struct":["ManifestControllerImpl"]};

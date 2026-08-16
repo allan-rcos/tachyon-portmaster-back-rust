@@ -5,22 +5,25 @@ use anyhow::Context;
 use crate::query::{QueryRepository, SqlDql};
 use crate::scope::database::mysql_transaction::MySqlTransaction;
 
-/// A implementação sobre `MariaDB`.
+/// Monta o executor de consultas sobre o `MariaDB`.
 ///
 /// O que ele guarda é o handle do banco; a transação em si vem do escopo da
 /// tarefa, o que permite ao provider reconstruí-lo a cada chamada por custo
 /// nenhum.
-#[derive(Clone)]
-pub(crate) struct MariadbQueryRepository<T> {
-    /// De onde a transação da tarefa vem.
+pub(crate) fn mariadb_query_repository<T>(
     transactions: T,
+) -> impl QueryRepository + Sync + Clone + use<T> + 'static
+where
+    T: MySqlTransaction + Send + Sync + Clone + 'static,
+{
+    MariadbQueryRepository { transactions }
 }
 
-impl<T> MariadbQueryRepository<T> {
-    /// Monta o repositório.
-    pub(crate) const fn new(transactions: T) -> Self {
-        Self { transactions }
-    }
+/// A implementação sobre `MariaDB`.
+#[derive(Clone)]
+struct MariadbQueryRepository<T> {
+    /// De onde a transação da tarefa vem.
+    transactions: T,
 }
 
 impl<T: MySqlTransaction + Send + Sync> QueryRepository for MariadbQueryRepository<T> {
@@ -28,8 +31,8 @@ impl<T: MySqlTransaction + Send + Sync> QueryRepository for MariadbQueryReposito
     ///
     /// Não há `AssertSqlSafe` no caminho, e é por construção: o `QueryBuilder`
     /// do sqlx separa o texto do valor no próprio tipo, então não existe ponto
-    /// onde um valor pudesse ser interpolado no SQL. Antes essa garantia era uma
-    /// afirmação nossa sobre um construtor nosso, e valia enquanto ninguém
+    /// onde um valor pudesse ser interpolado no SQL. Um construtor nosso daria a
+    /// mesma garantia como afirmação, e ela valeria só enquanto ninguém
     /// escrevesse a linha errada dentro dele.
     ///
     /// O `MariaDB` compara número com texto descartando o índice, então os

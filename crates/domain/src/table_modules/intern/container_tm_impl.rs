@@ -20,19 +20,27 @@ struct ContainerCode(String);
 #[nutype(validate(finite, greater = 0.0))]
 struct MaxCapacity(f64);
 
+/// Monta as regras de contêiner com o seu gerador de id.
+///
+/// O gerador chega injetado e o que sai é o contrato: o tipo concreto não tem
+/// nome fora deste arquivo.
+pub(crate) fn container_tm<G>(
+    id_generator: G,
+) -> impl ContainerTM + Send + Sync + Clone + use<G> + 'static
+where
+    G: DatabaseIdGenerator + Send + Sync + Clone + 'static,
+{
+    ContainerTMImpl { id_generator }
+}
+
 /// A implementação, genérica sobre o gerador de id.
 #[derive(Clone)]
-pub(crate) struct ContainerTMImpl<G> {
+struct ContainerTMImpl<G> {
     /// De onde sai a identidade de um contêiner novo.
     id_generator: G,
 }
 
 impl<G: DatabaseIdGenerator> ContainerTMImpl<G> {
-    /// Monta o `TableModule` com o seu gerador de id.
-    pub(crate) const fn new(id_generator: G) -> Self {
-        Self { id_generator }
-    }
-
     /// Examina código e capacidade, acumulando o que estiver errado.
     fn checked(
         code: String,

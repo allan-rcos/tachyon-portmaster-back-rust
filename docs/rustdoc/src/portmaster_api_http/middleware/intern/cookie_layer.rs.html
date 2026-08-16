@@ -71,9 +71,9 @@
 <a href=#71 id=71 data-nosnippet>71</a>    /// navegador nenhum.
 <a href=#72 id=72 data-nosnippet>72</a>    ///
 <a href=#73 id=73 data-nosnippet>73</a>    /// O carimbo acontece **depois** do handler, e por isso vale para toda
-<a href=#74 id=74 data-nosnippet>74</a>    /// resposta — inclusive a de erro. Antes cada rota que emitia cookie
-<a href=#75 id=75 data-nosnippet>75</a>    /// dobrava um `Vec&lt;Cookie&gt;` sobre a resposta com um `fold`, e um caminho de
-<a href=#76 id=76 data-nosnippet>76</a>    /// falha que precisasse limpar a sessão tinha de lembrar de fazer o mesmo.
+<a href=#74 id=74 data-nosnippet>74</a>    /// resposta — inclusive a de erro. Deixá-lo a cargo de cada rota que emite
+<a href=#75 id=75 data-nosnippet>75</a>    /// cookie faria todo caminho de falha que precisa limpar a sessão lembrar de
+<a href=#76 id=76 data-nosnippet>76</a>    /// repetir o mesmo `fold`.
 <a href=#77 id=77 data-nosnippet>77</a>    </span><span class="kw">fn </span>call(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: Request) -&gt; <span class="self">Self</span>::Future {
 <a href=#78 id=78 data-nosnippet>78</a>        <span class="kw">let </span>clone = <span class="self">self</span>.inner.clone();
 <a href=#79 id=79 data-nosnippet>79</a>        <span class="kw">let </span><span class="kw-2">mut </span>inner = std::mem::replace(<span class="kw-2">&amp;mut </span><span class="self">self</span>.inner, clone);

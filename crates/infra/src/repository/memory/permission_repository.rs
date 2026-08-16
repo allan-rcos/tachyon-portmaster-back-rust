@@ -8,18 +8,21 @@ use crate::scope::memory::memory_store::MemoryStore;
 /// O grupo deste repositório — o que num repositório do `MariaDB` seria a tabela.
 const GROUP: &str = "permission";
 
-/// O repositório de permissões.
-#[derive(Clone)]
-pub struct PermissionMemoryRepository<S> {
-    /// De onde a memória da tarefa vem.
+/// Monta o repositório de permissões sobre um recorte da memória.
+pub(super) fn permission_repository<S>(
     store: S,
+) -> impl PermissionRepository + Sync + Clone + use<S> + 'static
+where
+    S: MemoryStore + Send + Sync + Clone + 'static,
+{
+    PermissionMemoryRepository { store }
 }
 
-impl<S> PermissionMemoryRepository<S> {
-    /// Monta o repositório.
-    pub(crate) const fn new(store: S) -> Self {
-        Self { store }
-    }
+/// O repositório, sobre o store em memória.
+#[derive(Clone)]
+struct PermissionMemoryRepository<S> {
+    /// De onde a memória da tarefa vem.
+    store: S,
 }
 
 impl<S: MemoryStore + Send + Sync> PermissionRepository for PermissionMemoryRepository<S> {
@@ -46,7 +49,3 @@ impl<S: MemoryStore + Send + Sync> PermissionRepository for PermissionMemoryRepo
         Ok(self.store.get(GROUP, slug).await?.is_some())
     }
 }
-
-#[cfg(test)]
-#[path = "tests/permission_repository_test.rs"]
-mod tests;

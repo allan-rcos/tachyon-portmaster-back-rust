@@ -1,6 +1,5 @@
 //! O contrato de uma versão publicada da API.
 
-use crate::bootstrap::provider::ApiProvider;
 use crate::router::route::Route;
 
 /// Uma versão do contrato REST: o número dela, e tudo que ela serve.
@@ -26,12 +25,16 @@ pub(crate) trait VersionedRouter {
 
     /// Tudo que esta versão publica.
     ///
-    /// Recebe o provider e não os controllers: cada recurso sabe de qual
-    /// controller precisa, e uma versão nova que sirva os mesmos recursos não
-    /// deveria ter de repetir a lista de dez fábricas.
+    /// Não recebe nada: o provider é estático, e cada recurso pede o controller
+    /// de que precisa direto a ele.
     ///
     /// A ordem é preservada, e é o que mantém um segmento literal à frente do
     /// `{id}` que também casaria com ele — não porque o axum dependa disso, mas
     /// porque quem lê depende.
-    fn routes<P: ApiProvider>(provider: &P) -> Vec<Route>;
+    ///
+    /// Devolve `Result` porque a maioria dos controllers depende do pool, e
+    /// montá-los antes de o boot ter passado os segredos do banco falha. É erro
+    /// de boot, e não de requisição: quando a primeira chega, a tabela já
+    /// existe.
+    fn routes() -> anyhow::Result<Vec<Route>>;
 }

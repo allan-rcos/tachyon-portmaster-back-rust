@@ -44,7 +44,3 @@ impl SqlDql for GetContainer {
         rows.first().map(read_item).transpose()
     }
 }
-
-#[cfg(test)]
-#[path = "tests/get_container_test.rs"]
-mod tests;

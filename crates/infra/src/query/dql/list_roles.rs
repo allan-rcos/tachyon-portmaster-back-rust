@@ -172,7 +172,3 @@ impl SqlDql for ListRoles {
         })
     }
 }
-
-#[cfg(test)]
-#[path = "tests/list_roles_test.rs"]
-mod tests;

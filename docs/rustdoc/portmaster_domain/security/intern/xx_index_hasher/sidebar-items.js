@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["SEED"],"struct":["XxIndexHasher"]};
+window.SIDEBAR_ITEMS = {"constant":["SEED"],"fn":["xx_index_hasher"],"struct":["XxIndexHasher"]};

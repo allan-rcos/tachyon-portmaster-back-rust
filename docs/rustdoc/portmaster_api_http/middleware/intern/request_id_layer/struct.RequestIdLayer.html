@@ -5,24 +5,24 @@
 <h3 id="o-layer-é-o-serviço-antes-de-saber-o-que-envolve"><a class="doc-anchor" href="#o-layer-é-o-serviço-antes-de-saber-o-que-envolve">§</a>O layer é o serviço antes de saber o que envolve</h3>
 <p>Um tipo só, e não um par. <code>RequestIdLayer&lt;G&gt;</code> é o <code>Layer</code> — o gerador, ainda
 sem serviço interno —, e <code>RequestIdLayer&lt;G, S&gt;</code> é o <code>Service</code> que sai do
-<code>layer()</code>. Eram dois tipos em dois arquivos, e o segundo nunca foi nomeado
-por ninguém.</p>
+<code>layer()</code>. Um par de tipos custaria um segundo arquivo e um nome que ninguém
+pronuncia: quem monta a pilha aplica o layer e mais nada.</p>
 <h3 id="o-id-é-sempre-nosso"><a class="doc-anchor" href="#o-id-é-sempre-nosso">§</a>O id é sempre nosso</h3>
-<p>Um <code>X-Request-Id</code> que chegue de fora é <strong>ignorado</strong>. Antes ele era aceito se
-tivesse até 128 bytes, o que deixava o cliente escolher o que apareceria em
-toda linha de log daquela requisição — e num agregador de log, um valor
-escolhido por quem faz a chamada é um valor que dá para forjar, colidir com o
-de outra requisição ou usar para injetar conteúdo em quem lê os campos.</p>
+<p>Um <code>X-Request-Id</code> que chegue de fora é <strong>ignorado</strong>. Aceitá-lo deixaria o
+cliente escolher o que aparece em toda linha de log daquela requisição — e
+num agregador de log, um valor escolhido por quem faz a chamada é um valor
+que dá para forjar, colidir com o de outra requisição ou usar para injetar
+conteúdo em quem lê os campos.</p>
 <p>A resposta continua trazendo o id no cabeçalho, então quem chamou consegue
 correlacionar. O que ele não consegue é <strong>escolhê-lo</strong> — nem quando a API
 chama a si mesma, caso em que a chamada de dentro ganha um id próprio e a
 cadeia se reconstrói pelo log, não pelo cabeçalho.</p>
 <h3 id="o-id-não-viaja-na-requisição"><a class="doc-anchor" href="#o-id-não-viaja-na-requisição">§</a>O id não viaja na requisição</h3>
-<p>Ele viaja no escopo da tarefa. Antes era carimbado num cabeçalho da
-requisição para o log encontrá-lo logo adiante — um dado nosso dando a volta
-por uma estrutura do cliente, no mesmo campo em que o cliente podia ter
-escrito. Quem quer o id agora pede ao
-<a href="../../request_id_port/trait.RequestIdPort.html" title="trait portmaster_api_http::middleware::request_id_port::RequestIdPort"><code>RequestIdPort</code></a>.</p>
+<p>Ele viaja no escopo da tarefa, e quem o quer pede ao
+<a href="../../request_id_port/trait.RequestIdPort.html" title="trait portmaster_api_http::middleware::request_id_port::RequestIdPort"><code>RequestIdPort</code></a>.
+Carimbá-lo num cabeçalho da requisição para o log encontrá-lo adiante seria
+um dado nosso dando a volta por uma estrutura do cliente, no mesmo campo em
+que o cliente podia ter escrito.</p>
 </div></details><h2 id="fields" class="fields section-header">Fields<a href="#fields" class="anchor">§</a></h2><span id="structfield.inner" class="structfield section-header"><a href="#structfield.inner" class="anchor field">§</a><code>inner: S</code></span><div class="docblock"><p>O serviço interno, que este envolve; <code>()</code> enquanto é só layer.</p>
 </div><span id="structfield.generator" class="structfield section-header"><a href="#structfield.generator" class="anchor field">§</a><code>generator: G</code></span><div class="docblock"><p>De onde sai o id desta requisição.</p>
 </div><h2 id="implementations" class="section-header">Implementations<a href="#implementations" class="anchor">§</a></h2><div id="implementations-list"><details class="toggle implementors-toggle" open><summary><section id="impl-RequestIdLayer%3CG%3E" class="impl"><a class="src rightside" href="../../../../src/portmaster_api_http/middleware/intern/request_id_layer.rs.html#54-62">Source</a><a href="#impl-RequestIdLayer%3CG%3E" class="anchor">§</a><h3 class="code-header">impl&lt;G&gt; <a class="struct" href="struct.RequestIdLayer.html" title="struct portmaster_api_http::middleware::intern::request_id_layer::RequestIdLayer">RequestIdLayer</a>&lt;G&gt;</h3></section></summary><div class="impl-items"><details class="toggle method-toggle" open><summary><section id="method.new" class="method"><a class="src rightside" href="../../../../src/portmaster_api_http/middleware/intern/request_id_layer.rs.html#56-61">Source</a><h4 class="code-header">pub(crate) const fn <a href="#method.new" class="fn">new</a>(generator: G) -&gt; Self</h4></section></summary><div class="docblock"><p>Monta o layer com o gerador que o provider entregou.</p>

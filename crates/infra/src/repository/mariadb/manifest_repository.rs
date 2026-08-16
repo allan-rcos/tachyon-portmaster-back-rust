@@ -42,17 +42,25 @@ const INSERT_TELEMETRY: &str =
      VALUES (?, ?, ?, UTC_TIMESTAMP())";
 
 /// O repositório de manifesto.
-#[derive(Clone)]
-pub struct ManifestMariadbRepository<T> {
-    /// De onde a transação da tarefa vem.
+/// Monta o repositório de manifesto.
+///
+/// Não guarda estado: a transação vem do escopo da tarefa, não de um campo — o
+/// que permite ao provider reconstruí-lo a cada chamada por custo praticamente
+/// zero.
+pub(super) fn manifest_repository<T>(
     transactions: T,
+) -> impl ManifestRepository + Sync + Clone + use<T> + 'static
+where
+    T: MySqlTransaction + Send + Sync + Clone + 'static,
+{
+    ManifestMariadbRepository { transactions }
 }
 
-impl<T> ManifestMariadbRepository<T> {
-    /// Monta o repositório.
-    pub(crate) const fn new(transactions: T) -> Self {
-        Self { transactions }
-    }
+/// O repositório de manifesto, sobre o `MariaDB`.
+#[derive(Clone)]
+struct ManifestMariadbRepository<T> {
+    /// De onde a transação da tarefa vem.
+    transactions: T,
 }
 
 impl<T: MySqlTransaction + Send + Sync> ManifestRepository for ManifestMariadbRepository<T> {

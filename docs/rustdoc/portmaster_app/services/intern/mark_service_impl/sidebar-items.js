@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["MarkServiceImpl"]};
+window.SIDEBAR_ITEMS = {"fn":["mark_service"],"struct":["MarkServiceImpl"]};

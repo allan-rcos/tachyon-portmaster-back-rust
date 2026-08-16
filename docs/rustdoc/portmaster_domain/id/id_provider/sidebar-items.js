@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"static":["DATABASE"],"struct":["IdProvider"]};

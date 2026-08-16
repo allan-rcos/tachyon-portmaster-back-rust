@@ -12,8 +12,8 @@ use crate::tests::mocks::permission_tm_mock::MockPermissionRules;
 fn service(
     permissions: MockPermissions,
     permission_rules: MockPermissionRules,
-) -> MetadataServiceImpl<MockPermissions, MockPermissionRules> {
-    MetadataServiceImpl::new(permissions, permission_rules)
+) -> impl MetadataService {
+    metadata_service(permissions, permission_rules)
 }
 
 /// A consulta ao catálogo, com o contexto e o filtro que o teste escolheu.

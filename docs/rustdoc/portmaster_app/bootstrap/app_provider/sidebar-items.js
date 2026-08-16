@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["AppProviderImpl"]};
+window.SIDEBAR_ITEMS = {"struct":["AppProvider"]};

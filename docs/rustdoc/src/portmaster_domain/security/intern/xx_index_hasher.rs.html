@@ -15,24 +15,22 @@
 <a href=#15 id=15 data-nosnippet>15</a>/// por processo faria toda marca gravada antes de um restart virar inalcançável.
 <a href=#16 id=16 data-nosnippet>16</a></span><span class="kw">const </span>SEED: u64 = <span class="number">0</span>;
 <a href=#17 id=17 data-nosnippet>17</a>
-<a href=#18 id=18 data-nosnippet>18</a><span class="doccomment">/// Digest de lookup para marcadores.
-<a href=#19 id=19 data-nosnippet>19</a></span><span class="attr">#[derive(Clone)]
-<a href=#20 id=20 data-nosnippet>20</a></span><span class="kw">pub struct </span>XxIndexHasher;
-<a href=#21 id=21 data-nosnippet>21</a>
-<a href=#22 id=22 data-nosnippet>22</a><span class="kw">impl </span>XxIndexHasher {
-<a href=#23 id=23 data-nosnippet>23</a>    <span class="doccomment">/// Monta o hasher.
-<a href=#24 id=24 data-nosnippet>24</a>    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const fn </span>new() -&gt; <span class="self">Self </span>{
-<a href=#25 id=25 data-nosnippet>25</a>        <span class="self">Self
-<a href=#26 id=26 data-nosnippet>26</a>    </span>}
-<a href=#27 id=27 data-nosnippet>27</a>}
-<a href=#28 id=28 data-nosnippet>28</a>
-<a href=#29 id=29 data-nosnippet>29</a><span class="kw">impl </span>IndexHasher <span class="kw">for </span>XxIndexHasher {
-<a href=#30 id=30 data-nosnippet>30</a>    <span class="kw">fn </span>hash(<span class="kw-2">&amp;</span><span class="self">self</span>, plain: <span class="kw-2">&amp;</span>str) -&gt; String {
-<a href=#31 id=31 data-nosnippet>31</a>        <span class="macro">format!</span>(<span class="string">"{:016x}"</span>, xxh64(plain.as_bytes(), SEED))
-<a href=#32 id=32 data-nosnippet>32</a>    }
-<a href=#33 id=33 data-nosnippet>33</a>}
-<a href=#34 id=34 data-nosnippet>34</a>
-<a href=#35 id=35 data-nosnippet>35</a><span class="attr">#[cfg(test)]
-<a href=#36 id=36 data-nosnippet>36</a>#[path = <span class="string">"tests/xx_index_hasher_test.rs"</span>]
-<a href=#37 id=37 data-nosnippet>37</a></span><span class="kw">mod </span>tests;
+<a href=#18 id=18 data-nosnippet>18</a><span class="doccomment">/// Monta o digest de lookup para marcadores.
+<a href=#19 id=19 data-nosnippet>19</a>///
+<a href=#20 id=20 data-nosnippet>20</a>/// O que sai é o contrato: trocar o xxh64 por outro digest de indexação não
+<a href=#21 id=21 data-nosnippet>21</a>/// muda nenhuma assinatura fora deste arquivo — o que **não** pode mudar é a
+<a href=#22 id=22 data-nosnippet>22</a>/// [`SEED`], porque ela é o que liga o digest às marcas já gravadas.
+<a href=#23 id=23 data-nosnippet>23</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const fn </span>xx_index_hasher() -&gt; <span class="kw">impl </span>IndexHasher + Send + Sync + Clone + <span class="kw">use</span>&lt;&gt; + <span class="lifetime">'static </span>{
+<a href=#24 id=24 data-nosnippet>24</a>    XxIndexHasher
+<a href=#25 id=25 data-nosnippet>25</a>}
+<a href=#26 id=26 data-nosnippet>26</a>
+<a href=#27 id=27 data-nosnippet>27</a><span class="doccomment">/// Digest de lookup para marcadores.
+<a href=#28 id=28 data-nosnippet>28</a></span><span class="attr">#[derive(Clone)]
+<a href=#29 id=29 data-nosnippet>29</a></span><span class="kw">struct </span>XxIndexHasher;
+<a href=#30 id=30 data-nosnippet>30</a>
+<a href=#31 id=31 data-nosnippet>31</a><span class="kw">impl </span>IndexHasher <span class="kw">for </span>XxIndexHasher {
+<a href=#32 id=32 data-nosnippet>32</a>    <span class="kw">fn </span>hash(<span class="kw-2">&amp;</span><span class="self">self</span>, plain: <span class="kw-2">&amp;</span>str) -&gt; String {
+<a href=#33 id=33 data-nosnippet>33</a>        <span class="macro">format!</span>(<span class="string">"{:016x}"</span>, xxh64(plain.as_bytes(), SEED))
+<a href=#34 id=34 data-nosnippet>34</a>    }
+<a href=#35 id=35 data-nosnippet>35</a>}
 </code></pre></div></section></main></body></html>

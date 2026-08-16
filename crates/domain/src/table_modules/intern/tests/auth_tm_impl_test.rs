@@ -2,7 +2,7 @@
 
 use super::*;
 use crate::domain::Role;
-use crate::security::intern::argon2_hasher::Argon2Hasher;
+use crate::security::SecurityProvider;
 use chrono::{DateTime, Utc};
 
 /// Usuário mínimo, com o hash que o teste quiser.
@@ -39,13 +39,13 @@ impl User for StubUser {
 
 fn user_with_password(password: &str) -> StubUser {
     StubUser {
-        password_hash: Argon2Hasher::new().hash(password),
+        password_hash: SecurityProvider::password().hash(password),
     }
 }
 
 #[test]
 fn aceita_a_senha_correta() {
-    let table_module = AuthTMImpl::new(Argon2Hasher::new());
+    let table_module = auth_tm(SecurityProvider::password());
     let user = user_with_password("Portmaster1");
 
     assert!(table_module.login(&user, "Portmaster1").is_ok());
@@ -53,7 +53,7 @@ fn aceita_a_senha_correta() {
 
 #[test]
 fn recusa_a_senha_errada() {
-    let table_module = AuthTMImpl::new(Argon2Hasher::new());
+    let table_module = auth_tm(SecurityProvider::password());
     let user = user_with_password("Portmaster1");
 
     assert!(matches!(
@@ -65,7 +65,7 @@ fn recusa_a_senha_errada() {
 #[test]
 fn hash_corrompido_nao_autentica() {
     // Uma linha danificada no banco não pode virar uma porta aberta.
-    let table_module = AuthTMImpl::new(Argon2Hasher::new());
+    let table_module = auth_tm(SecurityProvider::password());
     let user = StubUser {
         password_hash: "isto não é um hash".into(),
     };

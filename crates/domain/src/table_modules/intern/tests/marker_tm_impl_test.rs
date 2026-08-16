@@ -1,11 +1,11 @@
 //! Os testes de `marker_tm_impl`.
 
 use super::*;
-use crate::security::intern::xx_index_hasher::XxIndexHasher;
+use crate::security::SecurityProvider;
 use pretty_assertions::assert_eq;
 
-fn table_module() -> MarkerTMImpl<XxIndexHasher> {
-    MarkerTMImpl::new(XxIndexHasher::new())
+fn table_module() -> impl MarkerTM {
+    marker_tm(SecurityProvider::index())
 }
 
 #[test]

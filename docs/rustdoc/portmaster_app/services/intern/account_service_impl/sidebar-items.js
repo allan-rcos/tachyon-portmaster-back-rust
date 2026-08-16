@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["CACHE_GROUP"],"struct":["AccountServiceImpl"]};
+window.SIDEBAR_ITEMS = {"constant":["CACHE_GROUP"],"fn":["account_service"],"struct":["AccountServiceImpl"]};

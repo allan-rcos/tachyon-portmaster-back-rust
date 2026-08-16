@@ -62,9 +62,9 @@
 <a href=#62 id=62 data-nosnippet>62</a>    <span class="doccomment">/// Resolve o formato, ou recusa com `406`.
 <a href=#63 id=63 data-nosnippet>63</a>    ///
 <a href=#64 id=64 data-nosnippet>64</a>    /// `406 Not Acceptable` é literalmente o que aconteceu: o cliente listou o
-<a href=#65 id=65 data-nosnippet>65</a>    /// que aceita e não há interseção com o que sabemos escrever. Antes isto
-<a href=#66 id=66 data-nosnippet>66</a>    /// caía em JSON calado, e quem pedira XML recebia um `200` com um corpo que
-<a href=#67 id=67 data-nosnippet>67</a>    /// não sabe ler — nem recebe o que pediu, nem descobre que não vai receber.
+<a href=#65 id=65 data-nosnippet>65</a>    /// que aceita e não há interseção com o que sabemos escrever. Cair em JSON
+<a href=#66 id=66 data-nosnippet>66</a>    /// calado daria a quem pediu XML um `200` com um corpo que ele não sabe ler
+<a href=#67 id=67 data-nosnippet>67</a>    /// — nem recebe o que pediu, nem descobre que não vai receber.
 <a href=#68 id=68 data-nosnippet>68</a>    ///
 <a href=#69 id=69 data-nosnippet>69</a>    /// O corpo da própria recusa sai em JSON, que é o padrão do
 <a href=#70 id=70 data-nosnippet>70</a>    /// [`EncodeContext`] fora do escopo. Não há alternativa: acabamos de

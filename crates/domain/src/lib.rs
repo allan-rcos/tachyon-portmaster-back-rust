@@ -3,11 +3,14 @@
 //! O núcleo. Só regras de negócio: não depende de nenhum outro crate e não toca
 //! banco, rede ou I/O.
 //!
-//! Exporta **apenas traits** — os traits de objeto de domínio (read-only), os
-//! `TableModules`, os geradores de id de borda, a trait [`DomainProvider`] e
-//! [`register()`]. Models, implementações de `TableModule` e helpers internos
-//! (o gerador de identidade, os hashers) são privados ao crate e servidos pelos
-//! factories do provider.
+//! Exporta os traits de objeto de domínio (read-only), os `TableModules`, os
+//! geradores de id de borda e o [`DomainProvider`]. Models,
+//! implementações de `TableModule` e helpers internos (o gerador de identidade,
+//! os hashers) são privados ao crate e servidos pelos factories do provider.
+//!
+//! O provider é a única coisa aqui que não é trait, e não é por acaso: ele é um
+//! construtor, e um construtor não precisa ser substituível. O que se troca em
+//! teste são as dependências que ele injeta, e essas continuam sendo traits.
 //!
 //! Essa reserva não é cerimônia. Se o `app` alcançasse o hasher de senha, ele
 //! conseguiria gravar um usuário direto na `infra`, pulando a validação do
@@ -54,6 +57,5 @@ pub mod id;
 pub mod security;
 pub mod table_modules;
 
-pub use bootstrap::provider::DomainProvider;
-pub use bootstrap::register::register;
+pub use bootstrap::domain_provider::DomainProvider;
 pub use config::DomainSecrets;

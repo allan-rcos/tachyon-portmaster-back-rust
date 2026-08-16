@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["domain_provider","provider","register"]};
+window.SIDEBAR_ITEMS = {"mod":["domain_provider"]};

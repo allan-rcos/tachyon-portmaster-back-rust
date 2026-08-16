@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["CACHE_GROUP","CREATE","LIST","UPDATE_PERMISSIONS"],"struct":["RoleServiceImpl"]};
+window.SIDEBAR_ITEMS = {"constant":["CACHE_GROUP","CREATE","LIST","UPDATE_PERMISSIONS"],"fn":["role_service"],"struct":["RoleServiceImpl"]};

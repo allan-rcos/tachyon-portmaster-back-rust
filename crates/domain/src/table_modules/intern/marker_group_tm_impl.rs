@@ -6,16 +6,15 @@ use crate::table_modules::intern::helpers::slug::{Slug, SlugError};
 use crate::table_modules::intern::models::marker_group_model::MarkerGroupModel;
 use crate::table_modules::MarkerGroupTM;
 
+/// Monta as regras de grupo de marcador.
+pub(crate) const fn marker_group_tm() -> impl MarkerGroupTM + Send + Sync + Clone + use<> + 'static
+{
+    MarkerGroupTMImpl
+}
+
 /// A implementação.
 #[derive(Clone)]
-pub(crate) struct MarkerGroupTMImpl;
-
-impl MarkerGroupTMImpl {
-    /// Monta o `TableModule`.
-    pub(crate) const fn new() -> Self {
-        Self
-    }
-}
+struct MarkerGroupTMImpl;
 
 impl MarkerGroupTM for MarkerGroupTMImpl {
     fn create(&self, slug: String) -> Result<Box<dyn MarkerGroup>, MetadataError> {

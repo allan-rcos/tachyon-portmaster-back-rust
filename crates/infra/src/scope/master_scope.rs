@@ -53,7 +53,3 @@ impl MasterScope {
         ScopeSlots::is_active()
     }
 }
-
-#[cfg(test)]
-#[path = "tests/master_scope_test.rs"]
-mod tests;

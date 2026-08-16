@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["MAX_NAME_LENGTH"],"fn":["name_refused"],"struct":["ProductTMImpl"]};
+window.SIDEBAR_ITEMS = {"constant":["MAX_NAME_LENGTH"],"fn":["name_refused","product_tm"],"struct":["ProductTMImpl"]};

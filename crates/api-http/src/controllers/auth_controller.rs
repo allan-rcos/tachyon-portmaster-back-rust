@@ -10,10 +10,9 @@ use crate::wire::vo::auth::setup_x_request::SetupXRequest;
 /// Os handlers de sessão.
 ///
 /// A sessão **é** um par de cookies, e quem decide o que entra neles é quem
-/// emite o token — este controller. O que mudou é que isso não aparece mais na
-/// assinatura: os quatro métodos devolviam `Vec<Cookie<'static>>`, o que punha o
-/// tipo interno do crate `cookie` num contrato e obrigava cada rota a dobrar
-/// aquele vetor sobre a resposta. Agora ele escreve pela
+/// emite o token — este controller. Isso não aparece na assinatura: devolver
+/// `Vec<Cookie<'static>>` poria o tipo interno do crate `cookie` num contrato e
+/// obrigaria cada rota a dobrar aquele vetor sobre a resposta. Ele escreve pela
 /// [`CookiePort`](crate::middleware::cookie_port::CookiePort), e o middleware
 /// carimba o que foi escrito.
 ///

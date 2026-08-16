@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["cookie_port","decode_port","encode_port","intern","request_id_port","session_port"]};
+window.SIDEBAR_ITEMS = {"mod":["cookie_port","decode_port","encode_port","intern","middleware_provider","request_id_port","session_port"]};

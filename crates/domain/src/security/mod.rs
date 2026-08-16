@@ -17,6 +17,9 @@ pub mod index_hasher;
 pub mod password_hasher;
 
 pub(crate) mod intern;
+pub(crate) mod security_provider;
 
 pub use index_hasher::IndexHasher;
 pub use password_hasher::PasswordHasher;
+
+pub(crate) use security_provider::SecurityProvider;

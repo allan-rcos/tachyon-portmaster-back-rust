@@ -19,10 +19,12 @@ pub mod views;
 
 pub(crate) mod cursor;
 pub(crate) mod intern;
+pub(crate) mod query_provider;
 pub(crate) mod sql_dql;
 
 pub use default_limit::DEFAULT_LIMIT;
 pub use dql_trait::Dql;
 pub use query_repository::QueryRepository;
 
+pub(crate) use query_provider::QueryProvider;
 pub(crate) use sql_dql::SqlDql;

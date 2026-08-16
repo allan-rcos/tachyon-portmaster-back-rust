@@ -10,20 +10,28 @@ use crate::ports::error::api_error::ApiError;
 use crate::wire::api_response::ApiResponse;
 use crate::wire::vo::metrics::metrics_x_response::MetricsXResponse;
 
+/// Monta o controller de painel.
+///
+/// O service e o acesso à sessão chegam injetados, e o que sai é o contrato: o
+/// tipo concreto não tem nome fora deste arquivo.
+pub(crate) fn metrics_controller<M, S>(
+    metrics: M,
+    session: S,
+) -> impl MetricsController + use<M, S> + 'static
+where
+    M: MetricsService + Clone + Send + Sync + 'static,
+    S: SessionPort + Clone + Send + Sync + 'static,
+{
+    MetricsControllerImpl { metrics, session }
+}
+
 /// Os handlers do painel, genéricos sobre o service.
 #[derive(Clone)]
-pub(crate) struct MetricsControllerImpl<M, S> {
+struct MetricsControllerImpl<M, S> {
     /// O service do painel.
     metrics: M,
     /// Quem diz se há sessão, e quem a apresenta.
     session: S,
-}
-
-impl<M: MetricsService, S: SessionPort> MetricsControllerImpl<M, S> {
-    /// Monta o controller.
-    pub(crate) const fn new(metrics: M, session: S) -> Self {
-        Self { metrics, session }
-    }
 }
 
 impl<M: MetricsService + Clone + Send + Sync + 'static, S: SessionPort> MetricsController

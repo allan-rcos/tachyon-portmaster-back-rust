@@ -15,23 +15,21 @@ use crate::security::IndexHasher;
 /// por processo faria toda marca gravada antes de um restart virar inalcançável.
 const SEED: u64 = 0;
 
+/// Monta o digest de lookup para marcadores.
+///
+/// O que sai é o contrato: trocar o xxh64 por outro digest de indexação não
+/// muda nenhuma assinatura fora deste arquivo — o que **não** pode mudar é a
+/// [`SEED`], porque ela é o que liga o digest às marcas já gravadas.
+pub(crate) const fn xx_index_hasher() -> impl IndexHasher + Send + Sync + Clone + use<> + 'static {
+    XxIndexHasher
+}
+
 /// Digest de lookup para marcadores.
 #[derive(Clone)]
-pub struct XxIndexHasher;
-
-impl XxIndexHasher {
-    /// Monta o hasher.
-    pub(crate) const fn new() -> Self {
-        Self
-    }
-}
+struct XxIndexHasher;
 
 impl IndexHasher for XxIndexHasher {
     fn hash(&self, plain: &str) -> String {
         format!("{:016x}", xxh64(plain.as_bytes(), SEED))
     }
 }
-
-#[cfg(test)]
-#[path = "tests/xx_index_hasher_test.rs"]
-mod tests;

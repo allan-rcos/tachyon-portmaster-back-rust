@@ -19,9 +19,24 @@ use crate::wire::vo::admin::role_list_x_response::RoleListXResponse;
 use crate::wire::vo::admin::role_permissions_update_x_request::RolePermissionsUpdateXRequest;
 use axum::extract::{Path, Query};
 
+/// Monta o controller de papel.
+///
+/// O service e o acesso à sessão chegam injetados, e o que sai é o contrato: o
+/// tipo concreto não tem nome fora deste arquivo.
+pub(crate) fn role_controller<R, S>(
+    roles: R,
+    session: S,
+) -> impl RoleController + use<R, S> + 'static
+where
+    R: RoleService + Clone + Send + Sync + 'static,
+    S: SessionPort + Clone + Send + Sync + 'static,
+{
+    RoleControllerImpl { roles, session }
+}
+
 /// Os handlers de papel, genéricos sobre o service.
 #[derive(Clone)]
-pub(crate) struct RoleControllerImpl<R, S> {
+struct RoleControllerImpl<R, S> {
     /// O service de papel.
     roles: R,
     /// Quem diz se há sessão, e quem a apresenta.
@@ -29,11 +44,6 @@ pub(crate) struct RoleControllerImpl<R, S> {
 }
 
 impl<R: RoleService, S: SessionPort> RoleControllerImpl<R, S> {
-    /// Monta o controller.
-    pub(crate) const fn new(roles: R, session: S) -> Self {
-        Self { roles, session }
-    }
-
     /// O papel pelo lado de leitura, já na forma do fio.
     async fn read(&self, context: UserContext, id: String) -> Result<RoleXResponse, ApiError> {
         let view = self

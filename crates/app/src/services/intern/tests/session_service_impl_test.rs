@@ -24,15 +24,8 @@ fn service(
     user_rules: MockUserRules,
     role_rules: MockRoleRules,
     auth_rules: MockAuthRules,
-) -> SessionServiceImpl<
-    MockUsers,
-    MockRoles,
-    MockPermissions,
-    MockUserRules,
-    MockRoleRules,
-    MockAuthRules,
-> {
-    SessionServiceImpl::new(
+) -> impl SessionService {
+    session_service(
         users,
         roles,
         permissions,

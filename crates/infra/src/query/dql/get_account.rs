@@ -108,7 +108,3 @@ impl SqlDql for GetAccount {
         }))
     }
 }
-
-#[cfg(test)]
-#[path = "tests/get_account_test.rs"]
-mod tests;

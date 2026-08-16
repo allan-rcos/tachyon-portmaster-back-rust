@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["to_api"],"struct":["AccountControllerImpl"]};
+window.SIDEBAR_ITEMS = {"fn":["account_controller","to_api"],"struct":["AccountControllerImpl"]};

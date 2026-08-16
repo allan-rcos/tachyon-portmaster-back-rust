@@ -16,9 +16,24 @@ use crate::wire::vo::account::account_password_change_x_request::AccountPassword
 use crate::wire::vo::account::account_profile_x_response::AccountProfileXResponse;
 use crate::wire::vo::account::account_update_x_request::AccountUpdateXRequest;
 
+/// Monta o controller de conta.
+///
+/// O service e o acesso à sessão chegam injetados, e o que sai é o contrato: o
+/// tipo concreto não tem nome fora deste arquivo.
+pub(crate) fn account_controller<A, S>(
+    account: A,
+    session: S,
+) -> impl AccountController + use<A, S> + 'static
+where
+    A: AccountService + Clone + Send + Sync + 'static,
+    S: SessionPort + Clone + Send + Sync + 'static,
+{
+    AccountControllerImpl { account, session }
+}
+
 /// Os handlers de conta, genéricos sobre o service.
 #[derive(Clone)]
-pub(crate) struct AccountControllerImpl<A, S> {
+struct AccountControllerImpl<A, S> {
     /// O service de conta.
     account: A,
     /// Quem diz se há sessão, e quem a apresenta.
@@ -26,11 +41,6 @@ pub(crate) struct AccountControllerImpl<A, S> {
 }
 
 impl<A: AccountService, S: SessionPort> AccountControllerImpl<A, S> {
-    /// Monta o controller.
-    pub(crate) const fn new(account: A, session: S) -> Self {
-        Self { account, session }
-    }
-
     /// O perfil pelo lado de leitura, já na forma do fio.
     async fn profile(&self, context: UserContext) -> Result<AccountProfileXResponse, ApiError> {
         let view = self

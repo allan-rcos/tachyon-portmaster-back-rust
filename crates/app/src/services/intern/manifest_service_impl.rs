@@ -34,9 +34,37 @@ const UNLOAD: &str = "manifest:unload";
 /// leitura própria a invalidar.
 const CONTAINER_CACHE_GROUP: &str = "container";
 
+/// Monta o caso de uso de manifesto.
+///
+/// Os ports chegam injetados e o que sai é o contrato: o tipo concreto não tem
+/// nome fora deste arquivo, então nada além do provider consegue depender do
+/// formato dele.
+pub(crate) fn manifest_service<CR, PR, MR, T, C>(
+    containers: CR,
+    products: PR,
+    manifest: MR,
+    manifest_tm: T,
+    views: C,
+) -> impl ManifestService + Sync + Clone + use<CR, PR, MR, T, C> + 'static
+where
+    CR: ContainerRepository + Send + Sync + Clone + 'static,
+    PR: ProductRepository + Send + Sync + Clone + 'static,
+    MR: ManifestRepository + Send + Sync + Clone + 'static,
+    T: ManifestTM + Send + Sync + Clone + 'static,
+    C: ViewCacheRepository + Send + Sync + Clone + 'static,
+{
+    ManifestServiceImpl {
+        containers,
+        products,
+        manifest,
+        manifest_tm,
+        views,
+    }
+}
+
 /// A implementação, genérica sobre os ports que consome.
 #[derive(Clone)]
-pub(crate) struct ManifestServiceImpl<CR, PR, MR, T, C> {
+struct ManifestServiceImpl<CR, PR, MR, T, C> {
     /// Persistência de contêineres.
     containers: CR,
     /// Persistência de produtos.
@@ -47,25 +75,6 @@ pub(crate) struct ManifestServiceImpl<CR, PR, MR, T, C> {
     manifest_tm: T,
     /// O cache do lado de leitura.
     views: C,
-}
-
-impl<CR, PR, MR, T, C> ManifestServiceImpl<CR, PR, MR, T, C> {
-    /// Monta o caso de uso.
-    pub(crate) const fn new(
-        containers: CR,
-        products: PR,
-        manifest: MR,
-        manifest_tm: T,
-        views: C,
-    ) -> Self {
-        Self {
-            containers,
-            products,
-            manifest,
-            manifest_tm,
-            views,
-        }
-    }
 }
 
 impl<CR, PR, MR, T, C> ManifestServiceImpl<CR, PR, MR, T, C>
@@ -211,14 +220,6 @@ where
         .await
     }
 }
-
-/// Os slugs deste serviço, para o teste do catálogo.
-///
-/// `cfg(test)`: em produção nada além deste arquivo vê um slug, e é isso que se
-/// quer. O teste do catálogo precisa somá-los para afirmar as 25 permissões que
-/// já existem em papéis gravados, e essa é a única razão de a lista existir.
-#[cfg(test)]
-pub(crate) const PERMISSIONS: &[&str] = &[LOAD, UNLOAD];
 
 #[cfg(test)]
 #[path = "tests/manifest_service_impl_test.rs"]

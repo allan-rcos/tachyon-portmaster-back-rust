@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["intern","logger","logger_factory","system_logger"]};
+window.SIDEBAR_ITEMS = {"mod":["intern","logger","logger_factory","logging_provider","system_logger"]};

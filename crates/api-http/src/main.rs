@@ -1,22 +1,21 @@
 //! Entrada do servidor HTTP.
 //!
 //! Não há composition root: esta apresentação tem o seu próprio `main`, que lê os
-//! segredos de runtime, chama `portmaster_app::register` — o qual encadeia
-//! `domain` e `infra` — e sobe o axum sobre o router resultante.
+//! segredos de runtime, chama `AppProvider::boot` — o qual encadeia `domain` e
+//! `infra` — e sobe o axum sobre o router resultante.
 //!
 //! O `main` conhece **só o `app`**. Ele preenche `AppSecrets` com o que leu do
-//! ambiente e recebe de volta algo que já sabe atender requisição; `domain` e
-//! `infra` não aparecem nem como dependência do crate.
+//! ambiente e o entrega ao `boot`, que deixa as camadas de baixo prontas;
+//! `domain` e `infra` não aparecem nem como dependência do crate.
 //!
 //! ## Nada disto sobrevive ao boot
 //!
-//! O provider do `app` e a configuração desta camada entram por valor no
-//! `register`, viram um provider de apresentação, e esse provider é consumido ao
-//! montar o router. Depois disso nenhum dos três existe em memória — e por isso
-//! não há `Arc` segurando nada.
+//! Nenhum provider vira variável, e a configuração desta camada entra por valor
+//! no `router` e morre lá. Depois do boot o que existe em memória é o router —
+//! e por isso não há `Arc` segurando nada.
 
 use portmaster_api_http::{config, router};
-use portmaster_app::{Logger as _, SystemLogger};
+use portmaster_app::{AppProvider, Logger as _, SystemLogger};
 use tokio::net::TcpListener;
 use tokio::signal;
 
@@ -34,8 +33,8 @@ async fn main() -> anyhow::Result<()> {
     let secrets = config::secrets::Secrets::load()?;
     let address = format!("{}:{}", secrets.api.host, secrets.api.port);
 
-    let app = portmaster_app::register(secrets.app).await?;
-    let routes = router(app, secrets.api, secrets.jwt).await?;
+    AppProvider::boot(&secrets.app).await?;
+    let routes = router(secrets.api, secrets.jwt).await?;
 
     let listener = TcpListener::bind(&address).await?;
     SystemLogger::get().info("servidor no ar", [("address", &address)]);

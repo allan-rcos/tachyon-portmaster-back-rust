@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["ON"],"struct":["MarkerMemoryRepository"]};
+window.SIDEBAR_ITEMS = {"constant":["ON"],"fn":["marker_repository"],"struct":["MarkerMemoryRepository"]};

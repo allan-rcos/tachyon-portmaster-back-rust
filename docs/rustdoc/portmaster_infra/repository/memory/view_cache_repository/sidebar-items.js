@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["ViewCacheMemoryRepository"]};
+window.SIDEBAR_ITEMS = {"fn":["view_cache_repository"],"struct":["ViewCacheMemoryRepository"]};

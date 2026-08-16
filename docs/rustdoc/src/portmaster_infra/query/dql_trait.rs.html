@@ -14,10 +14,10 @@
 <a href=#14 id=14 data-nosnippet>14</a>    <span class="doccomment">/// O que distingue esta consulta de outra do mesmo tipo.
 <a href=#15 id=15 data-nosnippet>15</a>    ///
 <a href=#16 id=16 data-nosnippet>16</a>    /// É a identidade da consulta para efeito de cache, e quem a escreve é o
-<a href=#17 id=17 data-nosnippet>17</a>    /// DQL porque é ele quem sabe o que a consulta é. Antes cada serviço do
-<a href=#18 id=18 data-nosnippet>18</a>    /// `app` montava a chave à mão, com um prefixo por serviço e a lembrança de
-<a href=#19 id=19 data-nosnippet>19</a>    /// incluir cada filtro — e um filtro novo que ninguém somasse à chave fazia
-<a href=#20 id=20 data-nosnippet>20</a>    /// duas consultas diferentes lerem a mesma entrada.
+<a href=#17 id=17 data-nosnippet>17</a>    /// DQL porque é ele quem sabe o que a consulta é. Deixá-la a cargo de cada
+<a href=#18 id=18 data-nosnippet>18</a>    /// serviço do `app` pediria um prefixo por serviço e a lembrança de incluir
+<a href=#19 id=19 data-nosnippet>19</a>    /// cada filtro — e um filtro novo que ninguém somasse à chave deixaria duas
+<a href=#20 id=20 data-nosnippet>20</a>    /// consultas diferentes lendo a mesma entrada.
 <a href=#21 id=21 data-nosnippet>21</a>    ///
 <a href=#22 id=22 data-nosnippet>22</a>    /// Não sai do SQL: o `QueryBuilder` separa o texto dos valores, e o texto
 <a href=#23 id=23 data-nosnippet>23</a>    /// sozinho é idêntico entre duas páginas do mesmo `SELECT`.

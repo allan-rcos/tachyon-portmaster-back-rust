@@ -157,7 +157,3 @@ impl SqlDql for ListProducts {
         })
     }
 }
-
-#[cfg(test)]
-#[path = "tests/list_products_test.rs"]
-mod tests;

@@ -27,6 +27,22 @@ const READ: &str = "metrics:read";
 /// toda escrita do sistema o afeta e derrubá-lo a cada uma o deixaria sempre frio.
 const CACHE_GROUP: &str = "metrics";
 
+/// Monta o caso de uso de painel.
+///
+/// Os ports chegam injetados e o que sai é o contrato: o tipo concreto não tem
+/// nome fora deste arquivo, então nada além do provider consegue depender do
+/// formato dele.
+pub(crate) fn metrics_service<Q, C>(
+    queries: Q,
+    views: C,
+) -> impl MetricsService + Sync + Clone + use<Q, C> + 'static
+where
+    Q: QueryRepository + Send + Sync + Clone + 'static,
+    C: ViewCacheRepository + Send + Sync + Clone + 'static,
+{
+    MetricsServiceImpl { queries, views }
+}
+
 /// A chave do painel.
 ///
 /// Uma só: a leitura não tem parâmetro. Nenhuma escrita a derruba — o painel
@@ -35,18 +51,11 @@ const CACHE_GROUP: &str = "metrics";
 /// velho aqui é o TTL do cache de leitura, na `infra`.
 /// A implementação, genérica sobre os ports que consome.
 #[derive(Clone)]
-pub(crate) struct MetricsServiceImpl<Q, C> {
+struct MetricsServiceImpl<Q, C> {
     /// Quem executa um DQL contra o banco.
     queries: Q,
     /// O cache do lado de leitura.
     views: C,
-}
-
-impl<Q, C> MetricsServiceImpl<Q, C> {
-    /// Monta o caso de uso.
-    pub(crate) const fn new(queries: Q, views: C) -> Self {
-        Self { queries, views }
-    }
 }
 
 impl<Q, C> MetricsService for MetricsServiceImpl<Q, C>
@@ -101,14 +110,6 @@ where
         Ok(view)
     }
 }
-
-/// Os slugs deste serviço, para o teste do catálogo.
-///
-/// `cfg(test)`: em produção nada além deste arquivo vê um slug, e é isso que se
-/// quer. O teste do catálogo precisa somá-los para afirmar as 25 permissões que
-/// já existem em papéis gravados, e essa é a única razão de a lista existir.
-#[cfg(test)]
-pub(crate) const PERMISSIONS: &[&str] = &[READ];
 
 #[cfg(test)]
 #[path = "tests/metrics_service_impl_test.rs"]

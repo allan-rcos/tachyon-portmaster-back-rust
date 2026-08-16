@@ -13,9 +13,8 @@ use serde::Serialize;
 /// Os DTOs são dois, um por formato, e **nenhum dos dois é o outro**: o de
 /// `FlatBuffers` é a tabela que o planus gera do `.fbs`; o de JSON é uma struct
 /// nossa com `#[derive(Serialize)]`. Colar os dois no mesmo tipo — serializar a
-/// tabela do planus como JSON, que era o desenho anterior — amarra o corpo JSON
-/// à forma do `.fbs` e faz uma mudança de schema binário mexer no contrato
-/// textual sem ninguém pedir.
+/// tabela do planus como JSON — amarraria o corpo JSON à forma do `.fbs`, e uma
+/// mudança de schema binário mexeria no contrato textual sem ninguém pedir.
 ///
 /// Esta trait é o que amarra os três. Um terceiro formato é um tipo associado a
 /// mais aqui e uma strategy nova — nenhum VO muda, nenhum controller muda.

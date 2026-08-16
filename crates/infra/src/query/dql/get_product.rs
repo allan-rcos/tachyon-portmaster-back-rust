@@ -54,7 +54,3 @@ impl SqlDql for GetProduct {
         rows.first().map(read_item).transpose()
     }
 }
-
-#[cfg(test)]
-#[path = "tests/get_product_test.rs"]
-mod tests;

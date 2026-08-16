@@ -62,9 +62,9 @@ where
     /// Resolve o formato, ou recusa com `406`.
     ///
     /// `406 Not Acceptable` é literalmente o que aconteceu: o cliente listou o
-    /// que aceita e não há interseção com o que sabemos escrever. Antes isto
-    /// caía em JSON calado, e quem pedira XML recebia um `200` com um corpo que
-    /// não sabe ler — nem recebe o que pediu, nem descobre que não vai receber.
+    /// que aceita e não há interseção com o que sabemos escrever. Cair em JSON
+    /// calado daria a quem pediu XML um `200` com um corpo que ele não sabe ler
+    /// — nem recebe o que pediu, nem descobre que não vai receber.
     ///
     /// O corpo da própria recusa sai em JSON, que é o padrão do
     /// [`EncodeContext`] fora do escopo. Não há alternativa: acabamos de

@@ -50,9 +50,34 @@ const UPDATE: &str = "container:update";
 /// obsoleta pelas mesmas escritas.
 const CACHE_GROUP: &str = "container";
 
+/// Monta o caso de uso de contêiner.
+///
+/// Os ports chegam injetados e o que sai é o contrato: o tipo concreto não tem
+/// nome fora deste arquivo, então nada além do provider consegue depender do
+/// formato dele.
+pub(crate) fn container_service<R, T, Q, C>(
+    containers: R,
+    container_tm: T,
+    queries: Q,
+    views: C,
+) -> impl ContainerService + Sync + Clone + use<R, T, Q, C> + 'static
+where
+    R: ContainerRepository + Send + Sync + Clone + 'static,
+    T: ContainerTM + Send + Sync + Clone + 'static,
+    Q: QueryRepository + Send + Sync + Clone + 'static,
+    C: ViewCacheRepository + Send + Sync + Clone + 'static,
+{
+    ContainerServiceImpl {
+        containers,
+        container_tm,
+        queries,
+        views,
+    }
+}
+
 /// A implementação, genérica sobre os ports que consome.
 #[derive(Clone)]
-pub(crate) struct ContainerServiceImpl<R, T, Q, C> {
+struct ContainerServiceImpl<R, T, Q, C> {
     /// Persistência de contêineres.
     containers: R,
     /// As regras de contêiner.
@@ -61,18 +86,6 @@ pub(crate) struct ContainerServiceImpl<R, T, Q, C> {
     queries: Q,
     /// O cache do lado de leitura.
     views: C,
-}
-
-impl<R, T, Q, C> ContainerServiceImpl<R, T, Q, C> {
-    /// Monta o caso de uso.
-    pub(crate) const fn new(containers: R, container_tm: T, queries: Q, views: C) -> Self {
-        Self {
-            containers,
-            container_tm,
-            queries,
-            views,
-        }
-    }
 }
 
 impl<R, T, Q, C> ContainerServiceImpl<R, T, Q, C>
@@ -321,14 +334,6 @@ where
         Ok(view)
     }
 }
-
-/// Os slugs deste serviço, para o teste do catálogo.
-///
-/// `cfg(test)`: em produção nada além deste arquivo vê um slug, e é isso que se
-/// quer. O teste do catálogo precisa somá-los para afirmar as 25 permissões que
-/// já existem em papéis gravados, e essa é a única razão de a lista existir.
-#[cfg(test)]
-pub(crate) const PERMISSIONS: &[&str] = &[CREATE, DELETE, DISPATCH, READ, SEAL, SUMMARY, UPDATE];
 
 #[cfg(test)]
 #[path = "tests/container_service_impl_test.rs"]

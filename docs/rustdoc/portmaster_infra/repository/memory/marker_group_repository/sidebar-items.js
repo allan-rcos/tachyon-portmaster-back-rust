@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["GROUP"],"struct":["MarkerGroupMemoryRepository"]};
+window.SIDEBAR_ITEMS = {"constant":["GROUP"],"fn":["marker_group_repository"],"struct":["MarkerGroupMemoryRepository"]};

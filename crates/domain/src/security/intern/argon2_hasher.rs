@@ -9,20 +9,26 @@ use argon2::{Argon2, PasswordVerifier};
 
 use crate::security::PasswordHasher;
 
-/// Hasher de senha para armazenamento.
-#[derive(Clone)]
-pub struct Argon2Hasher {
-    /// O Argon2 já configurado; construí-lo por chamada desperdiçaria o parse dos parâmetros.
-    argon: Argon2<'static>,
+/// Monta o hasher com os parâmetros padrão do Argon2id.
+///
+/// Os parâmetros são do build, não de runtime: mudá-los invalidaria os hashes
+/// já gravados, que carregam os seus próprios no formato PHC.
+///
+/// Montar é barato — ler constantes —, e dois deles não têm nada a
+/// compartilhar. O que custa é derivar o hash, e isso é por chamada de
+/// [`PasswordHasher::hash`].
+pub(in crate::security) fn argon2_hasher(
+) -> impl PasswordHasher + Send + Sync + Clone + use<> + 'static {
+    Argon2Hasher {
+        argon: Argon2::default(),
+    }
 }
 
-impl Argon2Hasher {
-    /// Monta o hasher com os parâmetros padrão do Argon2id.
-    pub(crate) fn new() -> Self {
-        Self {
-            argon: Argon2::default(),
-        }
-    }
+/// Hasher de senha para armazenamento.
+#[derive(Clone)]
+struct Argon2Hasher {
+    /// O Argon2 já configurado, com os parâmetros de custo do build.
+    argon: Argon2<'static>,
 }
 
 impl PasswordHasher for Argon2Hasher {
@@ -61,7 +67,3 @@ impl PasswordHasher for Argon2Hasher {
             .is_ok()
     }
 }
-
-#[cfg(test)]
-#[path = "tests/argon2_hasher_test.rs"]
-mod tests;

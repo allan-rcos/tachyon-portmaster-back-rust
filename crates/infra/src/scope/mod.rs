@@ -33,7 +33,10 @@ pub(crate) mod memory;
 pub(crate) mod scope_context;
 pub(crate) mod scope_layer;
 pub(crate) mod scope_layers;
+pub(crate) mod scope_provider;
 
 pub use master_scope::MasterScope;
 pub use unit_of_work::UnitOfWork;
 pub use unit_of_work_iterator::UnitOfWorkIterator;
+
+pub(crate) use scope_provider::ScopeProvider;

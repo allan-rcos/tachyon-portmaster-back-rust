@@ -3,9 +3,9 @@
     FlatBuffers,
 }</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Qual dos dois formatos está em jogo.</p>
 <p>Os dois construtores <strong>falham</strong> quando o cabeçalho pede um tipo que não
-sabemos produzir nem ler. Antes eles caíam num padrão em silêncio, e o
-resultado era um cliente que pediu XML recebendo JSON com <code>200</code> — o pior dos
-dois mundos, porque nem recebe o que pediu nem descobre que não vai receber.
+sabemos produzir nem ler. Cair num padrão em silêncio daria a quem pediu XML
+um JSON com <code>200</code> — o pior dos dois mundos, porque nem recebe o que pediu nem
+descobre que não vai receber.
 Quem traduz a falha em status é o middleware: <code>406</code> na saída, <code>415</code> na
 entrada.</p>
 </div></details><h2 id="variants" class="variants section-header">Variants<a href="#variants" class="anchor">§</a></h2><div class="variants"><section id="variant.Json" class="variant"><a href="#variant.Json" class="anchor">§</a><h3 class="code-header">Json</h3></section><div class="docblock"><p>Texto, para depuração e clientes genéricos.</p>

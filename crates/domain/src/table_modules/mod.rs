@@ -16,6 +16,7 @@ pub mod role_tm;
 pub mod user_tm;
 
 pub(crate) mod intern;
+pub(crate) mod table_modules_provider;
 
 pub use auth_tm::AuthTM;
 pub use container_tm::ContainerTM;
@@ -26,3 +27,5 @@ pub use permission_tm::PermissionTM;
 pub use product_tm::ProductTM;
 pub use role_tm::RoleTM;
 pub use user_tm::UserTM;
+
+pub(crate) use table_modules_provider::TableModulesProvider;

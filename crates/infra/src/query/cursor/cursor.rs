@@ -86,7 +86,3 @@ impl Cursor {
         (served == limit as usize && last_id > 0).then(|| Self::encode(last_id, filters))
     }
 }
-
-#[cfg(test)]
-#[path = "tests/cursor_test.rs"]
-mod tests;

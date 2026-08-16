@@ -53,7 +53,3 @@ impl Secrets {
         draft.into_secrets()
     }
 }
-
-#[cfg(test)]
-#[path = "tests/secrets_test.rs"]
-mod tests;

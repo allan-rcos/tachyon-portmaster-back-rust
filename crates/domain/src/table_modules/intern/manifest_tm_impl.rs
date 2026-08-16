@@ -8,16 +8,18 @@ use crate::table_modules::intern::models::manifest_cargo_model::ManifestCargoMod
 use crate::table_modules::intern::models::manifest_change_model::ManifestChangeModel;
 use crate::table_modules::ManifestTM;
 
+/// Monta as regras de manifesto.
+///
+/// Não recebe helper nenhum: aqui é aritmética e regra pura.
+pub(crate) const fn manifest_tm() -> impl ManifestTM + Send + Sync + Clone + use<> + 'static {
+    ManifestTMImpl
+}
+
 /// A implementação. Não precisa de helper nenhum: é aritmética e regra pura.
 #[derive(Clone)]
-pub(crate) struct ManifestTMImpl;
+struct ManifestTMImpl;
 
 impl ManifestTMImpl {
-    /// Monta o `TableModule`.
-    pub(crate) const fn new() -> Self {
-        Self
-    }
-
     /// Produz o contêiner com outro peso e status.
     fn with_weight_and_status(
         container: &dyn Container,

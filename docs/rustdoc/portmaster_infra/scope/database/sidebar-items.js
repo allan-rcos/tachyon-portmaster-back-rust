@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["intern","mysql_transaction"]};
+window.SIDEBAR_ITEMS = {"mod":["database_scope_provider","intern","mysql_transaction"]};

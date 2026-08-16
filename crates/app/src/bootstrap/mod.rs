@@ -1,10 +1,7 @@
 //! Como esta camada é montada.
 //!
-//! O contrato dos factories, a implementação que os atende e a função que
-//! encadeia as camadas de baixo e devolve o sistema pronto. Os três só fazem
-//! sentido lidos juntos, e nenhum é chamado depois do boot.
+//! Um arquivo só: o provider da camada, que é a borda do crate e também o
+//! ponto de partida do processo — o `boot` mora nele. O `ServicesProvider` fica
+//! privado atrás dele.
 
-pub mod provider;
-pub mod register;
-
-pub(crate) mod app_provider;
+pub mod app_provider;

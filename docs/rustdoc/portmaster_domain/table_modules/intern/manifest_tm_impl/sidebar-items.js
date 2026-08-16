@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["EPSILON"],"struct":["ManifestTMImpl"]};
+window.SIDEBAR_ITEMS = {"constant":["EPSILON"],"fn":["manifest_tm"],"struct":["ManifestTMImpl"]};

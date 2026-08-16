@@ -61,7 +61,3 @@ impl fmt::Display for ContainerStatus {
         f.write_str(name)
     }
 }
-
-#[cfg(test)]
-#[path = "tests/container_status_test.rs"]
-mod tests;

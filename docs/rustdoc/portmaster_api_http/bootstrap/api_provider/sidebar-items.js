@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["AUTH_CHANNEL"],"struct":["ApiProviderImpl"]};
+window.SIDEBAR_ITEMS = {"struct":["ApiProvider"]};

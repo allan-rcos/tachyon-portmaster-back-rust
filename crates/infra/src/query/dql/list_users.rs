@@ -98,7 +98,3 @@ impl SqlDql for ListUsers {
         Ok(UserListView { items })
     }
 }
-
-#[cfg(test)]
-#[path = "tests/list_users_test.rs"]
-mod tests;

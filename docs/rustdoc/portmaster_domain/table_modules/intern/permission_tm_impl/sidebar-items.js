@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["is_domain_action","refused"],"struct":["PermissionTMImpl"]};
+window.SIDEBAR_ITEMS = {"fn":["is_domain_action","permission_tm","refused"],"struct":["PermissionTMImpl"]};

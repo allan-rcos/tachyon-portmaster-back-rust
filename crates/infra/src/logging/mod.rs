@@ -28,7 +28,10 @@ pub mod logger_factory;
 pub mod system_logger;
 
 pub(crate) mod intern;
+pub(crate) mod logging_provider;
 
 pub use logger::Logger;
 pub use logger_factory::LoggerFactory;
 pub use system_logger::SystemLogger;
+
+pub(crate) use logging_provider::LoggingProvider;

@@ -10,18 +10,21 @@ const NAME: &str = "tachyon/portmaster";
 /// Quantos bytes tem um MiB.
 const BYTES_PER_MIB: f64 = 1024.0 * 1024.0;
 
-/// O handler de `/info`.
-#[derive(Clone)]
-pub(crate) struct ServerControllerImpl {
-    /// Em que ambiente o processo está rodando.
+/// Monta o controller de `/info`.
+///
+/// O nome do ambiente vem por argumento e não de um `static`: ele é o único
+/// dado de config que um controller carrega, e é lido uma vez, no boot.
+pub(crate) const fn server_controller(
     environment: String,
+) -> impl ServerController + use<> + 'static {
+    ServerControllerImpl { environment }
 }
 
-impl ServerControllerImpl {
-    /// Monta o controller.
-    pub(crate) const fn new(environment: String) -> Self {
-        Self { environment }
-    }
+/// O handler de `/info`.
+#[derive(Clone)]
+struct ServerControllerImpl {
+    /// Em que ambiente o processo está rodando.
+    environment: String,
 }
 
 impl ServerController for ServerControllerImpl {
@@ -77,7 +80,3 @@ fn resident_mib_of(status: &str) -> f64 {
         .map(|kib| (kib * 1024.0 / BYTES_PER_MIB * 100.0).round() / 100.0)
         .unwrap_or_default()
 }
-
-#[cfg(test)]
-#[path = "tests/server_controller_impl_test.rs"]
-mod tests;

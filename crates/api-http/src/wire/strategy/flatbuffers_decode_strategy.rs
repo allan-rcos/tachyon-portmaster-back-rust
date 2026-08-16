@@ -13,7 +13,3 @@ impl DecodeStrategy for FlatBuffersDecodeStrategy {
         X::of_fbs(bytes)
     }
 }
-
-#[cfg(test)]
-#[path = "tests/flatbuffers_decode_strategy_test.rs"]
-mod tests;

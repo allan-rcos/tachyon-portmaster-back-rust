@@ -39,9 +39,34 @@ const UPDATE_PERMISSIONS: &str = "role:update-permissions";
 /// invalida o que é seu, e o dado velho dos outros vive o TTL do cache.
 const CACHE_GROUP: &str = "role";
 
+/// Monta o caso de uso de papel.
+///
+/// Os ports chegam injetados e o que sai é o contrato: o tipo concreto não tem
+/// nome fora deste arquivo, então nada além do provider consegue depender do
+/// formato dele.
+pub(crate) fn role_service<R, T, Q, C>(
+    roles: R,
+    role_tm: T,
+    queries: Q,
+    views: C,
+) -> impl RoleService + Sync + Clone + use<R, T, Q, C> + 'static
+where
+    R: RoleRepository + Send + Sync + Clone + 'static,
+    T: RoleTM + Send + Sync + Clone + 'static,
+    Q: QueryRepository + Send + Sync + Clone + 'static,
+    C: ViewCacheRepository + Send + Sync + Clone + 'static,
+{
+    RoleServiceImpl {
+        roles,
+        role_tm,
+        queries,
+        views,
+    }
+}
+
 /// A implementação, genérica sobre os ports que consome.
 #[derive(Clone)]
-pub(crate) struct RoleServiceImpl<R, T, Q, C> {
+struct RoleServiceImpl<R, T, Q, C> {
     /// Persistência de papéis.
     roles: R,
     /// As regras de papel.
@@ -50,18 +75,6 @@ pub(crate) struct RoleServiceImpl<R, T, Q, C> {
     queries: Q,
     /// O cache do lado de leitura.
     views: C,
-}
-
-impl<R, T, Q, C> RoleServiceImpl<R, T, Q, C> {
-    /// Monta o caso de uso.
-    pub(crate) const fn new(roles: R, role_tm: T, queries: Q, views: C) -> Self {
-        Self {
-            roles,
-            role_tm,
-            queries,
-            views,
-        }
-    }
 }
 
 impl<R, T, Q, C> RoleService for RoleServiceImpl<R, T, Q, C>
@@ -190,14 +203,6 @@ where
         Ok(view)
     }
 }
-
-/// Os slugs deste serviço, para o teste do catálogo.
-///
-/// `cfg(test)`: em produção nada além deste arquivo vê um slug, e é isso que se
-/// quer. O teste do catálogo precisa somá-los para afirmar as 25 permissões que
-/// já existem em papéis gravados, e essa é a única razão de a lista existir.
-#[cfg(test)]
-pub(crate) const PERMISSIONS: &[&str] = &[CREATE, LIST, UPDATE_PERMISSIONS];
 
 #[cfg(test)]
 #[path = "tests/role_service_impl_test.rs"]

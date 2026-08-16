@@ -18,8 +18,8 @@ fn service(
     roles: MockRoles,
     user_rules: MockUserRules,
     views: MockViewCache,
-) -> UserServiceImpl<MockUsers, MockRoles, MockUserRules, StubQueries, MockViewCache> {
-    UserServiceImpl::new(users, roles, user_rules, StubQueries::never(), views)
+) -> impl UserService {
+    user_service(users, roles, user_rules, StubQueries::never(), views)
 }
 
 /// O comando de criação, com o contexto e os papéis que o teste escolheu.

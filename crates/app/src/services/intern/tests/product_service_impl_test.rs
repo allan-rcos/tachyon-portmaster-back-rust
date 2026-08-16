@@ -16,8 +16,8 @@ fn service(
     products: MockProducts,
     product_rules: MockProductRules,
     views: MockViewCache,
-) -> ProductServiceImpl<MockProducts, MockProductRules, StubQueries, MockViewCache> {
-    ProductServiceImpl::new(products, product_rules, StubQueries::never(), views)
+) -> impl ProductService {
+    product_service(products, product_rules, StubQueries::never(), views)
 }
 
 /// O comando de cadastro, com o contexto que o teste escolheu.

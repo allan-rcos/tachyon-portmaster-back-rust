@@ -25,12 +25,12 @@ const SPAN: &str = "request";
 ///
 /// Um tipo só, e não um par. `LoggingLayer<L>` é o `Layer` — o logger do canal,
 /// ainda sem serviço interno —, e `LoggingLayer<L, S>` é o `Service` que sai do
-/// `layer()`. Eram dois tipos em dois arquivos, e o segundo nunca foi nomeado
-/// por ninguém.
+/// `layer()`. Um par de tipos custaria um segundo arquivo e um nome que ninguém
+/// pronuncia: quem monta a pilha aplica o layer e mais nada.
 ///
-/// O logger é criado **uma vez**, na construção do layer, e clonado por serviço.
-/// Antes o layer guardava a fábrica e criava um logger a cada `layer()`, que é
-/// trabalho repetido para produzir sempre o mesmo canal.
+/// O logger é criado **uma vez**, na construção do layer, e clonado por serviço
+/// — guardar a fábrica e criar um por `layer()` seria trabalho repetido para
+/// produzir sempre o mesmo canal.
 #[derive(Clone)]
 pub(crate) struct LoggingLayer<L, S = ()> {
     /// O serviço interno, que este envolve; `()` enquanto é só layer.

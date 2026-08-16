@@ -13,7 +13,7 @@ fn aceita_os_slugs_que_os_casos_de_uso_declaram() {
         "role:update-permissions",
         "metrics:read",
     ] {
-        let permission = PermissionTMImpl::new()
+        let permission = permission_tm()
             .create(good.into())
             .unwrap_or_else(|_| panic!("{good} deveria ser aceito"));
         assert_eq!(permission.slug(), good);
@@ -32,7 +32,7 @@ fn recusa_slug_fora_do_formato() {
         "product::create",
     ] {
         assert!(
-            PermissionTMImpl::new().create(bad.into()).is_err(),
+            permission_tm().create(bad.into()).is_err(),
             "deveria recusar {bad:?}"
         );
     }
@@ -41,5 +41,5 @@ fn recusa_slug_fora_do_formato() {
 #[test]
 fn recusa_slug_longo_demais() {
     let long = format!("{}:{}", "a".repeat(40), "b".repeat(40));
-    assert!(PermissionTMImpl::new().create(long).is_err());
+    assert!(permission_tm().create(long).is_err());
 }

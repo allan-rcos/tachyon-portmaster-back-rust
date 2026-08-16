@@ -25,9 +25,11 @@ pub mod random_id_generator;
 pub mod sequential_id_generator;
 
 pub(crate) mod database_id_generator;
+pub(crate) mod id_provider;
 pub(crate) mod intern;
 
 pub use random_id_generator::RandomIdGenerator;
 pub use sequential_id_generator::SequentialIdGenerator;
 
 pub(crate) use database_id_generator::DatabaseIdGenerator;
+pub(crate) use id_provider::IdProvider;

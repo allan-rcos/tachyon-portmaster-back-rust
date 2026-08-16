@@ -15,8 +15,8 @@
 //! ## Cada middleware é um arquivo
 //!
 //! O `tower::Service` que faz o trabalho e o `tower::Layer` que o aplica moram
-//! juntos. Eram dois arquivos, e o `Service` nunca foi nomeado de fora: quem
-//! monta a pilha aplica o `Layer`. A pilha continua composta por generics — cada
+//! juntos, num tipo só: o `Service` nunca é nomeado de fora, porque quem monta a
+//! pilha aplica o `Layer`. A pilha é composta por generics — cada
 //! `.layer()` embrulha o serviço num tipo novo —, então não há `dyn` nem
 //! `middleware::from_fn` solto em ponto nenhum dela.
 
@@ -26,4 +26,8 @@ pub(crate) mod encode_port;
 pub(crate) mod request_id_port;
 pub(crate) mod session_port;
 
+pub(crate) mod middleware_provider;
+
 pub(crate) mod intern;
+
+pub(crate) use middleware_provider::MiddlewareProvider;

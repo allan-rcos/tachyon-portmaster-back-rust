@@ -5,7 +5,11 @@
 //! traduzem colunas, estes serializam. Para o `app` não há diferença nenhuma —
 //! ele vê os mesmos ports, e não sabe qual dos dois está atendendo.
 
+pub(crate) mod memory_repository_provider;
+
 pub(crate) mod marker_group_repository;
 pub(crate) mod marker_repository;
 pub(crate) mod permission_repository;
 pub(crate) mod view_cache_repository;
+
+pub(crate) use memory_repository_provider::MemoryRepositoryProvider;

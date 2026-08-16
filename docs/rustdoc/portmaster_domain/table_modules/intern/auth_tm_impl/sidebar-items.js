@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["AuthTMImpl"]};
+window.SIDEBAR_ITEMS = {"fn":["auth_tm"],"struct":["AuthTMImpl"]};

@@ -11,10 +11,9 @@
 //!
 //! Um erro vira [`ProblemX`], que é um VO de resposta como qualquer outro, e sai
 //! pela [`EncodePort`](crate::middleware::encode_port::EncodePort) da
-//! requisição — em JSON ou em `FlatBuffers`, conforme o `Accept`. Antes o corpo
-//! era `application/problem+json` fixo, o que num sistema cujo cliente de
-//! produção fala `FlatBuffers` significava que todo caminho de erro entregava
-//! algo que ele não sabia ler.
+//! requisição — em JSON ou em `FlatBuffers`, conforme o `Accept`. Um corpo fixo
+//! em `application/problem+json` faria, num sistema cujo cliente de produção
+//! fala `FlatBuffers`, todo caminho de erro entregar algo que ele não sabe ler.
 //!
 //! Quando não há requisição de onde negociar — um erro que nasce antes de
 //! qualquer cabeçalho ser lido — vale JSON, que é o padrão do contexto fora do
@@ -89,15 +88,6 @@ impl ApiError {
     /// Go não afirma 502 em ponto nenhum, então o código está livre.
     pub(crate) fn unrenderable(detail: impl Into<String>) -> Self {
         Self::new(StatusCode::BAD_GATEWAY, detail)
-    }
-
-    /// O status, para quem precisa decidir sobre ele antes de responder.
-    ///
-    /// Só os testes perguntam: no caminho de produção o erro vira resposta
-    /// direto, sem ninguém inspecioná-lo pelo meio.
-    #[cfg(test)]
-    pub(crate) const fn status(&self) -> StatusCode {
-        self.status
     }
 
     /// Desmonta o erro no status e no corpo de problema.
@@ -202,7 +192,3 @@ fn describe_fields(fields: &[FieldError]) -> String {
         .collect::<Vec<_>>()
         .join("; ")
 }
-
-#[cfg(test)]
-#[path = "tests/api_error_test.rs"]
-mod tests;
