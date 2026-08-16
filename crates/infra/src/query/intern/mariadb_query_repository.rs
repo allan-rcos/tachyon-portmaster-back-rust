@@ -1,6 +1,8 @@
 //! A execução de consultas sobre o `MariaDB`.
 
 use anyhow::Context;
+use mysql_async::prelude::Queryable as _;
+use mysql_async::Row;
 
 use crate::query::{QueryRepository, SqlDql};
 use crate::scope::database::mysql_transaction::MySqlTransaction;
@@ -29,23 +31,20 @@ struct MariadbQueryRepository<T> {
 impl<T: MySqlTransaction + Send + Sync> QueryRepository for MariadbQueryRepository<T> {
     /// Executa o DQL e entrega as linhas para ele hidratar.
     ///
-    /// Não há `AssertSqlSafe` no caminho, e é por construção: o `QueryBuilder`
-    /// do sqlx separa o texto do valor no próprio tipo, então não existe ponto
-    /// onde um valor pudesse ser interpolado no SQL. Um construtor nosso daria a
-    /// mesma garantia como afirmação, e ela valeria só enquanto ninguém
-    /// escrevesse a linha errada dentro dele.
+    /// O texto e os valores chegam separados do [`build`](SqlDql::build) e assim
+    /// seguem até o servidor: a consulta é preparada, e os valores viajam como
+    /// parâmetros. Não há ponto neste caminho onde um valor pudesse ser
+    /// interpolado no texto.
     ///
-    /// O `MariaDB` compara número com texto descartando o índice, então os
-    /// valores continuam ligados pelo tipo que têm — o que agora é o
-    /// `push_bind` de quem monta a consulta, e não uma tradução aqui.
+    /// O `MariaDB` compara número com texto descartando o índice, então importa
+    /// que cada valor chegue com o tipo que tem — e é quem monta a consulta quem
+    /// o declara, não uma tradução aqui.
     async fn run<D: SqlDql>(&self, dql: D) -> anyhow::Result<D::View> {
-        let mut builder = dql.build();
-        let sql = builder.sql().as_str().to_owned();
+        let (sql, params) = dql.build();
         let mut transaction = self.transactions.transaction().await?;
 
-        let rows = builder
-            .build()
-            .fetch_all(&mut **transaction)
+        let rows: Vec<Row> = transaction
+            .exec(&sql, params)
             .await
             .with_context(|| format!("falha ao executar a consulta de leitura: {sql}"))?;
 

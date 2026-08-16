@@ -63,9 +63,9 @@ of these wrong fails at *read* time rather than at migrate time:
 
 | Kind | Type | Because |
 |---|---|---|
-| Entity id | `BIGINT` | A Snowflake is 63 bits and always positive. sqlx refuses to decode an `UNSIGNED` column into a signed Rust integer, and every id is read as `i64`. |
+| Entity id | `BIGINT` | A Snowflake is 63 bits and always positive. Every id is read as `i64`, and an `UNSIGNED` column would need a narrowing cast at the edge to get there. |
 | Enum | `TINYINT` | Holds the **ordinal**, the same number `common.fbs` publishes. Signed, so it decodes; `CHECK` pins the range. |
-| Timestamp | `DATETIME` | Stores what it is given, and the driver pins every session to `+00:00`. `TIMESTAMP` would convert twice and expire in 2038. |
+| Timestamp | `BIGINT` | Epoch **milliseconds**, written by the application. A date type would make the stored instant depend on interpretation — `TIMESTAMP` converts twice and expires in 2038, `DATETIME` stores a zoneless wall clock. |
 | Weight, capacity, density | `DOUBLE` | Matches the `f64` the domain computes with. These are measurements, not money. |
 | `roles.permissions` | `JSON` | MariaDB implements it as `LONGTEXT` plus a validity `CHECK`, which is what lets the driver read it as text and parse it itself. |
 

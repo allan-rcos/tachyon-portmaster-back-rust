@@ -11,13 +11,17 @@
 //!
 //! ## A entity **é** a linha
 //!
-//! Não há `*_row.rs`, e também não há `from_row` escrito à mão: cada entity
-//! deriva `sqlx::FromRow`, e o que antes se escrevia no corpo daquela função
-//! virou atributo do campo que o exige — `try_from` para o id e para o índice de
-//! enum, `json` para a coluna `JSON`, `default` para o campo que não é coluna.
+//! Não há `*_row.rs`: cada entity deriva o `FromRow` do driver, e o que se
+//! escreveria no corpo de um `from_row` é atributo do campo que o exige —
+//! `deserialize_with` para o id, para o índice de enum e para o instante, `json`
+//! para a coluna `JSON`. As conversões em si moram em
+//! [`decode`](decode::Decode), uma vez cada.
 //!
 //! O ganho não é o tamanho: é que uma coluna nova passa a ser um campo, e não um
 //! campo mais uma linha de leitura que pode ficar para trás.
+//!
+//! A exceção é o [`UserEntity`](user_entity::UserEntity), que tem um campo que
+//! não é coluna: o derive não tem como pular um, e ele escreve o `FromRow`.
 //!
 //! A identidade é um [`EntityId`](entity_id::EntityId) e não dois campos:
 //! guardar `id: String` e `raw_id: i64` lado a lado deixaria os dois para serem
@@ -25,6 +29,7 @@
 
 pub(crate) mod codec;
 pub(crate) mod container_entity;
+pub(crate) mod decode;
 pub(crate) mod entity_id;
 pub(crate) mod manifest_cargo_entity;
 pub(crate) mod product_entity;

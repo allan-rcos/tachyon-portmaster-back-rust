@@ -25,6 +25,12 @@
 -- The CHECK constraints on those columns reject a typo here at seed time rather
 -- than letting it surface as a failed read months later.
 --
+-- Timestamps are epoch milliseconds, and the seed writes them the same way the
+-- application does — the columns have no default to fall back on. The value is
+-- the fixed literal 1735689600000 (2025-01-01T00:00:00Z) rather than a call to
+-- the server's clock: a seed that stamped "now" would make every re-run produce
+-- a different database, and these rows are meant to be the same ones every time.
+--
 -- **Idempotent.** The compose `seed` service runs on every `docker compose up`,
 -- while the `db_data` volume survives everything short of `down -v` — so the
 -- second start always finds these rows already there. As plain INSERTs this file
@@ -37,14 +43,16 @@
 -- row back to the value declared below, not silently accept whatever a developer
 -- left in the table. Both survive a re-run; only this one converges.
 
-INSERT INTO products (id, name, density, risk_class, search_name) VALUES
-    (1, 'Liquid Nitrogen',  0.807, 1, 'liquid nitrogen'),
-    (2, 'Sodium Hydroxide', 2.13,  7, 'sodium hydroxide')
+INSERT INTO products (id, name, density, risk_class, search_name, created_at, updated_at) VALUES
+    (1, 'Liquid Nitrogen',  0.807, 1, 'liquid nitrogen',  1735689600000, 1735689600000),
+    (2, 'Sodium Hydroxide', 2.13,  7, 'sodium hydroxide', 1735689600000, 1735689600000)
 ON DUPLICATE KEY UPDATE
     name        = VALUES(name),
     density     = VALUES(density),
     risk_class  = VALUES(risk_class),
-    search_name = VALUES(search_name);
+    search_name = VALUES(search_name),
+    created_at  = VALUES(created_at),
+    updated_at  = VALUES(updated_at);
 
 -- The cargo of the two seeded containers is rewritten together with them.
 -- `current_weight` is a denormalised sum of `container_items.weight`, and the
@@ -56,20 +64,23 @@ ON DUPLICATE KEY UPDATE
 -- append-only history, and an old entry does not contradict the row below.
 DELETE FROM container_items WHERE container_id IN (1, 2);
 
-INSERT INTO containers (id, code, current_weight, max_capacity, status, search_code) VALUES
-    (1, 'CT-0001',   0, 1000, 0, 'ct-0001'),
+INSERT INTO containers (id, code, current_weight, max_capacity, status, search_code, created_at, updated_at) VALUES
+    (1, 'CT-0001',   0, 1000, 0, 'ct-0001', 1735689600000, 1735689600000),
     -- 100 units of product 2, at density 2.13 → 213 kg. Written out rather than
     -- computed so that reading this file tells you the state it produces.
-    (2, 'CT-0002', 213, 1000, 1, 'ct-0002')
+    (2, 'CT-0002', 213, 1000, 1, 'ct-0002', 1735689600000, 1735689600000)
 ON DUPLICATE KEY UPDATE
     code           = VALUES(code),
     current_weight = VALUES(current_weight),
     max_capacity   = VALUES(max_capacity),
     status         = VALUES(status),
-    search_code    = VALUES(search_code);
+    search_code    = VALUES(search_code),
+    created_at     = VALUES(created_at),
+    updated_at     = VALUES(updated_at);
 
-INSERT INTO container_items (container_id, product_id, quantity, weight) VALUES
-    (2, 2, 100, 213)
+INSERT INTO container_items (container_id, product_id, quantity, weight, created_at) VALUES
+    (2, 2, 100, 213, 1735689600000)
 ON DUPLICATE KEY UPDATE
-    quantity = VALUES(quantity),
-    weight   = VALUES(weight);
+    quantity   = VALUES(quantity),
+    weight     = VALUES(weight),
+    created_at = VALUES(created_at);

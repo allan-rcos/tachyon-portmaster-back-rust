@@ -24,9 +24,10 @@ license = "MIT"
 # a versão de uma lib apareça uma vez só no repositório.
 #
 # A tabela de referência é tmp/architecture/setup.md. Cinco entradas estão à
-# frente do que ela pinou (sqlx, tower-http, jsonwebtoken, config, mockall): a doc
-# foi escrita quando aquelas eram as correntes, e o que ela especifica é a
-# arquitetura, não a versão.
+# frente do que ela pinou (tower-http, jsonwebtoken, config, mockall): a doc foi
+# escrita quando aquelas eram as correntes, e o que ela especifica é a
+# arquitetura, não a versão. O driver do banco ela pinou como sqlx, que saiu —
+# ver `docs/adr/0012-driver-mariadb-sem-construtor-de-query.md`.
 [workspace.dependencies]
 # --- runtime / transporte ---------------------------------------------------
 tokio = { version = "1", features = ["full"] }
@@ -50,7 +51,19 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 # --- persistência / cache ---------------------------------------------------
-sqlx = { version = "0.9", features = ["runtime-tokio", "tls-rustls", "mysql", "chrono"] }
+# O driver do MariaDB, sem pool nem construtor de query embutidos — os dois vinham
+# no sqlx, e nenhum dos dois estava sendo usado como o sqlx os oferece.
+#
+# `default-rustls-ring` em vez do `default`: o conjunto padrão pede `flate2/zlib`,
+# que é a zlib em C, e o build multi-stage do Dockerfile não tem toolchain C de
+# propósito — foi por isso que o jsonwebtoken ficou em `rust_crypto`. Este perfil
+# troca a compressão pela implementação em Rust puro e mantém o TLS em rustls
+# sobre `ring`, que é o provider que o resto da árvore já usa.
+#
+# Sem a feature `chrono`: nenhuma coluna é de data. O tempo é `BIGINT` com epoch
+# em milissegundos, e quem o transforma em `DateTime<Utc>` é a entity — o driver
+# não precisa conhecer o tipo.
+mysql_async = { version = "0.37", default-features = false, features = ["default-rustls-ring"] }
 moka = { version = "0.12", features = ["future"] }
 # O cache de view guarda a View, não JSON: o formato é interno ao processo e
 # ninguém o lê de fora. bincode é menor e mais rápido, e uma entrada de formato

@@ -17,6 +17,7 @@ pub mod dql_trait;
 pub mod query_repository;
 pub mod views;
 
+pub(crate) mod column;
 pub(crate) mod cursor;
 pub(crate) mod intern;
 pub(crate) mod query_provider;

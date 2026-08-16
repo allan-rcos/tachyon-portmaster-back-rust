@@ -7,12 +7,11 @@ services:
     image: mariadb:11
     # O servidor inteiro em UTC, e não só a sessão da API.
     #
-    # As colunas de tempo têm `DEFAULT CURRENT_TIMESTAMP`, que o servidor avalia
-    # no fuso de quem está inserindo. A API fixa a própria sessão em `+00:00`
-    # (database/pool.rs), mas o `migrate` e o `seed` são outros contêineres, com
-    # outras sessões — e as linhas que o seed cria sairiam no fuso do servidor.
-    # Fixar aqui faz o default valer para todos, inclusive para um `mysql` que
-    # alguém abra à mão para investigar.
+    # Nenhuma linha depende disso: as colunas de tempo são `BIGINT` com epoch em
+    # milissegundos, escritas pela aplicação e pelo seed, e não há `DEFAULT
+    # CURRENT_TIMESTAMP` em lugar nenhum do schema. Fica como rede, para que um
+    # `mysql` aberto à mão e um `NOW()` digitado numa investigação respondam no
+    # mesmo fuso que a aplicação usa.
     command: --default-time-zone=+00:00
     environment:
       MARIADB_ROOT_PASSWORD: root

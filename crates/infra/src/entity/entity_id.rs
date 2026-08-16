@@ -36,6 +36,16 @@ impl EntityId {
         self.raw
     }
 
+    /// Entrega o `BIGINT` e descarta o resto.
+    ///
+    /// Existe para a devolução do `FromRow`: quando um campo posterior falha, o
+    /// derive recompõe a linha e passa este id **por valor**. O base62 já
+    /// codificado não tem para onde ir — a linha guarda a coluna, não a forma do
+    /// fio.
+    pub(crate) fn into_raw(self) -> i64 {
+        self.raw
+    }
+
     /// O id como o domínio o expõe.
     ///
     /// A primeira chamada codifica; as seguintes devolvem o que ficou guardado.

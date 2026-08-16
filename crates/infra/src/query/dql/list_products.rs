@@ -1,21 +1,15 @@
 //! A listagem paginada de produtos.
 
 use anyhow::{anyhow, Context as _};
-use sqlx::mysql::{MySql, MySqlRow};
-use sqlx::{QueryBuilder, Row as _};
+use mysql_async::{Params, Row, Value};
 
 use crate::entity::codec::Codec;
+use crate::query::column::Column;
 use crate::query::cursor::{Cursor, CursorFilters};
 use crate::query::dql::paging::Paging;
 use crate::query::views::{ProductListView, ProductViewItem};
 use crate::query::{Dql, SqlDql};
 use portmaster_domain::enums::RiskClass;
-
-/// As colunas que a View de produto precisa.
-///
-/// Nomeadas em vez de `*`: a projeção é o contrato da hidratação, e um `SELECT *`
-/// faria uma coluna nova entrar na consulta sem que ninguém a pedisse.
-const COLUMNS: &str = "p.id, p.name, p.density, p.risk_class";
 
 /// A listagem paginada de produtos.
 ///
@@ -38,10 +32,8 @@ pub fn list_products(
 ///
 /// `pub(super)` porque o DQL de item lê a mesma projeção: duplicar a leitura
 /// faria as duas divergirem na primeira coluna acrescentada.
-pub(super) fn read_item(row: &MySqlRow) -> anyhow::Result<ProductViewItem> {
-    let risk_class: i64 = row
-        .try_get("risk_class")
-        .context("coluna `risk_class` não veio como inteiro")?;
+pub(super) fn read_item(row: &Row) -> anyhow::Result<ProductViewItem> {
+    let risk_class: i64 = Column::of(row, "risk_class")?;
     let risk_class = i32::try_from(risk_class)
         .with_context(|| format!("coluna `risk_class` guarda {risk_class}, fora da faixa"))?;
 
@@ -49,16 +41,9 @@ pub(super) fn read_item(row: &MySqlRow) -> anyhow::Result<ProductViewItem> {
         .ok_or_else(|| anyhow!("{risk_class} não corresponde a variante nenhuma de RiskClass"))?;
 
     Ok(ProductViewItem {
-        id: Codec::encode_id(
-            row.try_get("id")
-                .context("coluna `id` não veio como inteiro")?,
-        ),
-        name: row
-            .try_get("name")
-            .context("coluna `name` não veio como texto")?,
-        density: row
-            .try_get("density")
-            .context("coluna `density` não veio como real")?,
+        id: Codec::encode_id(Column::of(row, "id")?),
+        name: Column::of(row, "name")?,
+        density: Column::of(row, "density")?,
         risk_class,
     })
 }
@@ -91,6 +76,31 @@ impl ListProducts {
             ("search", self.search.clone().unwrap_or_default()),
         ])
     }
+
+    /// A condição de busca, escrita uma vez e aplicada nas duas metades.
+    ///
+    /// A página e a contagem precisam descrever o mesmo conjunto: contar sem o
+    /// filtro reportaria o catálogo inteiro numa busca por uma palavra só. O
+    /// nome do parâmetro é o mesmo nas duas, e é ligado uma vez.
+    fn search_condition(search: Option<&String>, alias: &str) -> String {
+        search.map_or_else(String::new, |_| {
+            format!(" AND {alias}search_name LIKE :search")
+        })
+    }
+
+    /// Os valores que o texto da consulta nomeia.
+    fn params(&self, last_id: i64) -> Params {
+        let mut values = vec![
+            ("last_id".to_owned(), Value::Int(last_id)),
+            ("limit".to_owned(), Value::Int(i64::from(self.limit))),
+        ];
+
+        if let Some(term) = &self.search {
+            values.push(("search".to_owned(), Value::from(Paging::like(term))));
+        }
+
+        values.into()
+    }
 }
 
 impl Dql for ListProducts {
@@ -107,47 +117,34 @@ impl Dql for ListProducts {
 }
 
 impl SqlDql for ListProducts {
-    fn build(&self) -> QueryBuilder<MySql> {
+    /// As colunas são nomeadas em vez de `*`: a projeção é o contrato da
+    /// hidratação, e um `SELECT *` faria uma coluna nova entrar na consulta sem
+    /// que ninguém a pedisse.
+    fn build(&self) -> (String, Params) {
         let last_id = Cursor::last_id_or_start(self.cursor.as_deref(), &self.cursor_filters());
 
-        let mut builder = QueryBuilder::new("SELECT ");
-        builder.push(COLUMNS);
+        let sql = format!(
+            "SELECT p.id, p.name, p.density, p.risk_class, \
+             (SELECT COUNT(*) FROM products WHERE deleted_at IS NULL{total_search}) AS _total \
+             FROM products p \
+             WHERE p.id > :last_id AND p.deleted_at IS NULL{page_search} \
+             ORDER BY p.id ASC LIMIT :limit",
+            total_search = Self::search_condition(self.search.as_ref(), ""),
+            page_search = Self::search_condition(self.search.as_ref(), "p."),
+        );
 
-        builder.push(", (SELECT COUNT(*) FROM products WHERE deleted_at IS NULL");
-        if let Some(term) = &self.search {
-            builder.push(" AND search_name LIKE ");
-            builder.push_bind(Paging::like(term));
-        }
-        builder.push(") AS _total");
-
-        builder.push(" FROM products p WHERE p.id > ");
-        builder.push_bind(last_id);
-        builder.push(" AND p.deleted_at IS NULL");
-
-        if let Some(term) = &self.search {
-            builder.push(" AND p.search_name LIKE ");
-            builder.push_bind(Paging::like(term));
-        }
-
-        builder.push(" ORDER BY p.id ASC LIMIT ");
-        builder.push_bind(i64::from(self.limit));
-
-        builder
+        (sql, self.params(last_id))
     }
 
-    fn read(&self, rows: Vec<MySqlRow>) -> anyhow::Result<Self::View> {
+    fn read(&self, rows: Vec<Row>) -> anyhow::Result<Self::View> {
         let mut items = Vec::with_capacity(self.limit as usize);
         let mut total = 0;
         let mut last_id = 0;
 
         for row in &rows {
             items.push(read_item(row)?);
-            last_id = row
-                .try_get("id")
-                .context("coluna `id` não veio como inteiro")?;
-            total = row
-                .try_get("_total")
-                .context("coluna `_total` não veio como inteiro")?;
+            last_id = Column::of(row, "id")?;
+            total = Column::of(row, "_total")?;
         }
 
         Ok(ProductListView {

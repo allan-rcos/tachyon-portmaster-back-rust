@@ -1,11 +1,10 @@
 //! A listagem paginada de usuários.
 
-use anyhow::Context as _;
-use sqlx::mysql::{MySql, MySqlRow};
-use sqlx::{QueryBuilder, Row as _};
+use mysql_async::{Params, Row, Value};
 
 use crate::entity::codec::Codec;
-use crate::query::dql::get_account::{read_role_of, COLUMNS, JOIN_ROLES};
+use crate::query::column::Column;
+use crate::query::dql::get_account::read_role_of;
 use crate::query::dql::paging::Paging;
 use crate::query::views::{AccountView, UserListView};
 use crate::query::{Dql, SqlDql};
@@ -46,18 +45,23 @@ impl SqlDql for ListUsers {
     /// O `LEFT JOIN` com papéis multiplica as linhas por usuário, então um
     /// `LIMIT` externo cortaria no meio de um usuário: o vigésimo apareceria com
     /// parte dos papéis e nenhum indício de que faltou.
-    fn build(&self) -> QueryBuilder<MySql> {
-        let mut builder = QueryBuilder::new("SELECT ");
-        builder.push(COLUMNS);
-        builder.push(" FROM (SELECT id, name, email FROM users WHERE deleted_at IS NULL ORDER BY id ASC LIMIT ");
-        builder.push_bind(i64::from(self.limit));
-        builder.push(" OFFSET ");
-        builder.push_bind(i64::from(self.offset));
-        builder.push(") AS u ");
-        builder.push(JOIN_ROLES);
-        builder.push(" ORDER BY u.id ASC, r.id ASC");
+    fn build(&self) -> (String, Params) {
+        let sql = "SELECT u.id AS user_id, u.name AS user_name, u.email AS user_email, \
+             r.id AS role_id, r.name AS role_name, r.permissions AS role_permissions, \
+             (SELECT COUNT(*) FROM user_roles urc WHERE urc.role_id = r.id) \
+              AS role_user_count \
+             FROM (SELECT id, name, email FROM users WHERE deleted_at IS NULL \
+                   ORDER BY id ASC LIMIT :limit OFFSET :offset) AS u \
+             LEFT JOIN user_roles ur ON ur.user_id = u.id \
+             LEFT JOIN roles r ON r.id = ur.role_id AND r.deleted_at IS NULL \
+             ORDER BY u.id ASC, r.id ASC";
 
-        builder
+        let values = vec![
+            ("limit".to_owned(), Value::Int(i64::from(self.limit))),
+            ("offset".to_owned(), Value::Int(i64::from(self.offset))),
+        ];
+
+        (sql.to_owned(), values.into())
     }
 
     /// Agrupa o fan-out de papéis de volta em um usuário por item.
@@ -65,24 +69,18 @@ impl SqlDql for ListUsers {
     /// As linhas chegam agrupadas por usuário (`ORDER BY u.id`), então comparar
     /// com a última basta para saber se começou outro — sem mapa auxiliar e sem
     /// perder a ordem da consulta.
-    fn read(&self, rows: Vec<MySqlRow>) -> anyhow::Result<Self::View> {
+    fn read(&self, rows: Vec<Row>) -> anyhow::Result<Self::View> {
         let mut items: Vec<AccountView> = Vec::with_capacity(self.limit as usize);
 
         for row in &rows {
-            let raw: i64 = row
-                .try_get("user_id")
-                .context("coluna `user_id` não veio como inteiro")?;
+            let raw: i64 = Column::of(row, "user_id")?;
             let id = Codec::encode_id(raw);
 
             if items.last().map(|last| last.id.as_str()) != Some(id.as_str()) {
                 items.push(AccountView {
                     id,
-                    name: row
-                        .try_get("user_name")
-                        .context("coluna `user_name` não veio como texto")?,
-                    email: row
-                        .try_get("user_email")
-                        .context("coluna `user_email` não veio como texto")?,
+                    name: Column::of(row, "user_name")?,
+                    email: Column::of(row, "user_email")?,
                     roles: Vec::new(),
                 });
             }

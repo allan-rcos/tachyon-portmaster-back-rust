@@ -5,9 +5,10 @@
 //! A alternativa — uma consulta por contêiner para a carga e outra para os logs
 //! — custaria 2n idas ao banco por página.
 //!
-//! O timestamp sai como **epoch em ms**, na forma que a View guarda. Sair como
-//! texto de data obrigaria a hidratação a interpretar formato de data vindo de
-//! dentro de um JSON: duas conversões para chegar no mesmo número.
+//! O timestamp atravessa sem conversão nenhuma: a coluna guarda epoch em ms, o
+//! `JSON_OBJECT` copia o número, e é assim que a View o quer. Como data, ele
+//! sairia do JSON como texto, e a hidratação teria que interpretar formato de
+//! data para chegar no mesmo número.
 //!
 //! ## Por que a janela de recentes é sub-consulta escalar
 //!
@@ -16,14 +17,14 @@
 //! com uma correlação que o motor aceita.
 
 use anyhow::Context as _;
+use mysql_async::{Params, Row, Value as SqlValue};
 use portmaster_domain::enums::TelemetryEvent;
 use serde_json::Value;
-use sqlx::mysql::{MySql, MySqlRow};
-use sqlx::{QueryBuilder, Row as _};
 
 use crate::entity::codec::Codec;
+use crate::query::column::Column;
 use crate::query::cursor::{Cursor, CursorFilters};
-use crate::query::dql::list_containers::{read_item, COLUMNS};
+use crate::query::dql::list_containers::read_item;
 use crate::query::dql::paging::Paging;
 use crate::query::views::{
     CargoItemView, ContainerSummaryListView, ContainerSummaryViewItem, TelemetryLogView,
@@ -71,6 +72,15 @@ impl ListContainerSummaries {
             ("limit", self.limit.to_string()),
             ("id", self.id.clone().unwrap_or_default()),
         ])
+    }
+
+    /// A restrição a um contêiner só, aplicada à página e à contagem.
+    ///
+    /// O mesmo nome nas duas ocorrências: o driver o repete onde ele aparecer, e
+    /// ligar uma vez basta.
+    fn id_condition(&self, alias: &str) -> String {
+        self.raw_id
+            .map_or_else(String::new, |_| format!(" AND {alias}id = :id"))
     }
 }
 
@@ -177,66 +187,53 @@ impl Dql for ListContainerSummaries {
 }
 
 impl SqlDql for ListContainerSummaries {
-    fn build(&self) -> QueryBuilder<MySql> {
+    fn build(&self) -> (String, Params) {
         let last_id = Cursor::last_id_or_start(self.cursor.as_deref(), &self.cursor_filters());
 
-        let mut builder = QueryBuilder::new("SELECT ");
-        builder.push(COLUMNS);
-
-        builder.push(
-            ", (SELECT JSON_ARRAYAGG(JSON_OBJECT( \
-             'product_id', ci.product_id, 'product_name', p.name, \
-             'quantity', ci.quantity, 'weight', ci.weight)) \
-             FROM container_items ci \
-             INNER JOIN products p ON p.id = ci.product_id \
-             WHERE ci.container_id = c.id) AS manifest_json",
+        let sql = format!(
+            "SELECT c.id, c.code, c.current_weight, c.max_capacity, c.status, \
+             (SELECT JSON_ARRAYAGG(JSON_OBJECT( \
+              'product_id', ci.product_id, 'product_name', p.name, \
+              'quantity', ci.quantity, 'weight', ci.weight)) \
+              FROM container_items ci \
+              INNER JOIN products p ON p.id = ci.product_id \
+              WHERE ci.container_id = c.id) AS manifest_json, \
+             (SELECT JSON_ARRAYAGG(JSON_OBJECT( \
+              'id', t.id, 'event', t.event, 'description', t.description, \
+              'timestamp', t.timestamp)) \
+              FROM telemetry_logs t \
+              WHERE t.container_id = c.id \
+              AND t.id >= COALESCE((SELECT t2.id FROM telemetry_logs t2 \
+              WHERE t2.container_id = c.id ORDER BY t2.id DESC LIMIT 1 OFFSET {window}), 0)) AS logs_json, \
+             (SELECT COUNT(*) FROM containers WHERE deleted_at IS NULL{total_id}) AS _total \
+             FROM containers c \
+             WHERE c.id > :last_id AND c.deleted_at IS NULL{page_id} \
+             ORDER BY c.id ASC LIMIT :limit",
+            window = RECENT_LOGS - 1,
+            total_id = self.id_condition(""),
+            page_id = self.id_condition("c."),
         );
 
-        builder.push(format!(
-            ", (SELECT JSON_ARRAYAGG(JSON_OBJECT( \
-             'id', t.id, 'event', t.event, 'description', t.description, \
-             'timestamp', CAST(UNIX_TIMESTAMP(t.timestamp) * 1000 AS SIGNED))) \
-             FROM telemetry_logs t \
-             WHERE t.container_id = c.id \
-             AND t.id >= COALESCE((SELECT t2.id FROM telemetry_logs t2 \
-             WHERE t2.container_id = c.id ORDER BY t2.id DESC LIMIT 1 OFFSET {}), 0)) AS logs_json",
-            RECENT_LOGS - 1
-        ));
-
-        builder.push(", (SELECT COUNT(*) FROM containers WHERE deleted_at IS NULL");
-        if let Some(id) = self.raw_id {
-            builder.push(" AND id = ");
-            builder.push_bind(id);
-        }
-        builder.push(") AS _total");
-
-        builder.push(" FROM containers c WHERE c.id > ");
-        builder.push_bind(last_id);
-        builder.push(" AND c.deleted_at IS NULL");
+        let mut values = vec![
+            ("last_id".to_owned(), SqlValue::Int(last_id)),
+            ("limit".to_owned(), SqlValue::Int(i64::from(self.limit))),
+        ];
 
         if let Some(id) = self.raw_id {
-            builder.push(" AND c.id = ");
-            builder.push_bind(id);
+            values.push(("id".to_owned(), SqlValue::Int(id)));
         }
 
-        builder.push(" ORDER BY c.id ASC LIMIT ");
-        builder.push_bind(i64::from(self.limit));
-
-        builder
+        (sql, values.into())
     }
 
-    fn read(&self, rows: Vec<MySqlRow>) -> anyhow::Result<Self::View> {
+    fn read(&self, rows: Vec<Row>) -> anyhow::Result<Self::View> {
         let mut items = Vec::with_capacity(self.limit as usize);
         let mut total = 0;
         let mut last_id = 0;
 
         for row in &rows {
-            let manifest_json: Option<String> = row
-                .try_get("manifest_json")
-                .context("coluna `manifest_json` não veio como texto opcional")?;
-            let logs_json: Option<String> = row
-                .try_get("logs_json")
-                .context("coluna `logs_json` não veio como texto opcional")?;
+            let manifest_json: Option<String> = Column::of(row, "manifest_json")?;
+            let logs_json: Option<String> = Column::of(row, "logs_json")?;
 
             items.push(ContainerSummaryViewItem {
                 container: read_item(row)?,
@@ -244,12 +241,8 @@ impl SqlDql for ListContainerSummaries {
                 recent_logs: read_logs(logs_json.as_deref())?,
             });
 
-            last_id = row
-                .try_get("id")
-                .context("coluna `id` não veio como inteiro")?;
-            total = row
-                .try_get("_total")
-                .context("coluna `_total` não veio como inteiro")?;
+            last_id = Column::of(row, "id")?;
+            total = Column::of(row, "_total")?;
         }
 
         Ok(ContainerSummaryListView {

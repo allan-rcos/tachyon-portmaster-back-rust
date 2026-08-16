@@ -75,14 +75,25 @@ impl Dql for GetProductDql {
 }
 
 impl SqlDql for GetProductDql {
-    fn build(&self) -> SqlQuery { … }              // a consulta
-    fn read(&self, rows: Vec<MySqlRow>) -> … { … } // a hidratação
+    fn build(&self) -> (String, Params) { … }  // a consulta e os valores
+    fn read(&self, rows: Vec<Row>) -> … { … }  // a hidratação
 }
 ```
 
 **As colunas são nomeadas, nunca `SELECT *`.** A projeção é o contrato da
-hidratação: um `*` faria uma coluna nova entrar na consulta sem ninguém pedir. O
-padrão é um `const COLUMNS` no topo do arquivo.
+hidratação: um `*` faria uma coluna nova entrar na consulta sem ninguém pedir.
+
+**A consulta nasce inteira dentro do `build`, e nunca numa `const`.** Concatenar
+é permitido — é assim que um filtro condicional se monta — desde que seja dentro
+do método que executa a consulta. Um pedaço de SQL num item de módulo é um pedaço
+que outro arquivo importa pela metade, e aí duas consultas passam a mudar juntas
+sem que nada diga isso. O que **é** compartilhado entre arquivos é a hidratação
+(`read_item`), que é leitura de linha e não consulta.
+
+**Os parâmetros são nomeados (`:last_id`), não `?` posicional.** Um valor que
+aparece duas vezes no texto — o filtro de busca, que entra na página e no
+`COUNT(*)` — é ligado uma vez só, e um filtro condicional deixa de depender da
+ordem em que foi escrito.
 
 **O filtro de soft-delete é seu.** `deleted_at IS NULL` não vem de graça; sem
 ele, um registro removido reaparece na leitura.
@@ -98,11 +109,15 @@ quem sabe que uma escrita aconteceu é o caso de uso.
 
 ## Onde as coisas surpreendem
 
-**Todo horário é UTC, e isso é fixado no pool.** As colunas são `DATETIME`, que o
-MariaDB guarda sem converter, e o fuso da sessão decide o que `CURRENT_TIMESTAMP`
-vale no INSERT. `database/pool.rs` fixa `+00:00` **depois** do parse da URI —
-antes, uma `?timezone=` na URI o sobrescreveria. `chrono::Local` está banido por
-lint.
+**Todo horário é UTC, e a coluna guarda epoch em milissegundos.** As colunas de
+tempo são `BIGINT`, e quem escreve o instante é a aplicação — não há `DEFAULT
+CURRENT_TIMESTAMP` no schema nem função de tempo do servidor em consulta nenhuma.
+A tradução `i64` ↔ `DateTime<Utc>` mora em `entity/decode.rs`, e daí para dentro
+tudo é `DateTime<Utc>` como sempre foi. `chrono::Local` está banido por lint.
+
+O pool ainda fixa a sessão em `+00:00`, **depois** do parse da URI — antes, uma
+`?timezone=` a sobrescreveria. É rede, não mecanismo: nada hoje depende do fuso
+da sessão.
 
 **`SearchKey` normaliza o texto de busca, e a coluna `search_*` guarda o
 resultado.** Buscar sem passar por ela produz zero resultados para acentuação

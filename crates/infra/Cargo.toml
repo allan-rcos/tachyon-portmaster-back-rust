@@ -11,7 +11,7 @@ description = "Adaptadores de I/O do PortMaster: MariaDB, escopo da tarefa, cach
 [dependencies]
 portmaster-domain = { path = "../domain" }
 
-sqlx = { workspace = true }
+mysql_async = { workspace = true }
 moka = { workspace = true }
 bincode = { workspace = true }
 serde = { workspace = true }

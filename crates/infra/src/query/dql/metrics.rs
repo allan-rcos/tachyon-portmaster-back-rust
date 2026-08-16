@@ -1,12 +1,22 @@
 //! O painel do pátio.
 
-use anyhow::Context as _;
+use mysql_async::{Params, Row, Value};
 use portmaster_domain::enums::ContainerStatus;
-use sqlx::mysql::{MySql, MySqlRow};
-use sqlx::{QueryBuilder, Row as _};
 
+use crate::query::column::Column;
 use crate::query::views::{MetricsView, OccupancyView};
 use crate::query::{Dql, SqlDql};
+
+/// Os quatro status contados, e o nome que cada contagem recebe na linha.
+///
+/// O nome da coluna é também o nome do parâmetro que a filtra: são a mesma
+/// contagem vista dos dois lados, e um par a menos para manter em sincronia.
+const OCCUPANCY: &[(ContainerStatus, &str)] = &[
+    (ContainerStatus::Empty, "occ_empty"),
+    (ContainerStatus::Loading, "occ_loading"),
+    (ContainerStatus::Sealed, "occ_sealed"),
+    (ContainerStatus::InTransit, "occ_in_transit"),
+];
 
 /// O painel do pátio, numa ida só ao banco.
 pub fn metrics() -> impl SqlDql<View = MetricsView> {
@@ -32,64 +42,59 @@ impl SqlDql for Metrics {
     /// rede. Os índices de status são bindados, e não interpolados, mesmo sendo
     /// constantes nossas. Interpolar número em SQL é o hábito que um dia
     /// encontra um valor que não é constante.
-    fn build(&self) -> QueryBuilder<MySql> {
-        let mut builder = QueryBuilder::new(
-            "SELECT (SELECT COUNT(*) FROM containers WHERE deleted_at IS NULL) AS total_containers",
+    fn build(&self) -> (String, Params) {
+        let occupancy = OCCUPANCY
+            .iter()
+            .map(|(_, alias)| {
+                format!(
+                    ", (SELECT COUNT(*) FROM containers \
+                     WHERE deleted_at IS NULL AND status = :{alias}) AS {alias}"
+                )
+            })
+            .collect::<Vec<_>>()
+            .concat();
+
+        let sql = format!(
+            "SELECT \
+             (SELECT COUNT(*) FROM containers WHERE deleted_at IS NULL) AS total_containers, \
+             (SELECT COUNT(*) FROM containers \
+              WHERE deleted_at IS NULL AND status <> :empty) AS active_containers, \
+             (SELECT COALESCE(SUM(current_weight), 0) \
+              FROM containers WHERE deleted_at IS NULL) AS yard_load, \
+             (SELECT COUNT(*) FROM products WHERE deleted_at IS NULL) AS registered_products\
+             {occupancy}"
         );
 
-        builder.push(", (SELECT COUNT(*) FROM containers WHERE deleted_at IS NULL AND status <> ");
-        builder.push_bind(i64::from(ContainerStatus::Empty.as_i32()));
-        builder.push(") AS active_containers");
+        let mut values = vec![(
+            "empty".to_owned(),
+            Value::Int(i64::from(ContainerStatus::Empty.as_i32())),
+        )];
 
-        builder.push(
-            ", (SELECT COALESCE(SUM(current_weight), 0) FROM containers WHERE deleted_at IS NULL) AS yard_load",
-        );
-        builder.push(
-            ", (SELECT COUNT(*) FROM products WHERE deleted_at IS NULL) AS registered_products",
-        );
-
-        for (status, alias) in [
-            (ContainerStatus::Empty, "occ_empty"),
-            (ContainerStatus::Loading, "occ_loading"),
-            (ContainerStatus::Sealed, "occ_sealed"),
-            (ContainerStatus::InTransit, "occ_in_transit"),
-        ] {
-            builder
-                .push(", (SELECT COUNT(*) FROM containers WHERE deleted_at IS NULL AND status = ");
-            builder.push_bind(i64::from(status.as_i32()));
-            builder.push(format!(") AS {alias}"));
+        for (status, alias) in OCCUPANCY {
+            values.push(((*alias).to_owned(), Value::Int(i64::from(status.as_i32()))));
         }
 
-        builder.push(" FROM DUAL");
-
-        builder
+        (sql, values.into())
     }
 
     /// Um `SELECT` de agregações sempre devolve exatamente uma linha.
     ///
     /// Sem nenhuma, o painel zerado é a leitura honesta — não há o que reportar.
-    fn read(&self, rows: Vec<MySqlRow>) -> anyhow::Result<Self::View> {
+    fn read(&self, rows: Vec<Row>) -> anyhow::Result<Self::View> {
         let Some(row) = rows.first() else {
             return Ok(MetricsView::default());
         };
 
-        let count = |column: &str| -> anyhow::Result<i64> {
-            row.try_get(column)
-                .with_context(|| format!("coluna `{column}` não veio como inteiro"))
-        };
-
         Ok(MetricsView {
-            active_containers: count("active_containers")?,
-            total_containers: count("total_containers")?,
-            yard_load: row
-                .try_get("yard_load")
-                .context("coluna `yard_load` não veio como real")?,
-            registered_products: count("registered_products")?,
+            active_containers: Column::of(row, "active_containers")?,
+            total_containers: Column::of(row, "total_containers")?,
+            yard_load: Column::of(row, "yard_load")?,
+            registered_products: Column::of(row, "registered_products")?,
             occupancy: OccupancyView {
-                empty: count("occ_empty")?,
-                loading: count("occ_loading")?,
-                sealed: count("occ_sealed")?,
-                in_transit: count("occ_in_transit")?,
+                empty: Column::of(row, "occ_empty")?,
+                loading: Column::of(row, "occ_loading")?,
+                sealed: Column::of(row, "occ_sealed")?,
+                in_transit: Column::of(row, "occ_in_transit")?,
             },
         })
     }

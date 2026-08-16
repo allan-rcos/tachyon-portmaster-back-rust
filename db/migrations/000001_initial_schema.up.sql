@@ -1,4 +1,4 @@
--- Portmaster schema (MariaDB, reached through sqlx).
+-- Portmaster schema (MariaDB, reached through mysql_async).
 --
 -- Six tables and one association. Ids are application-generated Snowflakes;
 -- only `telemetry_logs` auto-increments, because an append-only log has no
@@ -17,9 +17,9 @@
 --
 -- `BIGINT` and not `BIGINT UNSIGNED`. A Snowflake is 63 bits — timestamp, node,
 -- sequence — so it is always positive and never needs the extra bit. The driver
--- decodes an id into `i64`, and sqlx refuses to decode an UNSIGNED column into a
--- signed Rust type: the column type is what makes the read legal, not a cast at
--- the edge.
+-- decodes an id into `i64`, and an UNSIGNED column would arrive as an unsigned
+-- value needing a narrowing cast at the edge: the column type is what makes the
+-- read legal.
 --
 -- `TINYINT` for enums, holding the **ordinal**. The previous schema stored the
 -- slug (`'class-2-gases'`), which meant every read parsed a string back into a
@@ -28,9 +28,14 @@
 -- number in the column is the number the client sees. Signed, again, so it
 -- decodes into a Rust integer.
 --
--- `DATETIME` and not `TIMESTAMP`. TIMESTAMP converts on write and read against
--- the session time zone and tops out in 2038; DATETIME stores what it is given.
--- The driver pins every session to `+00:00`, so what is given is always UTC.
+-- `BIGINT` for time, holding **epoch milliseconds** — no DATETIME and no
+-- TIMESTAMP anywhere. A date type makes the stored instant depend on how it is
+-- interpreted: TIMESTAMP converts on write and read against the session time
+-- zone and tops out in 2038, and DATETIME stores a wall clock with no zone at
+-- all, correct only for as long as every writer agrees on which zone that was.
+-- An epoch is one number with one meaning, and a session variable cannot change
+-- what it says. It is also the number the wire already publishes, so the value
+-- travels from column to client without a conversion in between.
 --
 -- `DOUBLE` for weights, capacities and densities, matching the `f64` the domain
 -- computes with. DECIMAL would be right for money and is wrong here: these are
@@ -42,8 +47,13 @@
 --
 -- A **strong** entity — one that exists on its own — carries `created_at`,
 -- `updated_at` and `deleted_at`, and is removed by soft-delete: the row stays
--- and every read filters `deleted_at IS NULL`. The application never writes
--- `created_at`/`updated_at`; the column defaults do.
+-- and every read filters `deleted_at IS NULL`.
+--
+-- Every one of those instants is written by the application, and none has a
+-- column default. The domain model already stamps `Utc::now()` when it builds an
+-- entity and again on every mutation; a `DEFAULT CURRENT_TIMESTAMP` would throw
+-- that value away and record when the INSERT reached the server instead — a
+-- different instant, decided by a different clock.
 --
 -- A **weak** entity — a satellite with no meaning apart from its owner — carries
 -- only `created_at` and is removed for real. There is nothing to preserve in a
@@ -79,9 +89,9 @@ CREATE TABLE IF NOT EXISTS roles (
     -- repository. Searching `name` directly would make the filter depend on
     -- accents and case.
     search_name  VARCHAR(255) NOT NULL,
-    created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    deleted_at   DATETIME     NULL,
+    created_at   BIGINT       NOT NULL,
+    updated_at   BIGINT       NOT NULL,
+    deleted_at   BIGINT       NULL,
     PRIMARY KEY (id),
     KEY idx_roles_search_name (search_name),
     -- The shape every listing has: alive, ordered by id. Leading with
@@ -94,9 +104,9 @@ CREATE TABLE IF NOT EXISTS users (
     name           VARCHAR(255) NOT NULL,
     email          VARCHAR(255) NOT NULL,
     password_hash  VARCHAR(255) NOT NULL,
-    created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    deleted_at     DATETIME     NULL,
+    created_at     BIGINT       NOT NULL,
+    updated_at     BIGINT       NOT NULL,
+    deleted_at     BIGINT       NULL,
     live_key       BIGINT       AS (IF(deleted_at IS NULL, 0, id)) STORED,
     PRIMARY KEY (id),
     UNIQUE KEY uq_users_email_live (email, live_key),
@@ -124,9 +134,9 @@ CREATE TABLE IF NOT EXISTS products (
     -- and is a class like any other, not a null.
     risk_class   TINYINT      NOT NULL,
     search_name  VARCHAR(255) NOT NULL,
-    created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    deleted_at   DATETIME     NULL,
+    created_at   BIGINT       NOT NULL,
+    updated_at   BIGINT       NOT NULL,
+    deleted_at   BIGINT       NULL,
     PRIMARY KEY (id),
     KEY idx_products_search_name (search_name),
     KEY idx_products_live (deleted_at, id),
@@ -143,9 +153,9 @@ CREATE TABLE IF NOT EXISTS containers (
     -- Ordinal of Domain ContainerStatus / API.Fbs.Common.ContainerStatus.
     status          TINYINT      NOT NULL,
     search_code     VARCHAR(255) NOT NULL,
-    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    deleted_at      DATETIME     NULL,
+    created_at      BIGINT       NOT NULL,
+    updated_at      BIGINT       NOT NULL,
+    deleted_at      BIGINT       NULL,
     live_key        BIGINT       AS (IF(deleted_at IS NULL, 0, id)) STORED,
     PRIMARY KEY (id),
     UNIQUE KEY uq_containers_code_live (code, live_key),
@@ -164,7 +174,7 @@ CREATE TABLE IF NOT EXISTS container_items (
     product_id    BIGINT   NOT NULL,
     quantity      DOUBLE   NOT NULL DEFAULT 0,
     weight        DOUBLE   NOT NULL DEFAULT 0,
-    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at    BIGINT   NOT NULL,
     PRIMARY KEY (container_id, product_id),
     KEY idx_container_items_product (product_id),
     CONSTRAINT fk_container_items_container FOREIGN KEY (container_id) REFERENCES containers (id) ON DELETE CASCADE,
@@ -184,7 +194,7 @@ CREATE TABLE IF NOT EXISTS telemetry_logs (
     description   TEXT     NULL,
     -- When the event happened, written explicitly by the repository. Not a
     -- `created_at`: the row and the event are the same thing here.
-    timestamp     DATETIME NOT NULL,
+    timestamp     BIGINT   NOT NULL,
     PRIMARY KEY (id),
     -- Descending id inside a container is exactly how the recent window is read.
     KEY idx_telemetry_container (container_id, id),

@@ -1,15 +1,11 @@
 //! A consulta de um produto pelo id.
 
-use sqlx::mysql::{MySql, MySqlRow};
-use sqlx::QueryBuilder;
+use mysql_async::{Params, Row, Value};
 
 use crate::entity::codec::Codec;
 use crate::query::dql::list_products::read_item;
 use crate::query::views::ProductViewItem;
 use crate::query::{Dql, SqlDql};
-
-/// As colunas que a View de produto precisa.
-const COLUMNS: &str = "p.id, p.name, p.density, p.risk_class";
 
 /// Um produto pelo id.
 ///
@@ -40,17 +36,20 @@ impl Dql for GetProduct {
 }
 
 impl SqlDql for GetProduct {
-    fn build(&self) -> QueryBuilder<MySql> {
-        let mut builder = QueryBuilder::new("SELECT ");
-        builder.push(COLUMNS);
-        builder.push(" FROM products p WHERE p.id = ");
-        builder.push_bind(self.id);
-        builder.push(" AND p.deleted_at IS NULL LIMIT 1");
+    /// As colunas são nomeadas em vez de `*`: a projeção é o contrato da
+    /// hidratação, e um `SELECT *` faria uma coluna nova entrar na consulta sem
+    /// que ninguém a pedisse.
+    fn build(&self) -> (String, Params) {
+        let sql = "SELECT p.id, p.name, p.density, p.risk_class FROM products p \
+                   WHERE p.id = :id AND p.deleted_at IS NULL LIMIT 1";
 
-        builder
+        (
+            sql.to_owned(),
+            vec![("id".to_owned(), Value::Int(self.id))].into(),
+        )
     }
 
-    fn read(&self, rows: Vec<MySqlRow>) -> anyhow::Result<Self::View> {
+    fn read(&self, rows: Vec<Row>) -> anyhow::Result<Self::View> {
         rows.first().map(read_item).transpose()
     }
 }

@@ -50,11 +50,11 @@ func startMariaDB(ctx context.Context, networkName string) (testcontainers.Conta
 		// and the scheduler that fires events is off by default. Migrations
 		// create the event either way, so without this the schema would apply
 		// but the purge would silently never run.
-		// --default-time-zone matches the dev compose stack: every session,
-		// including the migrate and seed ones, evaluates CURRENT_TIMESTAMP in
-		// UTC. Without it the harness would disagree with production about what
-		// a DEFAULT-filled created_at means, and only on a machine whose Docker
-		// daemon is not itself in UTC.
+		// --default-time-zone matches the dev compose stack. Nothing depends
+		// on it: time is stored as BIGINT epoch milliseconds, written by the
+		// application, so no column is interpreted against a session zone. It
+		// is here so that a NOW() typed into a shell against this container
+		// answers the same way it would against the dev stack.
 		Cmd:          []string{"--event-scheduler=ON", "--default-time-zone=+00:00"},
 		Env:          map[string]string{"MARIADB_ROOT_PASSWORD": dbRootPass},
 		ExposedPorts: []string{"3306/tcp"},

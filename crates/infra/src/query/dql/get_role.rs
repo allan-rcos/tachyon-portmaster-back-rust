@@ -1,19 +1,11 @@
 //! A consulta de um papel pelo id.
 
-use sqlx::mysql::{MySql, MySqlRow};
-use sqlx::QueryBuilder;
+use mysql_async::{Params, Row, Value};
 
 use crate::entity::codec::Codec;
 use crate::query::dql::list_roles::read_item;
 use crate::query::views::RoleViewItem;
 use crate::query::{Dql, SqlDql};
-
-/// As colunas próprias do papel.
-const COLUMNS: &str = "r.id, r.name, r.permissions";
-
-/// Quantos usuários têm o papel.
-const USER_COUNT: &str =
-    "(SELECT COUNT(*) FROM user_roles ur WHERE ur.role_id = r.id) AS user_count";
 
 /// Um papel pelo id.
 pub fn get_role(id: &str) -> anyhow::Result<impl SqlDql<View = Option<RoleViewItem>>> {
@@ -37,19 +29,24 @@ impl Dql for GetRole {
 }
 
 impl SqlDql for GetRole {
-    fn build(&self) -> QueryBuilder<MySql> {
-        let mut builder = QueryBuilder::new("SELECT ");
-        builder.push(COLUMNS);
-        builder.push(", ");
-        builder.push(USER_COUNT);
-        builder.push(" FROM roles r WHERE r.id = ");
-        builder.push_bind(self.id);
-        builder.push(" AND r.deleted_at IS NULL LIMIT 1");
+    /// A contagem de usuários é sub-consulta correlacionada, e não `LEFT JOIN`
+    /// com `GROUP BY`.
+    ///
+    /// Com o join, um papel sem usuário nenhum sumiria da contagem, e a
+    /// agregação teria que abraçar todas as outras colunas só para sobreviver ao
+    /// `GROUP BY`.
+    fn build(&self) -> (String, Params) {
+        let sql = "SELECT r.id, r.name, r.permissions, \
+                   (SELECT COUNT(*) FROM user_roles ur WHERE ur.role_id = r.id) AS user_count \
+                   FROM roles r WHERE r.id = :id AND r.deleted_at IS NULL LIMIT 1";
 
-        builder
+        (
+            sql.to_owned(),
+            vec![("id".to_owned(), Value::Int(self.id))].into(),
+        )
     }
 
-    fn read(&self, rows: Vec<MySqlRow>) -> anyhow::Result<Self::View> {
+    fn read(&self, rows: Vec<Row>) -> anyhow::Result<Self::View> {
         rows.first().map(|row| read_item(row, "")).transpose()
     }
 }

@@ -1,7 +1,6 @@
 //! Como um repositório alcança a transação da tarefa.
 
-use sqlx::mysql::MySql;
-use sqlx::Transaction;
+use mysql_async::Transaction;
 use tokio::sync::OwnedMappedMutexGuard;
 
 /// O empréstimo da transação da tarefa.
@@ -16,7 +15,7 @@ use tokio::sync::OwnedMappedMutexGuard;
 /// `pub(super)` para não competir com o export do arquivo — quem o recebe nunca
 /// precisa nomeá-lo.
 pub(super) type TransactionGuard =
-    OwnedMappedMutexGuard<Option<Transaction<'static, MySql>>, Transaction<'static, MySql>>;
+    OwnedMappedMutexGuard<Option<Transaction<'static>>, Transaction<'static>>;
 
 /// A transação da tarefa, para quem executa SQL.
 ///

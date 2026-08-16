@@ -1,7 +1,8 @@
 //! O handle que abre a transação da tarefa.
 
 use anyhow::{anyhow, Context as _};
-use sqlx::MySqlPool;
+use mysql_async::prelude::Queryable as _;
+use mysql_async::{Pool, TxOpts};
 use tokio::sync::OwnedMutexGuard;
 
 use crate::config::InfraSecrets;
@@ -35,7 +36,7 @@ pub(in crate::scope::database) fn mariadb_unit_of_work(
 #[derive(Clone)]
 pub(in crate::scope::database) struct MariaDbUnitOfWork {
     /// De onde a transação sai quando a primeira escrita a pede.
-    pool: MySqlPool,
+    pool: Pool,
 }
 
 impl MariaDbUnitOfWork {
@@ -46,12 +47,13 @@ impl MariaDbUnitOfWork {
     /// banco inalcançável só adia a descoberta para a primeira requisição, com
     /// o processo já reportado como saudável.
     pub(in crate::scope::database) async fn ping(&self) -> anyhow::Result<()> {
-        sqlx::query("SELECT 1")
-            .execute(&self.pool)
+        self.pool
+            .get_conn()
             .await
-            .context("o MariaDB não respondeu ao SELECT de sanidade")?;
-
-        Ok(())
+            .context("o MariaDB não entregou conexão para o teste de sanidade")?
+            .ping()
+            .await
+            .context("o MariaDB não respondeu ao ping de sanidade")
     }
 }
 
@@ -63,7 +65,7 @@ impl MySqlTransaction for MariaDbUnitOfWork {
         if guard.is_none() {
             *guard = Some(
                 self.pool
-                    .begin()
+                    .start_transaction(TxOpts::default())
                     .await
                     .context("falha ao abrir transação no MariaDB")?,
             );

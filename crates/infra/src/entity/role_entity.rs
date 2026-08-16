@@ -1,20 +1,24 @@
 //! A entity de papel.
 
 use chrono::{DateTime, Utc};
+use mysql_async::prelude::FromRow;
 use portmaster_domain::domain::Role;
-use sqlx::FromRow;
 
+use crate::entity::decode::Decode;
 use crate::entity::entity_id::EntityId;
 
 /// A entity, que é também a linha de `roles`.
 ///
-/// O `FromRow` é derivado: cada conversão que antes se escrevia à mão no corpo
-/// de um `from_row` virou atributo do campo que a exige — o id pelo
-/// `try_from`, as permissões pelo `json`.
+/// O `FromRow` é derivado: cada conversão que se escreveria à mão no corpo de um
+/// `from_row` é atributo do campo que a exige — o id e os instantes pelo
+/// [`Decode`], as permissões pelo `json`.
 #[derive(Clone, FromRow)]
 pub struct RoleEntity {
     /// A identidade, nas duas formas.
-    #[sqlx(try_from = "i64")]
+    #[mysql(
+        deserialize_with = "Decode::entity_id",
+        serialize_with = "Decode::entity_id_value"
+    )]
     id: EntityId,
     /// Nome do papel.
     name: String,
@@ -23,13 +27,16 @@ pub struct RoleEntity {
     /// Uma coluna ilegível é linha corrompida, e o `json` a faz falhar. Assumir
     /// lista vazia silenciosamente seria revogar todas as permissões do papel,
     /// que é o pior desfecho possível.
-    #[sqlx(json)]
+    #[mysql(json)]
     permissions: Vec<String>,
     /// Quando a linha nasceu, em UTC.
+    #[mysql(deserialize_with = "Decode::utc", serialize_with = "Decode::utc_value")]
     created_at: DateTime<Utc>,
     /// Quando a linha mudou pela última vez, em UTC.
+    #[mysql(deserialize_with = "Decode::utc", serialize_with = "Decode::utc_value")]
     updated_at: DateTime<Utc>,
     /// Quando foi removida, ou `None` se ativa — o soft-delete.
+    #[mysql(deserialize_with = "Decode::utc_opt")]
     deleted_at: Option<DateTime<Utc>>,
 }
 

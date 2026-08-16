@@ -3,8 +3,7 @@
 use std::sync::Arc;
 
 use anyhow::Context as _;
-use sqlx::mysql::MySql;
-use sqlx::Transaction;
+use mysql_async::Transaction;
 use tokio::sync::Mutex;
 
 use crate::scope::intern::scope_slots::ScopeSlots;
@@ -17,7 +16,7 @@ use crate::scope::scope_context::{Closing, ScopeContext};
 /// concorrentes da mesma tarefa podem pedir a transação, e uma transação SQL é
 /// sequencial por natureza; `Option` porque o escopo nasce sem transação e pode
 /// morrer sem nunca ter aberto uma.
-pub(super) type Slot = Arc<Mutex<Option<Transaction<'static, MySql>>>>;
+pub(super) type Slot = Arc<Mutex<Option<Transaction<'static>>>>;
 
 /// A transação da tarefa corrente.
 pub(crate) struct MariaDbContext {
@@ -63,9 +62,9 @@ impl ScopeContext for MariaDbContext {
     /// atrás de um segundo.
     ///
     /// Cancelamento (cliente desconecta, timeout do tower) não passa por aqui,
-    /// porque não há `Drop` assíncrono. Não é vazamento: o `Drop` da
-    /// `sqlx::Transaction` enfileira o rollback na conexão ao devolvê-la ao
-    /// pool.
+    /// porque não há `Drop` assíncrono. Não é vazamento: uma transação que morre
+    /// sem confirmação é desfeita pelo próprio driver quando a conexão volta
+    /// para o pool.
     fn rollback(&self) -> Closing<'_> {
         Box::pin(async {
             let transaction = self.slot.lock().await.take();

@@ -1,9 +1,10 @@
 //! A entity de carga do manifesto.
 
 use chrono::{DateTime, Utc};
+use mysql_async::prelude::FromRow;
 use portmaster_domain::domain::ManifestCargo;
-use sqlx::FromRow;
 
+use crate::entity::decode::Decode;
 use crate::entity::entity_id::EntityId;
 
 /// A entity, que é também a linha de `container_items`.
@@ -13,16 +14,23 @@ use crate::entity::entity_id::EntityId;
 #[derive(Clone, FromRow)]
 pub struct ManifestCargoEntity {
     /// O contêiner, nas duas formas.
-    #[sqlx(try_from = "i64")]
+    #[mysql(
+        deserialize_with = "Decode::entity_id",
+        serialize_with = "Decode::entity_id_value"
+    )]
     container_id: EntityId,
     /// O produto, nas duas formas.
-    #[sqlx(try_from = "i64")]
+    #[mysql(
+        deserialize_with = "Decode::entity_id",
+        serialize_with = "Decode::entity_id_value"
+    )]
     product_id: EntityId,
     /// Quantas unidades.
     quantity: f64,
     /// O peso correspondente, já pela densidade.
     weight: f64,
     /// Quando a linha entrou no manifesto, em UTC.
+    #[mysql(deserialize_with = "Decode::utc", serialize_with = "Decode::utc_value")]
     created_at: DateTime<Utc>,
 }
 

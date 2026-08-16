@@ -1,25 +1,14 @@
 //! A listagem paginada de papéis.
 
 use anyhow::Context as _;
-use sqlx::mysql::{MySql, MySqlRow};
-use sqlx::{QueryBuilder, Row as _};
+use mysql_async::{Params, Row, Value};
 
 use crate::entity::codec::Codec;
+use crate::query::column::Column;
 use crate::query::cursor::{Cursor, CursorFilters};
 use crate::query::dql::paging::Paging;
 use crate::query::views::{RoleListView, RoleViewItem};
 use crate::query::{Dql, SqlDql};
-
-/// As colunas próprias do papel.
-const COLUMNS: &str = "r.id, r.name, r.permissions";
-
-/// Quantos usuários têm o papel.
-///
-/// Sub-consulta correlacionada e não `LEFT JOIN` + `GROUP BY`: com o join, um
-/// papel sem usuário sumiria da contagem, e a agregação teria que abraçar todas
-/// as outras colunas só para sobreviver ao `GROUP BY`.
-const USER_COUNT: &str =
-    "(SELECT COUNT(*) FROM user_roles ur WHERE ur.role_id = r.id) AS user_count";
 
 /// A listagem paginada de papéis.
 pub fn list_roles(
@@ -40,19 +29,13 @@ pub fn list_roles(
 /// da linha teriam `id` e `name` colidindo — daí o `role_`. A hidratação é a
 /// mesma de propósito: um papel é um papel, e duas leituras separadas
 /// divergiriam na primeira coluna nova.
-pub(super) fn read_item(row: &MySqlRow, prefix: &str) -> anyhow::Result<RoleViewItem> {
-    let id: i64 = row
-        .try_get(&*format!("{prefix}id"))
-        .context("coluna de id do papel não veio como inteiro")?;
+pub(super) fn read_item(row: &Row, prefix: &str) -> anyhow::Result<RoleViewItem> {
+    let id: i64 = Column::of(row, &format!("{prefix}id"))?;
 
     Ok(RoleViewItem {
         id: Codec::encode_id(id),
-        name: row
-            .try_get(&*format!("{prefix}name"))
-            .context("coluna de nome do papel não veio como texto")?,
-        user_count: row
-            .try_get(&*format!("{prefix}user_count"))
-            .context("coluna de contagem do papel não veio como inteiro")?,
+        name: Column::of(row, &format!("{prefix}name"))?,
+        user_count: Column::of(row, &format!("{prefix}user_count"))?,
         permissions: read_permissions(row, &format!("{prefix}permissions"))?,
     })
 }
@@ -63,10 +46,8 @@ pub(super) fn read_item(row: &MySqlRow, prefix: &str) -> anyhow::Result<RoleView
 /// permissão é lista de autorização, e uma entrada corrompida no meio não deve
 /// impedir de ler as outras. Descartar aqui **restringe** o que o papel concede,
 /// que é o lado seguro de errar.
-pub(super) fn read_permissions(row: &MySqlRow, column: &str) -> anyhow::Result<Vec<String>> {
-    let raw: Option<String> = row
-        .try_get(column)
-        .with_context(|| format!("coluna `{column}` não veio como JSON"))?;
+pub(super) fn read_permissions(row: &Row, column: &str) -> anyhow::Result<Vec<String>> {
+    let raw: Option<String> = Column::of(row, column)?;
 
     let Some(raw) = raw else {
         return Ok(Vec::new());
@@ -104,6 +85,16 @@ impl ListRoles {
             ("search", self.search.clone().unwrap_or_default()),
         ])
     }
+
+    /// A condição de busca, aplicada à página e à contagem.
+    ///
+    /// As duas precisam descrever o mesmo conjunto, e o nome do parâmetro é o
+    /// mesmo nos dois lugares — ligado uma vez só.
+    fn search_condition(&self, alias: &str) -> String {
+        self.search.as_ref().map_or_else(String::new, |_| {
+            format!(" AND {alias}search_name LIKE :search")
+        })
+    }
 }
 
 impl Dql for ListRoles {
@@ -120,49 +111,47 @@ impl Dql for ListRoles {
 }
 
 impl SqlDql for ListRoles {
-    fn build(&self) -> QueryBuilder<MySql> {
+    /// A contagem de usuários é sub-consulta correlacionada, e não `LEFT JOIN`
+    /// com `GROUP BY`.
+    ///
+    /// Com o join, um papel sem usuário nenhum sumiria da contagem, e a
+    /// agregação teria que abraçar todas as outras colunas só para sobreviver ao
+    /// `GROUP BY`.
+    fn build(&self) -> (String, Params) {
         let last_id = Cursor::last_id_or_start(self.cursor.as_deref(), &self.cursor_filters());
 
-        let mut builder = QueryBuilder::new("SELECT ");
-        builder.push(COLUMNS);
-        builder.push(", ");
-        builder.push(USER_COUNT);
+        let sql = format!(
+            "SELECT r.id, r.name, r.permissions, \
+             (SELECT COUNT(*) FROM user_roles ur WHERE ur.role_id = r.id) AS user_count, \
+             (SELECT COUNT(*) FROM roles WHERE deleted_at IS NULL{total_search}) AS _total \
+             FROM roles r \
+             WHERE r.id > :last_id AND r.deleted_at IS NULL{page_search} \
+             ORDER BY r.id ASC LIMIT :limit",
+            total_search = self.search_condition(""),
+            page_search = self.search_condition("r."),
+        );
 
-        builder.push(", (SELECT COUNT(*) FROM roles WHERE deleted_at IS NULL");
+        let mut values = vec![
+            ("last_id".to_owned(), Value::Int(last_id)),
+            ("limit".to_owned(), Value::Int(i64::from(self.limit))),
+        ];
+
         if let Some(term) = &self.search {
-            builder.push(" AND search_name LIKE ");
-            builder.push_bind(Paging::like(term));
-        }
-        builder.push(") AS _total");
-
-        builder.push(" FROM roles r WHERE r.id > ");
-        builder.push_bind(last_id);
-        builder.push(" AND r.deleted_at IS NULL");
-
-        if let Some(term) = &self.search {
-            builder.push(" AND r.search_name LIKE ");
-            builder.push_bind(Paging::like(term));
+            values.push(("search".to_owned(), Value::from(Paging::like(term))));
         }
 
-        builder.push(" ORDER BY r.id ASC LIMIT ");
-        builder.push_bind(i64::from(self.limit));
-
-        builder
+        (sql, values.into())
     }
 
-    fn read(&self, rows: Vec<MySqlRow>) -> anyhow::Result<Self::View> {
+    fn read(&self, rows: Vec<Row>) -> anyhow::Result<Self::View> {
         let mut items = Vec::with_capacity(self.limit as usize);
         let mut total = 0;
         let mut last_id = 0;
 
         for row in &rows {
             items.push(read_item(row, "")?);
-            last_id = row
-                .try_get("id")
-                .context("coluna `id` não veio como inteiro")?;
-            total = row
-                .try_get("_total")
-                .context("coluna `_total` não veio como inteiro")?;
+            last_id = Column::of(row, "id")?;
+            total = Column::of(row, "_total")?;
         }
 
         Ok(RoleListView {

@@ -19,7 +19,7 @@ pub trait Dql {
     /// cada filtro — e um filtro novo que ninguém somasse à chave deixaria duas
     /// consultas diferentes lendo a mesma entrada.
     ///
-    /// Não sai do SQL: o `QueryBuilder` separa o texto dos valores, e o texto
-    /// sozinho é idêntico entre duas páginas do mesmo `SELECT`.
+    /// Não sai do SQL: o texto e os valores andam separados, e o texto sozinho é
+    /// idêntico entre duas páginas do mesmo `SELECT`.
     fn cache_key(&self) -> String;
 }

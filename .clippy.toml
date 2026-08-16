@@ -16,7 +16,7 @@ allow-dbg-in-tests = true
 # de um `.await`. Toda leitura e toda escrita fazem, obrigatoriamente:
 #
 #     let mut transaction = MariadbUnitOfWork::current().await?;
-#     sqlx::query(…).execute(transaction.as_mut()).await?;
+#     transaction.exec_drop(…, params! { … }).await?;
 #
 # Não há como executar uma query na transação sem segurar o guard durante o
 # `.await` da query. Listá-lo aqui marcaria como erro os 26 pontos que são o

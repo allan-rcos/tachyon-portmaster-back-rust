@@ -1,17 +1,21 @@
 //! A entity de contêiner.
 
 use chrono::{DateTime, Utc};
+use mysql_async::prelude::FromRow;
 use portmaster_domain::domain::Container;
 use portmaster_domain::enums::ContainerStatus;
-use sqlx::FromRow;
 
+use crate::entity::decode::Decode;
 use crate::entity::entity_id::EntityId;
 
 /// A entity, que é também a linha de `containers`.
 #[derive(Clone, FromRow)]
 pub struct ContainerEntity {
     /// A identidade, nas duas formas.
-    #[sqlx(try_from = "i64")]
+    #[mysql(
+        deserialize_with = "Decode::entity_id",
+        serialize_with = "Decode::entity_id_value"
+    )]
     id: EntityId,
     /// O código do contêiner.
     code: String,
@@ -21,16 +25,22 @@ pub struct ContainerEntity {
     max_capacity: f64,
     /// O status, já como enum de domínio — a coluna guarda o índice.
     ///
-    /// O `try_from` valida o índice na leitura: um valor que não corresponde a
+    /// O [`Decode`] valida o índice na leitura: um valor que não corresponde a
     /// variante nenhuma é uma linha que o schema não deveria admitir, e escolher
     /// uma variante por aproximação afirmaria um estado que o banco não guardou.
-    #[sqlx(try_from = "i32")]
+    #[mysql(
+        deserialize_with = "Decode::container_status",
+        serialize_with = "Decode::container_status_value"
+    )]
     status: ContainerStatus,
     /// Quando a linha nasceu, em UTC.
+    #[mysql(deserialize_with = "Decode::utc", serialize_with = "Decode::utc_value")]
     created_at: DateTime<Utc>,
     /// Quando a linha mudou pela última vez, em UTC.
+    #[mysql(deserialize_with = "Decode::utc", serialize_with = "Decode::utc_value")]
     updated_at: DateTime<Utc>,
     /// Quando foi removida, ou `None` se ativa — o soft-delete.
+    #[mysql(deserialize_with = "Decode::utc_opt")]
     deleted_at: Option<DateTime<Utc>>,
 }
 

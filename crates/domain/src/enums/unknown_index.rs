@@ -8,10 +8,9 @@ use thiserror::Error;
 /// frase com dois buracos, e o que muda entre um enum e outro é só o nome que
 /// aparece nela.
 ///
-/// Existir como erro, e não como `Option`, é o que permite ao
-/// `#[sqlx(try_from = "i32")]` das entities dispensar o `ok_or_else` que cada
-/// `from_row` escrevia à mão — a mensagem passa a morar junto do enum que a
-/// justifica.
+/// Existir como erro, e não como `Option`, é o que permite à leitura de coluna
+/// das entities dispensar o `ok_or_else` que cada `from_row` escrevia à mão — a
+/// mensagem passa a morar junto do enum que a justifica.
 #[derive(Debug, Error)]
 #[error("{value} não corresponde a variante nenhuma de {enum_name}")]
 pub struct UnknownIndex {

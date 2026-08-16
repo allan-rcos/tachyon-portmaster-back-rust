@@ -1,44 +1,15 @@
 //! Persistência de usuários sobre `MariaDB`.
 
 use anyhow::Context;
+use chrono::Utc;
+use mysql_async::params;
+use mysql_async::prelude::Queryable as _;
 use portmaster_domain::domain::User;
 
 use crate::entity::codec::Codec;
 use crate::entity::user_entity::UserEntity;
 use crate::repository::{RoleRepository, UserRepository};
 use crate::scope::database::mysql_transaction::MySqlTransaction;
-
-/// `LIMIT 1` e não `COUNT(*)`: a pergunta é "existe algum", e contar todos para
-/// descobrir isso varre a tabela inteira à toa.
-const HAS_ANY: &str = "SELECT 1 FROM `users` WHERE deleted_at IS NULL LIMIT 1";
-
-/// Busca por id, já filtrando o soft-delete.
-const FIND_BY_ID: &str =
-    "SELECT id, name, email, password_hash, created_at, updated_at, deleted_at \
-     FROM `users` WHERE id = ? AND deleted_at IS NULL";
-
-/// O filtro de removidos vale também aqui: um e-mail liberado por remoção
-/// precisa poder ser reusado.
-const FIND_BY_EMAIL: &str =
-    "SELECT id, name, email, password_hash, created_at, updated_at, deleted_at \
-     FROM `users` WHERE email = ? AND deleted_at IS NULL";
-
-/// Grava a linha nova.
-const INSERT: &str = "INSERT INTO `users` (id, name, email, password_hash) VALUES (?, ?, ?, ?)";
-
-/// Atualiza a linha existente.
-const UPDATE: &str = "UPDATE `users` SET name = ?, email = ?, password_hash = ? \
-                      WHERE id = ? AND deleted_at IS NULL";
-
-/// Marca como removida em vez de apagar — o histórico continua auditável.
-const SOFT_DELETE: &str =
-    "UPDATE `users` SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL";
-
-/// Tira todos os papéis do usuário, antes de regravá-los.
-const CLEAR_ROLES: &str = "DELETE FROM `user_roles` WHERE user_id = ?";
-
-/// Liga um papel ao usuário.
-const LINK_ROLE: &str = "INSERT INTO `user_roles` (user_id, role_id) VALUES (?, ?)";
 
 /// Monta o repositório de usuários sobre o de papéis.
 ///
@@ -83,25 +54,31 @@ impl<R: RoleRepository, T> UserMariadbRepository<R, T> {
 impl<R: RoleRepository + Send + Sync, T: MySqlTransaction + Send + Sync> UserRepository
     for UserMariadbRepository<R, T>
 {
+    /// `LIMIT 1` e não `COUNT(*)`: a pergunta é "existe algum", e contar todos
+    /// para descobrir isso varre a tabela inteira à toa.
     async fn has_any(&self) -> anyhow::Result<bool> {
         let mut transaction = self.transactions.transaction().await?;
 
-        let found: Option<(i64,)> = sqlx::query_as(HAS_ANY)
-            .fetch_optional(&mut **transaction)
+        let found: Option<i64> = transaction
+            .exec_first("SELECT 1 FROM `users` WHERE deleted_at IS NULL LIMIT 1", ())
             .await
             .context("falha ao verificar se há algum usuário")?;
 
         Ok(found.is_some())
     }
 
+    /// Busca por id, já filtrando o soft-delete.
     async fn find_by_id(&self, id: &str) -> anyhow::Result<Option<Box<dyn User>>> {
         let raw_id = Codec::decode_id(id)?;
 
         let entity: Option<UserEntity> = {
             let mut transaction = self.transactions.transaction().await?;
-            sqlx::query_as(FIND_BY_ID)
-                .bind(raw_id)
-                .fetch_optional(&mut **transaction)
+            transaction
+                .exec_first(
+                    "SELECT id, name, email, password_hash, created_at, updated_at, deleted_at \
+                     FROM `users` WHERE id = :id AND deleted_at IS NULL",
+                    params! { "id" => raw_id },
+                )
                 .await
                 .with_context(|| format!("falha ao buscar o usuário {id}"))?
         };
@@ -112,12 +89,17 @@ impl<R: RoleRepository + Send + Sync, T: MySqlTransaction + Send + Sync> UserRep
         }
     }
 
+    /// O filtro de removidos vale também aqui: um e-mail liberado por remoção
+    /// precisa poder ser reusado.
     async fn find_by_email(&self, email: &str) -> anyhow::Result<Option<Box<dyn User>>> {
         let entity: Option<UserEntity> = {
             let mut transaction = self.transactions.transaction().await?;
-            sqlx::query_as(FIND_BY_EMAIL)
-                .bind(email)
-                .fetch_optional(&mut **transaction)
+            transaction
+                .exec_first(
+                    "SELECT id, name, email, password_hash, created_at, updated_at, deleted_at \
+                     FROM `users` WHERE email = :email AND deleted_at IS NULL",
+                    params! { "email" => email },
+                )
                 .await
                 .context("falha ao buscar usuário por e-mail")?
         };
@@ -128,45 +110,65 @@ impl<R: RoleRepository + Send + Sync, T: MySqlTransaction + Send + Sync> UserRep
         }
     }
 
+    /// Grava a linha nova, com os dois instantes que o modelo já carimbou.
     async fn insert(&self, user: &dyn User) -> anyhow::Result<()> {
         let entity = UserEntity::from_domain(user)?;
         let mut transaction = self.transactions.transaction().await?;
 
-        sqlx::query(INSERT)
-            .bind(entity.raw_id())
-            .bind(entity.name())
-            .bind(entity.email())
-            .bind(entity.password_hash())
-            .execute(&mut **transaction)
+        transaction
+            .exec_drop(
+                "INSERT INTO `users` (id, name, email, password_hash, created_at, updated_at) \
+                 VALUES (:id, :name, :email, :password_hash, :created_at, :updated_at)",
+                params! {
+                    "id" => entity.raw_id(),
+                    "name" => entity.name(),
+                    "email" => entity.email(),
+                    "password_hash" => entity.password_hash(),
+                    "created_at" => entity.created_at().timestamp_millis(),
+                    "updated_at" => entity.updated_at().timestamp_millis(),
+                },
+            )
             .await
             .with_context(|| format!("falha ao gravar o usuário {}", user.id()))?;
 
         Ok(())
     }
 
+    /// Atualiza a linha existente.
     async fn update(&self, user: &dyn User) -> anyhow::Result<()> {
         let entity = UserEntity::from_domain(user)?;
         let mut transaction = self.transactions.transaction().await?;
 
-        sqlx::query(UPDATE)
-            .bind(entity.name())
-            .bind(entity.email())
-            .bind(entity.password_hash())
-            .bind(entity.raw_id())
-            .execute(&mut **transaction)
+        transaction
+            .exec_drop(
+                "UPDATE `users` SET name = :name, email = :email, \
+                 password_hash = :password_hash, updated_at = :updated_at \
+                 WHERE id = :id AND deleted_at IS NULL",
+                params! {
+                    "name" => entity.name(),
+                    "email" => entity.email(),
+                    "password_hash" => entity.password_hash(),
+                    "updated_at" => entity.updated_at().timestamp_millis(),
+                    "id" => entity.raw_id(),
+                },
+            )
             .await
             .with_context(|| format!("falha ao atualizar o usuário {}", user.id()))?;
 
         Ok(())
     }
 
+    /// Marca como removido em vez de apagar — o histórico continua auditável.
     async fn delete(&self, id: &str) -> anyhow::Result<()> {
         let raw_id = Codec::decode_id(id)?;
         let mut transaction = self.transactions.transaction().await?;
 
-        sqlx::query(SOFT_DELETE)
-            .bind(raw_id)
-            .execute(&mut **transaction)
+        transaction
+            .exec_drop(
+                "UPDATE `users` SET deleted_at = :now, updated_at = :now \
+                 WHERE id = :id AND deleted_at IS NULL",
+                params! { "now" => Utc::now().timestamp_millis(), "id" => raw_id },
+            )
             .await
             .with_context(|| format!("falha ao remover o usuário {id}"))?;
 
@@ -187,17 +189,20 @@ impl<R: RoleRepository + Send + Sync, T: MySqlTransaction + Send + Sync> UserRep
 
         let mut transaction = self.transactions.transaction().await?;
 
-        sqlx::query(CLEAR_ROLES)
-            .bind(raw_user)
-            .execute(&mut **transaction)
+        transaction
+            .exec_drop(
+                "DELETE FROM `user_roles` WHERE user_id = :user_id",
+                params! { "user_id" => raw_user },
+            )
             .await
             .with_context(|| format!("falha ao limpar os papéis do usuário {user_id}"))?;
 
         for role_id in raw_roles {
-            sqlx::query(LINK_ROLE)
-                .bind(raw_user)
-                .bind(role_id)
-                .execute(&mut **transaction)
+            transaction
+                .exec_drop(
+                    "INSERT INTO `user_roles` (user_id, role_id) VALUES (:user_id, :role_id)",
+                    params! { "user_id" => raw_user, "role_id" => role_id },
+                )
                 .await
                 .with_context(|| format!("falha ao vincular papel ao usuário {user_id}"))?;
         }

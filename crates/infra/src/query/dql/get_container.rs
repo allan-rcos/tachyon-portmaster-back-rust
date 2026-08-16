@@ -1,10 +1,9 @@
 //! A consulta de um contêiner pelo id.
 
-use sqlx::mysql::{MySql, MySqlRow};
-use sqlx::QueryBuilder;
+use mysql_async::{Params, Row, Value};
 
 use crate::entity::codec::Codec;
-use crate::query::dql::list_containers::{read_item, COLUMNS};
+use crate::query::dql::list_containers::read_item;
 use crate::query::views::ContainerViewItem;
 use crate::query::{Dql, SqlDql};
 
@@ -30,17 +29,20 @@ impl Dql for GetContainer {
 }
 
 impl SqlDql for GetContainer {
-    fn build(&self) -> QueryBuilder<MySql> {
-        let mut builder = QueryBuilder::new("SELECT ");
-        builder.push(COLUMNS);
-        builder.push(" FROM containers c WHERE c.id = ");
-        builder.push_bind(self.id);
-        builder.push(" AND c.deleted_at IS NULL LIMIT 1");
+    /// As colunas são nomeadas em vez de `*`: a projeção é o contrato da
+    /// hidratação, e um `SELECT *` faria uma coluna nova entrar na consulta sem
+    /// que ninguém a pedisse.
+    fn build(&self) -> (String, Params) {
+        let sql = "SELECT c.id, c.code, c.current_weight, c.max_capacity, c.status \
+                   FROM containers c WHERE c.id = :id AND c.deleted_at IS NULL LIMIT 1";
 
-        builder
+        (
+            sql.to_owned(),
+            vec![("id".to_owned(), Value::Int(self.id))].into(),
+        )
     }
 
-    fn read(&self, rows: Vec<MySqlRow>) -> anyhow::Result<Self::View> {
+    fn read(&self, rows: Vec<Row>) -> anyhow::Result<Self::View> {
         rows.first().map(read_item).transpose()
     }
 }

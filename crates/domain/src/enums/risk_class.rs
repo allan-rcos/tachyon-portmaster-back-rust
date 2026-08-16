@@ -57,9 +57,8 @@ impl TryFrom<i32> for RiskClass {
 
     /// O mesmo que [`from_i32`](Self::from_i32), com a recusa já explicada.
     ///
-    /// É esta a forma que o `#[sqlx(try_from = "i32")]` das entities usa: a
-    /// mensagem sai daqui, de onde se sabe qual enum recusou, e não do ponto de
-    /// leitura.
+    /// É esta a forma que a leitura de coluna das entities usa: a mensagem sai
+    /// daqui, de onde se sabe qual enum recusou, e não do ponto de leitura.
     fn try_from(value: i32) -> Result<Self, Self::Error> {
         Self::from_i32(value).ok_or_else(|| UnknownIndex::new(value, "RiskClass"))
     }
