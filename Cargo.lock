@@ -2272,7 +2272,7 @@ checksum = "3d20d5497ef88037a52ff98267d066e7f11fcc5e99bbfbd58a42336193aacec3"
 
 [[package]]
 name = "portmaster-api-http"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "axum",
@@ -2304,7 +2304,7 @@ dependencies = [
 
 [[package]]
 name = "portmaster-app"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2323,7 +2323,7 @@ dependencies = [
 
 [[package]]
 name = "portmaster-domain"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "argon2",
  "base62",
@@ -2340,7 +2340,7 @@ dependencies = [
 
 [[package]]
 name = "portmaster-infra"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "base62",
@@ -4194,7 +4194,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "chrono",
  "proc-macro2",

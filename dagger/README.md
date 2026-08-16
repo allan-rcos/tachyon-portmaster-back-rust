@@ -40,7 +40,7 @@ dagger call clippy                # -D warnings; sem isso o lint não vale
 dagger call test
 dagger call lint-exports          # o xtask do próprio projeto
 dagger call doc export --path ../docs/rustdoc
-dagger call dist --version 0.1.0 export --path ../dist
+dagger call dist --version 1.0.0 export --path ../dist
 dagger call check-fbs-go
 dagger call integration-test
 ```
@@ -85,7 +85,7 @@ Doze funções. Nenhuma pede Rust instalado; `dagger call <nome> --help` lista o
 
 ```bash
 dagger call doc  export --path ../docs/rustdoc
-dagger call dist --version 0.1.0 export --path ../dist
+dagger call dist --version 1.0.0 export --path ../dist
 dagger call generate-fbs-go export --path ../tests/integration/internal/fbs
 ```
 
