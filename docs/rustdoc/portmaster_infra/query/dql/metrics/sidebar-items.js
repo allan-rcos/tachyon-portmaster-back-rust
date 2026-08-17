@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["metrics"],"struct":["Metrics"]};
+window.SIDEBAR_ITEMS = {"constant":["OCCUPANCY"],"fn":["metrics"],"struct":["Metrics"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["codec","container_entity","entity_id","manifest_cargo_entity","product_entity","role_entity","user_entity"]};
+window.SIDEBAR_ITEMS = {"mod":["codec","container_entity","decode","entity_id","manifest_cargo_entity","product_entity","role_entity","user_entity"]};

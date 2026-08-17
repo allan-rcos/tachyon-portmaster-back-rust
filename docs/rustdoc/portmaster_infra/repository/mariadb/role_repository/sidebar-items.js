@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["FIND_BY_ID","FIND_BY_USER","INSERT","SOFT_DELETE","UPDATE"],"fn":["role_repository"],"struct":["RoleMariadbRepository"]};
+window.SIDEBAR_ITEMS = {"fn":["role_repository"],"struct":["RoleMariadbRepository"]};

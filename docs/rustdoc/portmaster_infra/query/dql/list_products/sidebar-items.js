@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["COLUMNS"],"fn":["list_products","read_item"],"struct":["ListProducts"]};
+window.SIDEBAR_ITEMS = {"fn":["list_products","read_item"],"struct":["ListProducts"]};

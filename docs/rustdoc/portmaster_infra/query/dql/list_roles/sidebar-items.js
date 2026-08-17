@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["COLUMNS","USER_COUNT"],"fn":["list_roles","read_item","read_permissions"],"struct":["ListRoles"]};
+window.SIDEBAR_ITEMS = {"fn":["list_roles","read_item","read_permissions"],"struct":["ListRoles"]};

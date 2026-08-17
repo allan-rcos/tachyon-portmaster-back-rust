@@ -11,23 +11,28 @@
 <a href=#11 id=11 data-nosnippet>11</a>//!
 <a href=#12 id=12 data-nosnippet>12</a>//! ## A entity **é** a linha
 <a href=#13 id=13 data-nosnippet>13</a>//!
-<a href=#14 id=14 data-nosnippet>14</a>//! Não há `*_row.rs`, e também não há `from_row` escrito à mão: cada entity
-<a href=#15 id=15 data-nosnippet>15</a>//! deriva `sqlx::FromRow`, e o que antes se escrevia no corpo daquela função
-<a href=#16 id=16 data-nosnippet>16</a>//! virou atributo do campo que o exige — `try_from` para o id e para o índice de
-<a href=#17 id=17 data-nosnippet>17</a>//! enum, `json` para a coluna `JSON`, `default` para o campo que não é coluna.
-<a href=#18 id=18 data-nosnippet>18</a>//!
-<a href=#19 id=19 data-nosnippet>19</a>//! O ganho não é o tamanho: é que uma coluna nova passa a ser um campo, e não um
-<a href=#20 id=20 data-nosnippet>20</a>//! campo mais uma linha de leitura que pode ficar para trás.
-<a href=#21 id=21 data-nosnippet>21</a>//!
-<a href=#22 id=22 data-nosnippet>22</a>//! A identidade é um [`EntityId`](entity_id::EntityId) e não dois campos:
-<a href=#23 id=23 data-nosnippet>23</a>//! guardar `id: String` e `raw_id: i64` lado a lado deixaria os dois para serem
-<a href=#24 id=24 data-nosnippet>24</a>//! mantidos em sincronia à mão em cada construtor.
-<a href=#25 id=25 data-nosnippet>25</a>
-<a href=#26 id=26 data-nosnippet>26</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>codec;
-<a href=#27 id=27 data-nosnippet>27</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>container_entity;
-<a href=#28 id=28 data-nosnippet>28</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>entity_id;
-<a href=#29 id=29 data-nosnippet>29</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>manifest_cargo_entity;
-<a href=#30 id=30 data-nosnippet>30</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>product_entity;
-<a href=#31 id=31 data-nosnippet>31</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>role_entity;
-<a href=#32 id=32 data-nosnippet>32</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>user_entity;
+<a href=#14 id=14 data-nosnippet>14</a>//! Não há `*_row.rs`: cada entity deriva o `FromRow` do driver, e o que se
+<a href=#15 id=15 data-nosnippet>15</a>//! escreveria no corpo de um `from_row` é atributo do campo que o exige —
+<a href=#16 id=16 data-nosnippet>16</a>//! `deserialize_with` para o id, para o índice de enum e para o instante, `json`
+<a href=#17 id=17 data-nosnippet>17</a>//! para a coluna `JSON`. As conversões em si moram em
+<a href=#18 id=18 data-nosnippet>18</a>//! [`decode`](decode::Decode), uma vez cada.
+<a href=#19 id=19 data-nosnippet>19</a>//!
+<a href=#20 id=20 data-nosnippet>20</a>//! O ganho não é o tamanho: é que uma coluna nova passa a ser um campo, e não um
+<a href=#21 id=21 data-nosnippet>21</a>//! campo mais uma linha de leitura que pode ficar para trás.
+<a href=#22 id=22 data-nosnippet>22</a>//!
+<a href=#23 id=23 data-nosnippet>23</a>//! A exceção é o [`UserEntity`](user_entity::UserEntity), que tem um campo que
+<a href=#24 id=24 data-nosnippet>24</a>//! não é coluna: o derive não tem como pular um, e ele escreve o `FromRow`.
+<a href=#25 id=25 data-nosnippet>25</a>//!
+<a href=#26 id=26 data-nosnippet>26</a>//! A identidade é um [`EntityId`](entity_id::EntityId) e não dois campos:
+<a href=#27 id=27 data-nosnippet>27</a>//! guardar `id: String` e `raw_id: i64` lado a lado deixaria os dois para serem
+<a href=#28 id=28 data-nosnippet>28</a>//! mantidos em sincronia à mão em cada construtor.
+<a href=#29 id=29 data-nosnippet>29</a>
+<a href=#30 id=30 data-nosnippet>30</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>codec;
+<a href=#31 id=31 data-nosnippet>31</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>container_entity;
+<a href=#32 id=32 data-nosnippet>32</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>decode;
+<a href=#33 id=33 data-nosnippet>33</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>entity_id;
+<a href=#34 id=34 data-nosnippet>34</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>manifest_cargo_entity;
+<a href=#35 id=35 data-nosnippet>35</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>product_entity;
+<a href=#36 id=36 data-nosnippet>36</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>role_entity;
+<a href=#37 id=37 data-nosnippet>37</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>user_entity;
 </code></pre></div></section></main></body></html>

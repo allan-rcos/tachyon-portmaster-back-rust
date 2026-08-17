@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["COLUMNS","JOIN_ROLES"],"fn":["get_account","read_role_of"],"struct":["GetAccount"]};
+window.SIDEBAR_ITEMS = {"fn":["get_account","read_role_of"],"struct":["GetAccount"]};

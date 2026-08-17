@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["connect_options","open","pinned_to_utc"]};
+window.SIDEBAR_ITEMS = {"fn":["open","pool_opts","ssl_opts"]};

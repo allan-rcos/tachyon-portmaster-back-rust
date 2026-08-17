@@ -1,0 +1,34 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/app/src/event/meta_event.rs`."><title>meta_event.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="portmaster_app" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.1 (8bab26f4f 2026-07-14)" data-channel="1.97.1" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">portmaster_app/event/</div>meta_event.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! O que um caso de uso tem a dizer a um middleware.
+<a href=#2 id=2 data-nosnippet>2</a>
+<a href=#3 id=3 data-nosnippet>3</a>/// Qualquer coisa que um service precise comunicar a um middleware.
+<a href=#4 id=4 data-nosnippet>4</a>///
+<a href=#5 id=5 data-nosnippet>5</a>/// É essa a regra de admissão, e ela é ampla de propósito: um caso de uso sabe
+<a href=#6 id=6 data-nosnippet>6</a>/// algo sobre como produziu a resposta, um middleware precisa desse algo para
+<a href=#7 id=7 data-nosnippet>7</a>/// decidir o que fazer com ela, e não existe caminho entre os dois. O retorno do
+<a href=#8 id=8 data-nosnippet>8</a>/// caso de uso é a View — o que o cliente pediu —, e pendurar nele um segundo
+<a href=#9 id=9 data-nosnippet>9</a>/// valor que só a borda entende contaminaria a assinatura de todo mundo no meio.
+<a href=#10 id=10 data-nosnippet>10</a>/// Um `MetaEvent` é esse segundo canal.
+<a href=#11 id=11 data-nosnippet>11</a>///
+<a href=#12 id=12 data-nosnippet>12</a>/// Meta e não domínio: nada aqui descreve o que aconteceu no pátio. O que um
+<a href=#13 id=13 data-nosnippet>13</a>/// evento descreve é o **caminho** que a requisição tomou por dentro — se a
+<a href=#14 id=14 data-nosnippet>14</a>/// resposta saiu do cache, se uma regra caiu num ramo degradado, se algo foi
+<a href=#15 id=15 data-nosnippet>15</a>/// servido de uma fonte alternativa. Se o cliente precisa do dado como
+<a href=#16 id=16 data-nosnippet>16</a>/// informação de negócio, ele pertence à View e não a este enum.
+<a href=#17 id=17 data-nosnippet>17</a>///
+<a href=#18 id=18 data-nosnippet>18</a>/// Acrescentar um evento é acrescentar uma variante aqui e um `emit` no caso de
+<a href=#19 id=19 data-nosnippet>19</a>/// uso que a conhece. Nenhuma assinatura entre os dois muda, e nenhum middleware
+<a href=#20 id=20 data-nosnippet>20</a>/// que não se importe fica sabendo.
+<a href=#21 id=21 data-nosnippet>21</a>///
+<a href=#22 id=22 data-nosnippet>22</a>/// ## Um bit por variante
+<a href=#23 id=23 data-nosnippet>23</a>///
+<a href=#24 id=24 data-nosnippet>24</a>/// O discriminante é o índice do bit na máscara que a pilha guarda, e é por isso
+<a href=#25 id=25 data-nosnippet>25</a>/// que o enum é `#[repr(u8)]`: a representação da variante é o dado, não um
+<a href=#26 id=26 data-nosnippet>26</a>/// detalhe do compilador. Quem faz a conta é a implementação da pilha, em
+<a href=#27 id=27 data-nosnippet>27</a>/// `event/intern/`, e alargar a máscara é assunto exclusivamente dela.
+<a href=#28 id=28 data-nosnippet>28</a></span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+<a href=#29 id=29 data-nosnippet>29</a>#[repr(u8)]
+<a href=#30 id=30 data-nosnippet>30</a></span><span class="kw">pub enum </span>MetaEvent {
+<a href=#31 id=31 data-nosnippet>31</a>    <span class="doccomment">/// A View devolvida saiu do cache de leitura, e não do banco.
+<a href=#32 id=32 data-nosnippet>32</a>    </span>ViewCacheHit = <span class="number">0</span>,
+<a href=#33 id=33 data-nosnippet>33</a>}
+</code></pre></div></section></main></body></html>
