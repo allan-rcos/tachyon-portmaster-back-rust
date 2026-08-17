@@ -86,17 +86,14 @@ func SetupPool(ctx context.Context) (*Pool, func(), error) {
 	if err := buildAPIImage(ctx, repoRoot); err != nil {
 		return nil, nil, err
 	}
-
 	net, err := newNetwork(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
-
 	mariadb, mappedPort, err := startMariaDB(ctx, net.Name)
 	if err != nil {
 		return nil, nil, err
 	}
-
 	rootDB, err := sql.Open("mysql", fmt.Sprintf("root:%s@tcp(127.0.0.1:%s)/", dbRootPass, mappedPort))
 	if err != nil {
 		return nil, nil, err
@@ -123,7 +120,6 @@ func SetupPool(ctx context.Context) (*Pool, func(), error) {
 			if err != nil {
 				return err
 			}
-
 			envDB, err := sql.Open("mysql", fmt.Sprintf("root:%s@tcp(127.0.0.1:%s)/%s?parseTime=true&multiStatements=true", dbRootPass, mappedPort, dbName))
 			if err != nil {
 				return err
@@ -142,7 +138,6 @@ func SetupPool(ctx context.Context) (*Pool, func(), error) {
 	if err := g.Wait(); err != nil {
 		return nil, nil, err
 	}
-
 	ch := make(chan *Environment, size)
 	for _, e := range envs {
 		ch <- e
@@ -165,18 +160,36 @@ func SetupPool(ctx context.Context) (*Pool, func(), error) {
 	return &Pool{ch: ch}, teardown, nil
 }
 
+// defaultPoolSize is one environment per story, which is as many as can ever be
+// in use at once: the stories are the only parallel tests, and a leased
+// environment goes back to the pool when its story ends.
+//
+// It used to be GOMAXPROCS, and on an 8-core machine that provisioned eight
+// environments for three stories. The five spares were not free — measured on
+// this suite, they cost 17s to create and a further 28s to destroy, which was
+// 41% of the whole run (122.6s against 72.5s). Teardown was the larger half and
+// the easier one to miss, because nothing timed it.
+//
+// A fourth story does not break: it blocks until one of the three frees up, and
+// the run is slower rather than wrong. Bump this, or set INTEGRATION_POOL_SIZE,
+// when that trade stops being worth it.
+const defaultPoolSize = 3
+
 // poolSize is the number of {API + database} environments, overridable via
-// INTEGRATION_POOL_SIZE; it defaults to GOMAXPROCS (bounded to a sane minimum).
+// INTEGRATION_POOL_SIZE.
+//
+// Capped by GOMAXPROCS: more environments than the runtime will schedule tests
+// on is provisioning nobody can use.
 func poolSize() int {
 	if v := os.Getenv("INTEGRATION_POOL_SIZE"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
 			return n
 		}
 	}
-	if n := runtime.GOMAXPROCS(0); n >= 2 {
-		return n
+	if n := runtime.GOMAXPROCS(0); n < defaultPoolSize {
+		return max(n, 1)
 	}
-	return 2
+	return defaultPoolSize
 }
 
 func repoRoot() (string, error) {
