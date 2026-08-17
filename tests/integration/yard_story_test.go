@@ -83,24 +83,33 @@ func TestYardStory(t *testing.T) {
 		requireOK(t, c.Put(t, "/containers/"+containerID, factories.ContainerUpdate(1500)))
 	})
 
-	t.Run("a repeated read is served from the view cache", func(t *testing.T) {
-		// The PUT above invalidated the container group, so the next read is
-		// guaranteed cold. That ordering is what makes this deterministic: no
+	t.Run("a repeated listing is served from the view cache", func(t *testing.T) {
+		// A listing, and deliberately not /containers/{id}: reads by id go
+		// straight to the database on purpose, so both calls there would be a
+		// miss and the assertion would prove nothing.
+		//
+		// The PUT above invalidated the container group, so the first read here
+		// is guaranteed cold. That ordering is what makes it deterministic: no
 		// other story touches /containers, and this one is sequential.
 		//
 		// A hit and a miss return byte-identical bodies, so Cache-Status is the
 		// only place the difference is observable — which is the whole reason
 		// the header exists.
-		first := requireOK(t, c.Get(t, "/containers/"+containerID))
+		first := requireOK(t, c.Get(t, "/containers"))
 		assert.Equal(t, "portmaster; fwd=miss", first.Headers.Get("Cache-Status"),
-			"the read after a write must reach the database")
+			"the listing after a write must reach the database")
 
-		second := requireOK(t, c.Get(t, "/containers/"+containerID))
+		second := requireOK(t, c.Get(t, "/containers"))
 		assert.Equal(t, "portmaster; hit", second.Headers.Get("Cache-Status"),
 			"the repeat must be served from the view cache")
 
 		assert.Equal(t, first.Body, second.Body,
-			"a cached read must answer exactly what the cold one answered")
+			"a cached listing must answer exactly what the cold one answered")
+
+		// A read by id is the documented exception, and stays a miss twice over.
+		byID := requireOK(t, c.Get(t, "/containers/"+containerID))
+		assert.Equal(t, "portmaster; fwd=miss", byID.Headers.Get("Cache-Status"),
+			"a read by id does not go through the view cache")
 	})
 
 	t.Run("an empty container cannot be sealed", func(t *testing.T) {
