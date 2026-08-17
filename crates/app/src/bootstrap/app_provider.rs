@@ -8,6 +8,7 @@ use portmaster_infra::logging::LoggerFactory;
 use portmaster_infra::InfraProvider;
 
 use crate::config::AppSecrets;
+use crate::event::{EventProvider, MetaEventStackSubscriber};
 use crate::services::ServicesProvider;
 use crate::services::{
     AccountService, ContainerService, ManifestService, MarkService, MetadataService,
@@ -168,5 +169,15 @@ impl AppProvider {
     /// Gerador de id ordenável, para o `request_id`.
     pub fn sequential_id_generator() -> impl SequentialIdGenerator + use<> {
         DomainProvider::sequential_id_generator()
+    }
+
+    /// A pilha de eventos da tarefa, só o lado de leitura.
+    ///
+    /// O que atravessa é `MetaEventStackSubscriber` e mais nada: abrir o escopo
+    /// e perguntar o que foi registrado são assunto da apresentação, emitir não
+    /// é. O trait de escrita nem sai do crate, então esta assinatura é a única
+    /// forma de a pilha existir do lado de fora.
+    pub fn meta_event_stack() -> impl MetaEventStackSubscriber + Sync + Clone + use<> + 'static {
+        EventProvider::meta_event_stack()
     }
 }

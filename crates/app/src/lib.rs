@@ -46,11 +46,13 @@ pub mod commands;
 pub mod config;
 pub mod context;
 pub mod error;
+pub mod event;
 pub mod queries;
 pub mod services;
 
 pub use bootstrap::app_provider::AppProvider;
 pub use config::AppSecrets;
+pub use event::{MetaEvent, MetaEventStackSubscriber};
 
 // --- Reexports para a apresentação -----------------------------------------
 

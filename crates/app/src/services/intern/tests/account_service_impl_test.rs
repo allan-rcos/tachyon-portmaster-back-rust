@@ -7,6 +7,7 @@
 use portmaster_domain::error::AuthError;
 
 use super::*;
+use crate::event::EventProvider;
 use crate::tests::factories::user_context_factory::user_with;
 use crate::tests::factories::user_factory::StubUser;
 use crate::tests::mocks::auth_tm_mock::MockAuthRules;
@@ -22,7 +23,14 @@ fn service(
     auth_rules: MockAuthRules,
     views: MockViewCache,
 ) -> impl AccountService {
-    account_service(users, user_rules, auth_rules, StubQueries::never(), views)
+    account_service(
+        users,
+        user_rules,
+        auth_rules,
+        StubQueries::never(),
+        views,
+        EventProvider::meta_event_stack(),
+    )
 }
 
 /// O comando de troca de senha, com a senha atual que o teste escolheu.

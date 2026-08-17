@@ -11,6 +11,7 @@
 use portmaster_domain::error::{FieldError, RoleError as DomainRoleError};
 
 use super::*;
+use crate::event::EventProvider;
 use crate::tests::factories::role_factory::StubRole;
 use crate::tests::factories::user_context_factory::user_with;
 use crate::tests::mocks::query_repository_stub::StubQueries;
@@ -20,7 +21,13 @@ use crate::tests::mocks::view_cache_repository_mock::MockViewCache;
 
 /// O service com os quatro mocks que o teste armou.
 fn service(roles: MockRoles, role_rules: MockRoleRules, views: MockViewCache) -> impl RoleService {
-    role_service(roles, role_rules, StubQueries::never(), views)
+    role_service(
+        roles,
+        role_rules,
+        StubQueries::never(),
+        views,
+        EventProvider::meta_event_stack(),
+    )
 }
 
 /// O comando de criação, com o contexto que o teste escolheu.

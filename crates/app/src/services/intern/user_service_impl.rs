@@ -24,6 +24,7 @@ use crate::commands::user::ResetUserPasswordCommand;
 use crate::commands::user::UpdateUserCommand;
 use crate::commands::user::UpdateUserRolesCommand;
 use crate::error::{AppError, UserError};
+use crate::event::{MetaEvent, MetaEventStackPublisher};
 use crate::queries::user::GetUserQuery;
 use crate::queries::user::ListUsersQuery;
 use crate::services::MetadataService;
@@ -52,19 +53,21 @@ const CACHE_GROUP: &str = "user";
 /// Os ports chegam injetados e o que sai é o contrato: o tipo concreto não tem
 /// nome fora deste arquivo, então nada além do provider consegue depender do
 /// formato dele.
-pub(crate) fn user_service<UR, RR, T, Q, C>(
+pub(crate) fn user_service<UR, RR, T, Q, C, E>(
     users: UR,
     roles: RR,
     user_tm: T,
     queries: Q,
     views: C,
-) -> impl UserService + Sync + Clone + use<UR, RR, T, Q, C> + 'static
+    events: E,
+) -> impl UserService + Sync + Clone + use<UR, RR, T, Q, C, E> + 'static
 where
     UR: UserRepository + Send + Sync + Clone + 'static,
     RR: RoleRepository + Send + Sync + Clone + 'static,
     T: UserTM + Send + Sync + Clone + 'static,
     Q: QueryRepository + Send + Sync + Clone + 'static,
     C: ViewCacheRepository + Send + Sync + Clone + 'static,
+    E: MetaEventStackPublisher + Send + Sync + Clone + 'static,
 {
     UserServiceImpl {
         users,
@@ -72,12 +75,13 @@ where
         user_tm,
         queries,
         views,
+        events,
     }
 }
 
 /// A implementação, genérica sobre os ports que consome.
 #[derive(Clone)]
-struct UserServiceImpl<UR, RR, T, Q, C> {
+struct UserServiceImpl<UR, RR, T, Q, C, E> {
     /// Persistência de usuários.
     users: UR,
     /// Persistência de papéis.
@@ -88,9 +92,11 @@ struct UserServiceImpl<UR, RR, T, Q, C> {
     queries: Q,
     /// O cache do lado de leitura.
     views: C,
+    /// Onde um acerto de cache é registrado, para quem quiser saber.
+    events: E,
 }
 
-impl<UR, RR, T, Q, C> UserServiceImpl<UR, RR, T, Q, C>
+impl<UR, RR, T, Q, C, E> UserServiceImpl<UR, RR, T, Q, C, E>
 where
     RR: RoleRepository + Send + Sync,
 {
@@ -117,13 +123,14 @@ where
     }
 }
 
-impl<UR, RR, T, Q, C> UserService for UserServiceImpl<UR, RR, T, Q, C>
+impl<UR, RR, T, Q, C, E> UserService for UserServiceImpl<UR, RR, T, Q, C, E>
 where
     UR: UserRepository + Send + Sync,
     RR: RoleRepository + Send + Sync,
     T: UserTM + Send + Sync,
     Q: QueryRepository + Send + Sync,
     C: ViewCacheRepository + Send + Sync,
+    E: MetaEventStackPublisher + Send + Sync,
 {
     async fn declare_permissions<M: MetadataService + Send + Sync>(
         &self,
@@ -341,6 +348,7 @@ where
         let key = dql.cache_key();
 
         if let Some(hit) = self.views.get(CACHE_GROUP, &key).await? {
+            self.events.emit(MetaEvent::ViewCacheHit);
             return Ok(hit);
         }
 

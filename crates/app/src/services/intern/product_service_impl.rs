@@ -26,6 +26,7 @@ use crate::commands::product::CreateProductCommand;
 use crate::commands::product::DeleteProductCommand;
 use crate::commands::product::UpdateProductCommand;
 use crate::error::{AppError, ProductError};
+use crate::event::{MetaEvent, MetaEventStackPublisher};
 use crate::queries::product::GetProductQuery;
 use crate::queries::product::ListProductsQuery;
 use crate::services::MetadataService;
@@ -53,23 +54,26 @@ const CACHE_GROUP: &str = "product";
 /// Os ports chegam injetados e o que sai é o contrato: o tipo concreto não tem
 /// nome fora deste arquivo, então nada além do provider consegue depender do
 /// formato dele.
-pub(crate) fn product_service<R, T, Q, C>(
+pub(crate) fn product_service<R, T, Q, C, E>(
     products: R,
     product_tm: T,
     queries: Q,
     views: C,
-) -> impl ProductService + Sync + Clone + use<R, T, Q, C> + 'static
+    events: E,
+) -> impl ProductService + Sync + Clone + use<R, T, Q, C, E> + 'static
 where
     R: ProductRepository + Send + Sync + Clone + 'static,
     T: ProductTM + Send + Sync + Clone + 'static,
     Q: QueryRepository + Send + Sync + Clone + 'static,
     C: ViewCacheRepository + Send + Sync + Clone + 'static,
+    E: MetaEventStackPublisher + Send + Sync + Clone + 'static,
 {
     ProductServiceImpl {
         products,
         product_tm,
         queries,
         views,
+        events,
     }
 }
 
@@ -79,7 +83,7 @@ where
 /// monomorfiza o grafo inteiro. Um caso de uso que não pudesse ser montado seria
 /// erro de compilação, não surpresa no primeiro request.
 #[derive(Clone)]
-struct ProductServiceImpl<R, T, Q, C> {
+struct ProductServiceImpl<R, T, Q, C, E> {
     /// Persistência de produtos.
     products: R,
     /// As regras de produto.
@@ -88,14 +92,17 @@ struct ProductServiceImpl<R, T, Q, C> {
     queries: Q,
     /// O cache do lado de leitura.
     views: C,
+    /// Onde um acerto de cache é registrado, para quem quiser saber.
+    events: E,
 }
 
-impl<R, T, Q, C> ProductService for ProductServiceImpl<R, T, Q, C>
+impl<R, T, Q, C, E> ProductService for ProductServiceImpl<R, T, Q, C, E>
 where
     R: ProductRepository + Send + Sync,
     T: ProductTM + Send + Sync,
     Q: QueryRepository + Send + Sync,
     C: ViewCacheRepository + Send + Sync,
+    E: MetaEventStackPublisher + Send + Sync,
 {
     async fn declare_permissions<M: MetadataService + Send + Sync>(
         &self,
@@ -249,6 +256,7 @@ where
         let key = dql.cache_key();
 
         if let Some(hit) = self.views.get(CACHE_GROUP, &key).await? {
+            self.events.emit(MetaEvent::ViewCacheHit);
             return Ok(hit);
         }
 

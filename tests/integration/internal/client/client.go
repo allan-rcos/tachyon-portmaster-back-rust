@@ -21,10 +21,16 @@ type Client struct {
 	http    *http.Client
 }
 
-// Response is a decoded HTTP response: status plus the raw FlatBuffers body.
+// Response is a decoded HTTP response: status, headers, and the raw
+// FlatBuffers body.
+//
+// Headers is kept because some behaviour is only observable there. Cache-Status
+// is the case that forced it: whether a read was served from the view cache is
+// invisible in the body, since a hit and a miss return byte-identical payloads.
 type Response struct {
-	Status int
-	Body   []byte
+	Status  int
+	Headers http.Header
+	Body    []byte
 }
 
 // New returns a client for the given base URL with its own cookie jar.
@@ -64,7 +70,7 @@ func (c *Client) do(t *testing.T, method, path string, body []byte) Response {
 		t.Fatalf("read body %s %s: %v", method, path, err)
 	}
 
-	return Response{Status: resp.StatusCode, Body: data}
+	return Response{Status: resp.StatusCode, Headers: resp.Header, Body: data}
 }
 
 // Cookie returns the value of a cookie currently held in the jar, or "" when it

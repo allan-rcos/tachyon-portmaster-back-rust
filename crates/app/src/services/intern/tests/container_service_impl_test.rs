@@ -9,6 +9,7 @@ use portmaster_domain::enums::ContainerStatus;
 use portmaster_domain::error::ContainerError as DomainContainerError;
 
 use super::*;
+use crate::event::EventProvider;
 use crate::tests::factories::container_factory::StubContainer;
 use crate::tests::factories::user_context_factory::user_with;
 use crate::tests::mocks::container_repository_mock::MockContainers;
@@ -22,7 +23,13 @@ fn service(
     container_rules: MockContainerRules,
     views: MockViewCache,
 ) -> impl ContainerService {
-    container_service(containers, container_rules, StubQueries::never(), views)
+    container_service(
+        containers,
+        container_rules,
+        StubQueries::never(),
+        views,
+        EventProvider::meta_event_stack(),
+    )
 }
 
 /// O comando que carrega só id e contexto.

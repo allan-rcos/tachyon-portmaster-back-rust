@@ -11,6 +11,7 @@ use portmaster_infra::scope::{MasterScope, UnitOfWork};
 use crate::commands::account::ChangePasswordCommand;
 use crate::commands::account::UpdateAccountCommand;
 use crate::error::AccountError;
+use crate::event::{MetaEvent, MetaEventStackPublisher};
 use crate::queries::account::GetAccountQuery;
 use crate::services::AccountService;
 
@@ -22,19 +23,21 @@ const CACHE_GROUP: &str = "account";
 /// Os ports chegam injetados e o que sai é o contrato: o tipo concreto não tem
 /// nome fora deste arquivo, então nada além do provider consegue depender do
 /// formato dele.
-pub(crate) fn account_service<R, T, A, Q, C>(
+pub(crate) fn account_service<R, T, A, Q, C, E>(
     users: R,
     user_tm: T,
     auth_tm: A,
     queries: Q,
     views: C,
-) -> impl AccountService + Sync + Clone + use<R, T, A, Q, C> + 'static
+    events: E,
+) -> impl AccountService + Sync + Clone + use<R, T, A, Q, C, E> + 'static
 where
     R: UserRepository + Send + Sync + Clone + 'static,
     T: UserTM + Send + Sync + Clone + 'static,
     A: AuthTM + Send + Sync + Clone + 'static,
     Q: QueryRepository + Send + Sync + Clone + 'static,
     C: ViewCacheRepository + Send + Sync + Clone + 'static,
+    E: MetaEventStackPublisher + Send + Sync + Clone + 'static,
 {
     AccountServiceImpl {
         users,
@@ -42,13 +45,14 @@ where
         auth_tm,
         queries,
         views,
+        events,
     }
 }
 
 /// A chave do perfil de quem está na sessão.
 /// A implementação, genérica sobre os ports que consome.
 #[derive(Clone)]
-struct AccountServiceImpl<R, T, A, Q, C> {
+struct AccountServiceImpl<R, T, A, Q, C, E> {
     /// Persistência de usuários.
     users: R,
     /// As regras de usuário — quem constrói e valida.
@@ -59,15 +63,18 @@ struct AccountServiceImpl<R, T, A, Q, C> {
     queries: Q,
     /// O cache do lado de leitura.
     views: C,
+    /// Onde um acerto de cache é registrado, para quem quiser saber.
+    events: E,
 }
 
-impl<R, T, A, Q, C> AccountService for AccountServiceImpl<R, T, A, Q, C>
+impl<R, T, A, Q, C, E> AccountService for AccountServiceImpl<R, T, A, Q, C, E>
 where
     R: UserRepository + Send + Sync,
     T: UserTM + Send + Sync,
     A: AuthTM + Send + Sync,
     Q: QueryRepository + Send + Sync,
     C: ViewCacheRepository + Send + Sync,
+    E: MetaEventStackPublisher + Send + Sync,
 {
     /// O perfil de quem está na sessão.
     ///
@@ -80,6 +87,7 @@ where
         let key = dql.cache_key();
 
         if let Some(hit) = self.views.get(CACHE_GROUP, &key).await? {
+            self.events.emit(MetaEvent::ViewCacheHit);
             return Ok(hit);
         }
 

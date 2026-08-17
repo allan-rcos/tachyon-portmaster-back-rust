@@ -23,6 +23,7 @@ use crate::commands::container::CreateContainerCommand;
 use crate::commands::container::UpdateContainerCommand;
 use crate::commands::metadata::RegisterPermissionCommand;
 use crate::error::{AppError, ContainerError};
+use crate::event::{MetaEvent, MetaEventStackPublisher};
 use crate::queries::container::GetContainerQuery;
 use crate::queries::container::ListContainerSummariesQuery;
 use crate::queries::container::ListContainersQuery;
@@ -55,29 +56,32 @@ const CACHE_GROUP: &str = "container";
 /// Os ports chegam injetados e o que sai é o contrato: o tipo concreto não tem
 /// nome fora deste arquivo, então nada além do provider consegue depender do
 /// formato dele.
-pub(crate) fn container_service<R, T, Q, C>(
+pub(crate) fn container_service<R, T, Q, C, E>(
     containers: R,
     container_tm: T,
     queries: Q,
     views: C,
-) -> impl ContainerService + Sync + Clone + use<R, T, Q, C> + 'static
+    events: E,
+) -> impl ContainerService + Sync + Clone + use<R, T, Q, C, E> + 'static
 where
     R: ContainerRepository + Send + Sync + Clone + 'static,
     T: ContainerTM + Send + Sync + Clone + 'static,
     Q: QueryRepository + Send + Sync + Clone + 'static,
     C: ViewCacheRepository + Send + Sync + Clone + 'static,
+    E: MetaEventStackPublisher + Send + Sync + Clone + 'static,
 {
     ContainerServiceImpl {
         containers,
         container_tm,
         queries,
         views,
+        events,
     }
 }
 
 /// A implementação, genérica sobre os ports que consome.
 #[derive(Clone)]
-struct ContainerServiceImpl<R, T, Q, C> {
+struct ContainerServiceImpl<R, T, Q, C, E> {
     /// Persistência de contêineres.
     containers: R,
     /// As regras de contêiner.
@@ -86,9 +90,11 @@ struct ContainerServiceImpl<R, T, Q, C> {
     queries: Q,
     /// O cache do lado de leitura.
     views: C,
+    /// Onde um acerto de cache é registrado, para quem quiser saber.
+    events: E,
 }
 
-impl<R, T, Q, C> ContainerServiceImpl<R, T, Q, C>
+impl<R, T, Q, C, E> ContainerServiceImpl<R, T, Q, C, E>
 where
     R: ContainerRepository + Send + Sync,
     T: ContainerTM + Send + Sync,
@@ -125,12 +131,13 @@ where
     }
 }
 
-impl<R, T, Q, C> ContainerService for ContainerServiceImpl<R, T, Q, C>
+impl<R, T, Q, C, E> ContainerService for ContainerServiceImpl<R, T, Q, C, E>
 where
     R: ContainerRepository + Send + Sync,
     T: ContainerTM + Send + Sync,
     Q: QueryRepository + Send + Sync,
     C: ViewCacheRepository + Send + Sync,
+    E: MetaEventStackPublisher + Send + Sync,
 {
     async fn declare_permissions<M: MetadataService + Send + Sync>(
         &self,
@@ -283,6 +290,7 @@ where
         let key = dql.cache_key();
 
         if let Some(hit) = self.views.get(CACHE_GROUP, &key).await? {
+            self.events.emit(MetaEvent::ViewCacheHit);
             return Ok(hit);
         }
 
@@ -315,6 +323,7 @@ where
         let key = dql.cache_key();
 
         if let Some(hit) = self.views.get(CACHE_GROUP, &key).await? {
+            self.events.emit(MetaEvent::ViewCacheHit);
             return Ok(hit);
         }
 

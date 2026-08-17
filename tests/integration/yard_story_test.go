@@ -83,6 +83,26 @@ func TestYardStory(t *testing.T) {
 		requireOK(t, c.Put(t, "/containers/"+containerID, factories.ContainerUpdate(1500)))
 	})
 
+	t.Run("a repeated read is served from the view cache", func(t *testing.T) {
+		// The PUT above invalidated the container group, so the next read is
+		// guaranteed cold. That ordering is what makes this deterministic: no
+		// other story touches /containers, and this one is sequential.
+		//
+		// A hit and a miss return byte-identical bodies, so Cache-Status is the
+		// only place the difference is observable — which is the whole reason
+		// the header exists.
+		first := requireOK(t, c.Get(t, "/containers/"+containerID))
+		assert.Equal(t, "portmaster; fwd=miss", first.Headers.Get("Cache-Status"),
+			"the read after a write must reach the database")
+
+		second := requireOK(t, c.Get(t, "/containers/"+containerID))
+		assert.Equal(t, "portmaster; hit", second.Headers.Get("Cache-Status"),
+			"the repeat must be served from the view cache")
+
+		assert.Equal(t, first.Body, second.Body,
+			"a cached read must answer exactly what the cold one answered")
+	})
+
 	t.Run("an empty container cannot be sealed", func(t *testing.T) {
 		resp := c.Post(t, "/containers/"+containerID+"/seal", nil)
 		assert.Equal(t, http.StatusConflict, resp.Status,

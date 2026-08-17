@@ -20,6 +20,7 @@ use crate::commands::metadata::RegisterPermissionCommand;
 use crate::commands::role::CreateRoleCommand;
 use crate::commands::role::UpdateRolePermissionsCommand;
 use crate::error::{AppError, RoleError};
+use crate::event::{MetaEvent, MetaEventStackPublisher};
 use crate::queries::role::GetRoleQuery;
 use crate::queries::role::ListRolesQuery;
 use crate::services::MetadataService;
@@ -44,29 +45,32 @@ const CACHE_GROUP: &str = "role";
 /// Os ports chegam injetados e o que sai é o contrato: o tipo concreto não tem
 /// nome fora deste arquivo, então nada além do provider consegue depender do
 /// formato dele.
-pub(crate) fn role_service<R, T, Q, C>(
+pub(crate) fn role_service<R, T, Q, C, E>(
     roles: R,
     role_tm: T,
     queries: Q,
     views: C,
-) -> impl RoleService + Sync + Clone + use<R, T, Q, C> + 'static
+    events: E,
+) -> impl RoleService + Sync + Clone + use<R, T, Q, C, E> + 'static
 where
     R: RoleRepository + Send + Sync + Clone + 'static,
     T: RoleTM + Send + Sync + Clone + 'static,
     Q: QueryRepository + Send + Sync + Clone + 'static,
     C: ViewCacheRepository + Send + Sync + Clone + 'static,
+    E: MetaEventStackPublisher + Send + Sync + Clone + 'static,
 {
     RoleServiceImpl {
         roles,
         role_tm,
         queries,
         views,
+        events,
     }
 }
 
 /// A implementação, genérica sobre os ports que consome.
 #[derive(Clone)]
-struct RoleServiceImpl<R, T, Q, C> {
+struct RoleServiceImpl<R, T, Q, C, E> {
     /// Persistência de papéis.
     roles: R,
     /// As regras de papel.
@@ -75,14 +79,17 @@ struct RoleServiceImpl<R, T, Q, C> {
     queries: Q,
     /// O cache do lado de leitura.
     views: C,
+    /// Onde um acerto de cache é registrado, para quem quiser saber.
+    events: E,
 }
 
-impl<R, T, Q, C> RoleService for RoleServiceImpl<R, T, Q, C>
+impl<R, T, Q, C, E> RoleService for RoleServiceImpl<R, T, Q, C, E>
 where
     R: RoleRepository + Send + Sync,
     T: RoleTM + Send + Sync,
     Q: QueryRepository + Send + Sync,
     C: ViewCacheRepository + Send + Sync,
+    E: MetaEventStackPublisher + Send + Sync,
 {
     async fn declare_permissions<M: MetadataService + Send + Sync>(
         &self,
@@ -184,6 +191,7 @@ where
         let key = dql.cache_key();
 
         if let Some(hit) = self.views.get(CACHE_GROUP, &key).await? {
+            self.events.emit(MetaEvent::ViewCacheHit);
             return Ok(hit);
         }
 

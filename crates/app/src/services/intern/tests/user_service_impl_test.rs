@@ -3,6 +3,7 @@
 use portmaster_domain::error::{FieldError, UserError as DomainUserError};
 
 use super::*;
+use crate::event::EventProvider;
 use crate::tests::factories::role_factory::StubRole;
 use crate::tests::factories::user_context_factory::user_with;
 use crate::tests::factories::user_factory::StubUser;
@@ -19,7 +20,14 @@ fn service(
     user_rules: MockUserRules,
     views: MockViewCache,
 ) -> impl UserService {
-    user_service(users, roles, user_rules, StubQueries::never(), views)
+    user_service(
+        users,
+        roles,
+        user_rules,
+        StubQueries::never(),
+        views,
+        EventProvider::meta_event_stack(),
+    )
 }
 
 /// O comando de criação, com o contexto e os papéis que o teste escolheu.

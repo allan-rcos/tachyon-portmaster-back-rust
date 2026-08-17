@@ -4,6 +4,7 @@ use portmaster_domain::enums::RiskClass;
 use portmaster_domain::error::{FieldError, ProductError as DomainProductError};
 
 use super::*;
+use crate::event::EventProvider;
 use crate::tests::factories::product_factory::StubProduct;
 use crate::tests::factories::user_context_factory::user_with;
 use crate::tests::mocks::product_repository_mock::MockProducts;
@@ -17,7 +18,13 @@ fn service(
     product_rules: MockProductRules,
     views: MockViewCache,
 ) -> impl ProductService {
-    product_service(products, product_rules, StubQueries::never(), views)
+    product_service(
+        products,
+        product_rules,
+        StubQueries::never(),
+        views,
+        EventProvider::meta_event_stack(),
+    )
 }
 
 /// O comando de cadastro, com o contexto que o teste escolheu.

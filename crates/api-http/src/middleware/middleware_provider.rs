@@ -4,10 +4,12 @@ use std::time::Duration;
 
 use portmaster_app::AppProvider;
 
+use crate::middleware::intern::cache_status_layer::CacheStatusLayer;
 use crate::middleware::intern::cookie_layer::CookieLayer;
 use crate::middleware::intern::decode_layer::DecodeLayer;
 use crate::middleware::intern::encode_layer::EncodeLayer;
 use crate::middleware::intern::logging_layer::LoggingLayer;
+use crate::middleware::intern::meta_event_layer::MetaEventLayer;
 use crate::middleware::intern::recover_layer::RecoverLayer;
 use crate::middleware::intern::request_id_layer::RequestIdLayer;
 use crate::middleware::intern::session_layer::SessionLayer;
@@ -65,6 +67,21 @@ impl MiddlewareProvider {
     /// Registra a requisição e o que ela respondeu.
     pub(crate) fn logging() -> LoggingLayer<impl portmaster_app::Logger> {
         LoggingLayer::new(&AppProvider::logger_factory())
+    }
+
+    /// Abre o escopo da pilha de eventos desta requisição.
+    ///
+    /// Precisa ser mais externo que todo layer que pergunte à pilha — hoje, o
+    /// [`Self::cache_status`].
+    pub(crate) fn meta_events(
+    ) -> MetaEventLayer<impl portmaster_app::MetaEventStackSubscriber + Clone + use<>> {
+        MetaEventLayer::new(AppProvider::meta_event_stack())
+    }
+
+    /// Publica se a resposta saiu do cache de leitura.
+    pub(crate) fn cache_status(
+    ) -> CacheStatusLayer<impl portmaster_app::MetaEventStackSubscriber + Clone + use<>> {
+        CacheStatusLayer::new(AppProvider::meta_event_stack())
     }
 
     /// Abre o escopo com o `request_id` desta requisição.

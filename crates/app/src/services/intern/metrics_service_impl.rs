@@ -16,6 +16,7 @@ use portmaster_infra::scope::{MasterScope, UnitOfWork};
 
 use crate::commands::metadata::RegisterPermissionCommand;
 use crate::error::{AppError, MetricsError};
+use crate::event::{MetaEvent, MetaEventStackPublisher};
 use crate::queries::metrics::GetMetricsQuery;
 use crate::services::MetadataService;
 use crate::services::MetricsService;
@@ -32,15 +33,21 @@ const CACHE_GROUP: &str = "metrics";
 /// Os ports chegam injetados e o que sai é o contrato: o tipo concreto não tem
 /// nome fora deste arquivo, então nada além do provider consegue depender do
 /// formato dele.
-pub(crate) fn metrics_service<Q, C>(
+pub(crate) fn metrics_service<Q, C, E>(
     queries: Q,
     views: C,
-) -> impl MetricsService + Sync + Clone + use<Q, C> + 'static
+    events: E,
+) -> impl MetricsService + Sync + Clone + use<Q, C, E> + 'static
 where
     Q: QueryRepository + Send + Sync + Clone + 'static,
     C: ViewCacheRepository + Send + Sync + Clone + 'static,
+    E: MetaEventStackPublisher + Send + Sync + Clone + 'static,
 {
-    MetricsServiceImpl { queries, views }
+    MetricsServiceImpl {
+        queries,
+        views,
+        events,
+    }
 }
 
 /// A chave do painel.
@@ -51,17 +58,20 @@ where
 /// velho aqui é o TTL do cache de leitura, na `infra`.
 /// A implementação, genérica sobre os ports que consome.
 #[derive(Clone)]
-struct MetricsServiceImpl<Q, C> {
+struct MetricsServiceImpl<Q, C, E> {
     /// Quem executa um DQL contra o banco.
     queries: Q,
     /// O cache do lado de leitura.
     views: C,
+    /// Onde um acerto de cache é registrado, para quem quiser saber.
+    events: E,
 }
 
-impl<Q, C> MetricsService for MetricsServiceImpl<Q, C>
+impl<Q, C, E> MetricsService for MetricsServiceImpl<Q, C, E>
 where
     Q: QueryRepository + Send + Sync,
     C: ViewCacheRepository + Send + Sync,
+    E: MetaEventStackPublisher + Send + Sync,
 {
     async fn declare_permissions<M: MetadataService + Send + Sync>(
         &self,
@@ -91,6 +101,7 @@ where
         let key = dql.cache_key();
 
         if let Some(hit) = self.views.get(CACHE_GROUP, &key).await? {
+            self.events.emit(MetaEvent::ViewCacheHit);
             return Ok(hit);
         }
 

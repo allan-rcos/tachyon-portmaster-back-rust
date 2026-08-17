@@ -3,6 +3,7 @@
 use portmaster_domain::DomainProvider;
 use portmaster_infra::InfraProvider;
 
+use crate::event::EventProvider;
 use crate::services::intern::account_service_impl::account_service;
 use crate::services::intern::container_service_impl::container_service;
 use crate::services::intern::manifest_service_impl::manifest_service;
@@ -37,6 +38,7 @@ impl ServicesProvider {
             DomainProvider::auth_table_module(),
             InfraProvider::query_repository()?,
             InfraProvider::view_cache_repository(),
+            EventProvider::meta_event_stack(),
         ))
     }
 
@@ -48,6 +50,7 @@ impl ServicesProvider {
             DomainProvider::container_table_module(),
             InfraProvider::query_repository()?,
             InfraProvider::view_cache_repository(),
+            EventProvider::meta_event_stack(),
         ))
     }
 
@@ -91,6 +94,7 @@ impl ServicesProvider {
         Ok(metrics_service(
             InfraProvider::query_repository()?,
             InfraProvider::view_cache_repository(),
+            EventProvider::meta_event_stack(),
         ))
     }
 
@@ -102,6 +106,7 @@ impl ServicesProvider {
             DomainProvider::product_table_module(),
             InfraProvider::query_repository()?,
             InfraProvider::view_cache_repository(),
+            EventProvider::meta_event_stack(),
         ))
     }
 
@@ -112,6 +117,7 @@ impl ServicesProvider {
             DomainProvider::role_table_module(),
             InfraProvider::query_repository()?,
             InfraProvider::view_cache_repository(),
+            EventProvider::meta_event_stack(),
         ))
     }
 
@@ -136,6 +142,7 @@ impl ServicesProvider {
             DomainProvider::user_table_module(),
             InfraProvider::query_repository()?,
             InfraProvider::view_cache_repository(),
+            EventProvider::meta_event_stack(),
         ))
     }
 }

@@ -46,6 +46,10 @@ pub async fn router(config: ApiConfig, jwt: JwtConfig) -> anyhow::Result<Router>
         .layer(MiddlewareProvider::recover())
         .layer(MiddlewareProvider::decode())
         .layer(MiddlewareProvider::encode())
+        // O que pergunta à pilha vem antes do que a abre: `.layer` empilha de
+        // dentro para fora, então o de baixo é o mais externo dos dois.
+        .layer(MiddlewareProvider::cache_status())
+        .layer(MiddlewareProvider::meta_events())
         .layer(MiddlewareProvider::logging())
         .layer(MiddlewareProvider::request_id()))
 }
