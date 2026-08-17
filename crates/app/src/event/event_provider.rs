@@ -6,9 +6,8 @@ use crate::event::meta_event_stack_subscriber::MetaEventStackSubscriber;
 
 /// A pilha de eventos, já como contrato.
 ///
-/// Namespace estático, no molde do ADR 0011. Não há o que memoizar: o estado
-/// mora na tarefa, e o que este factory devolve é um ZST — construí-lo a cada
-/// chamada custa exatamente nada.
+/// Ver `docs/adr/0011-static-providers-one-per-directory.md`. Nada é guardado
+/// aqui: o estado da pilha é da tarefa, não de quem a entrega.
 ///
 /// Devolve os **dois** contratos de uma vez porque é um objeto só visto de dois
 /// lados. Quem o recebe escolhe qual metade declara: o `ServicesProvider` o

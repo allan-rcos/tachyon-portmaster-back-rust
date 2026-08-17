@@ -13,15 +13,20 @@
 //! É aqui que a autorização acontece. Cada caso de uso protegido declara no
 //! construtor a permissão que exige e a confere na primeira linha, contra o
 //! `UserContext` que veio no Command — o contexto chega por argumento, nunca de
-//! um estado global. É também o único lugar que abre o escopo da tarefa: o
-//! `MasterScope::run` marca onde a unidade de trabalho começa e termina, e a
-//! camada não sabe o que a `infra` carrega dentro dele.
+//! um estado global. É também quem abre o escopo da unidade de trabalho: o
+//! `MasterScope::run` marca onde ela começa e termina, e a camada não sabe o que
+//! a `infra` carrega dentro dele.
+//!
+//! O outro escopo por tarefa que existe é o da [`event`], e ele é aberto **pela
+//! apresentação**: um caso de uso só escreve nele, porque quem lê o que ele
+//! registrou é um middleware.
 //!
 //! ## O que esta camada reexporta, e por quê
 //!
 //! O `api-http` conhece só o `app`. Então tudo que ele precisa e que nasce
 //! abaixo — o trait `User` para mapear ao fio, as Views de leitura, o `Logger`,
-//! os geradores de id — sai daqui. Não é conveniência: é o que mantém o grafo de
+//! os geradores de id — sai daqui, junto do que nasce nesta camada e a borda
+//! consome, como a pilha de eventos. Não é conveniência: é o que mantém o grafo de
 //! dependências com uma seta só entre cada par de camadas.
 
 #![forbid(unsafe_code)]
@@ -52,7 +57,6 @@ pub mod services;
 
 pub use bootstrap::app_provider::AppProvider;
 pub use config::AppSecrets;
-pub use event::{MetaEvent, MetaEventStackSubscriber};
 
 // --- Reexports para a apresentação -----------------------------------------
 
@@ -72,6 +76,13 @@ pub mod domain {
 
 /// Os read models do lado de leitura.
 pub use portmaster_infra::query::views;
+
+/// A pilha de eventos da tarefa, só o lado de leitura.
+///
+/// O que um caso de uso registrou sobre como produziu a resposta, para um
+/// middleware perguntar depois. Emitir não atravessa: o contrato de escrita é
+/// `pub(crate)`, e é isso que mantém a emissão em quem tem o que emitir.
+pub use event::{MetaEvent, MetaEventStackSubscriber};
 
 /// O log estruturado.
 ///

@@ -90,7 +90,7 @@ struct ContainerServiceImpl<R, T, Q, C, E> {
     queries: Q,
     /// O cache do lado de leitura.
     views: C,
-    /// Onde um acerto de cache é registrado, para quem quiser saber.
+    /// Onde este caso de uso registra o que a borda precisa saber.
     events: E,
 }
 

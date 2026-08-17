@@ -6,6 +6,12 @@
 //!
 //! Nem todo layer tem contexto. `recover` e `timeout` não guardam nada da
 //! requisição; são middleware e só.
+//!
+//! E nem todo contexto mora aqui. `meta_event` e `cache_status` trabalham sobre
+//! a pilha de eventos, que é do `app`: quem emite é um caso de uso, e um escopo
+//! definido nesta camada estaria fora do alcance de quem escreve nele. O par
+//! continua o mesmo — um layer abre, outro lê —, só que o `task_local!` está do
+//! outro lado da fronteira e chega aqui como contrato.
 
 pub(crate) mod cache_status_layer;
 pub(crate) mod cookie_context;

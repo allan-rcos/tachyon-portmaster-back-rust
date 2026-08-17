@@ -3,9 +3,14 @@
 //! ## Quem usa o quê
 //!
 //! **Abrir** um escopo é assunto de middleware, e **consumir** o que há dentro
-//! dele é assunto de controller. A divisão do diretório é essa e nada mais: os
-//! `*_port.rs` daqui são o que um controller injeta, e [`intern`] guarda os
-//! layers que abrem os escopos e os contextos que os atendem.
+//! dele é, em geral, assunto de controller. A divisão do diretório é essa e nada
+//! mais: os `*_port.rs` daqui são o que um controller injeta, e [`intern`] guarda
+//! os layers que abrem os escopos e os contextos que os atendem.
+//!
+//! A exceção é o escopo cujo consumidor também é middleware — a pilha de eventos,
+//! onde um layer abre e outro lê para carimbar a resposta. Ali não há porta neste
+//! diretório, porque não há controller no caminho: o contrato vem do `app`, que é
+//! de quem escreve na pilha.
 //!
 //! É o que fecha a porta para o abuso óbvio. O escritor de cada contexto é
 //! `pub(super)`, alcançado só pelo layer irmão — de fora de `intern` não há
