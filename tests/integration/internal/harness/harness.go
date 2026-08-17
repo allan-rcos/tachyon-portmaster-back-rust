@@ -27,16 +27,24 @@ type Environment struct {
 	sourceURL  string
 	migrateDSN string
 	container  testcontainers.Container
+
+	// Ainda não serviu a teste nenhum, e por isso dispensa o Reset.
+	fresh bool
 }
 
 // Reset returns the environment to a clean, migrated, freshly booted state.
 // Each environment resets independently, so parallel tests never contend.
 //
-// The restart is not optional. Dropping the schema also drops the ENGINE=MEMORY
-// registries, and the application fills those exactly once, at WorkerStart —
-// permissions and the `refresh-token` marker group among them. Without a restart
-// every test after the first would run against a server whose catalogue no
-// longer exists in the database it is talking to.
+// The restart is what clears the API's in-process state, and that is why it is
+// not optional here. The view cache holds entries describing rows the drop just
+// deleted — its TTL is 30s, longer than a story takes — and the marker map still
+// holds the previous test's refresh sessions. Neither lives in the database, so
+// dropping the schema does not touch them; only a new process does.
+//
+// It is *not* about repopulating a catalogue. Permissions and marker groups are
+// in-process registries in this port (see ADR 0009), so a schema drop never
+// touched them: no table in db/migrations is ENGINE=MEMORY, and the seven that
+// exist are all InnoDB.
 //
 // Seeding then goes through POST /setup rather than SQL, which is the endpoint's
 // own reason for existing: a fresh deployment has no user, and no user can be
@@ -70,6 +78,20 @@ func (p *Pool) Lease(t *testing.T) *Environment {
 	t.Helper()
 	e := <-p.ch
 	t.Cleanup(func() { p.ch <- e })
+
+	// SetupPool já entrega o ambiente migrado e recém-subido, então o primeiro
+	// lease não tem o que limpar: derrubar o schema, remigrá-lo e reiniciar a
+	// API refaria, em ~12s, exatamente o estado que acabou de ser montado.
+	//
+	// Com o pool do tamanho do número de histórias, todo lease é um primeiro
+	// lease e nenhum Reset roda. A bandeira existe para o caso contrário — uma
+	// história a mais que ambientes faz alguém ser alugado duas vezes, e aí o
+	// Reset volta a ser obrigatório pelos motivos que o doc dele explica.
+	if e.fresh {
+		e.fresh = false
+		return e
+	}
+
 	e.Reset(context.Background(), t)
 	return e
 }
@@ -131,6 +153,7 @@ func SetupPool(ctx context.Context) (*Pool, func(), error) {
 				sourceURL:  sourceURL,
 				migrateDSN: dsn,
 				container:  container,
+				fresh:      true,
 			}
 			return nil
 		})

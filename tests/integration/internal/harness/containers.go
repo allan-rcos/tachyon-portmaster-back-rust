@@ -157,10 +157,9 @@ func startAPI(ctx context.Context, networkName, dbName string) (testcontainers.C
 // restartAPI stops and starts an API container, waits for it to serve /info
 // again, and returns its new base URL.
 //
-// This is how the application's boot-time state is rebuilt after a reset: the
-// ENGINE=MEMORY registries (permissions, marker groups) are filled at
-// WorkerStart and nowhere else, so dropping the schema without restarting would
-// leave the server pointing at a catalogue that no longer exists.
+// A new process is the only way to clear what the application holds in memory —
+// the view cache and the live markers — because none of it is in the database
+// for a schema drop to take away. See Environment.Reset for when that matters.
 //
 // It returns the URL rather than mutating nothing because Docker assigns a
 // *fresh* host port on every start: the mapping the container had before the
@@ -174,8 +173,8 @@ func restartAPI(ctx context.Context, container testcontainers.Container) (string
 		return "", fmt.Errorf("start api: %w", err)
 	}
 
-	// Start() returns once the container is running, which is well before
-	// OpenSwoole has booted its workers and re-registered the metadata.
+	// Start() returns once the container is running, which is before the
+	// process has bound its port and answered anything.
 	strategy := wait.ForHTTP("/info").
 		WithPort("8000/tcp").
 		WithStartupTimeout(90 * time.Second)
