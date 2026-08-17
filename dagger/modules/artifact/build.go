@@ -3,9 +3,19 @@ package main
 import (
 	"context"
 	"dagger/artifact/internal/dagger"
+	_ "embed"
 	"fmt"
 	"strings"
 )
+
+// O README que acompanha o bundle, com {{VERSION}} trocado na montagem.
+//
+// Embutido no módulo em vez de gerado por `printf` no contêiner: são cento e
+// poucas linhas de markdown, e escrevê-las dentro de um heredoc de shell as
+// tornaria ilegíveis e reféns de escaping.
+//
+//go:embed bundle_readme.md
+var bundleReadme string
 
 // Build monta os dois tarballs e devolve o diretório dist/.
 //
@@ -40,6 +50,7 @@ func (m *Artifact) Build(
 	api := fmt.Sprintf("portmaster-api-%s-linux-x86_64.tar.zst", version)
 	migrations := fmt.Sprintf("portmaster-migrations-%s.tar.zst", version)
 	image := fmt.Sprintf("portmaster-api-%s-image.tar", version)
+	bundle := fmt.Sprintf("portmaster-%s-bundle.tar.zst", version)
 
 	// A imagem sai do MESMO Dockerfile que a suíte de integração sobe, e é essa
 	// a razão de ela vir daqui em vez de ser montada à mão em volta do binário
@@ -78,7 +89,23 @@ func (m *Artifact) Build(
 		// A imagem não leva zstd por fora: as camadas dela já saem comprimidas
 		// dentro do próprio arquivo OCI, e uma segunda passada custaria minutos
 		// de CPU para não tirar quase nada.
-		WithFile("/out/"+image, imageTar).
+		//
+		// O 0644 é explícito: o tarball chega do Dagger com 0600, e um asset de
+		// release que só o dono lê surpreende quem o extrai ou o serve.
+		WithFile("/out/"+image, imageTar, dagger.ContainerWithFileOpts{Permissions: 0o644}).
+		// O bundle é o mesmo conteúdo remontado para quem baixa **um** arquivo e
+		// quer conseguir subir a API sem procurar mais nada: binário, imagem e as
+		// instruções de cada forma de rodar. Os três assets acima continuam
+		// existindo intactos, porque é neles que o contrato com o back-php e a
+		// role do Ansible se apoiam.
+		WithFile("/stage/bundle/portmaster-api-image.tar", imageTar,
+			dagger.ContainerWithFileOpts{Permissions: 0o644}).
+		WithNewFile("/stage/bundle/README.md",
+			strings.ReplaceAll(bundleReadme, "{{VERSION}}", version)).
+		WithExec([]string{"install", "-m", "0755",
+			"/stage/api/" + apiBinary, "/stage/bundle/"}).
+		WithExec([]string{"sh", "-c", fmt.Sprintf(
+			`tar -C /stage/bundle -c . | zstd -19 -q -o /out/%s`, bundle)}).
 		// Caminhos relativos dentro do arquivo de checksum, para o `sha256sum -c`
 		// funcionar a partir de dist/ independentemente de onde foi construído.
 		WithExec([]string{"sh", "-c",
