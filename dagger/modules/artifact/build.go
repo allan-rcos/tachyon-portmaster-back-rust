@@ -39,6 +39,24 @@ func (m *Artifact) Build(
 
 	api := fmt.Sprintf("portmaster-api-%s-linux-x86_64.tar.zst", version)
 	migrations := fmt.Sprintf("portmaster-migrations-%s.tar.zst", version)
+	image := fmt.Sprintf("portmaster-api-%s-image.tar", version)
+
+	// A imagem sai do MESMO Dockerfile que a suíte de integração sobe, e é essa
+	// a razão de ela vir daqui em vez de ser montada à mão em volta do binário
+	// acima: o que se publica é o que foi exercitado.
+	//
+	// Ela traz um binário diferente do que vai no tarball, e isso é esperado —
+	// o tarball é compilado para musl a partir da imagem Debian do toolchain, e
+	// o da imagem nasce na `rust:1-alpine`, que é musl nativa. Mesmo código, dois
+	// caminhos de compilação, dois artefatos para dois modos de implantar.
+	//
+	// `off` nas debug assertions: é a imagem de produção. Quem quer a que serve
+	// HTTP puro pede por ela em `dagger call api-image`.
+	imageTar := source.DockerBuild(dagger.DirectoryDockerBuildOpts{
+		BuildArgs: []dagger.BuildArg{
+			{Name: "RUST_DEBUG_ASSERTIONS", Value: "off"},
+		},
+	}).AsTarball()
 
 	return dag.Toolchain().Dev(dagger.ToolchainDevOpts{Source: source}).
 		WithExec([]string{
@@ -57,9 +75,13 @@ func (m *Artifact) Build(
 		WithExec([]string{"sh", "-c", fmt.Sprintf(
 			`tar -C /stage/api -c . | zstd -19 -q -o /out/%s
 			 tar -C /stage/migrations -c . | zstd -19 -q -o /out/%s`, api, migrations)}).
+		// A imagem não leva zstd por fora: as camadas dela já saem comprimidas
+		// dentro do próprio arquivo OCI, e uma segunda passada custaria minutos
+		// de CPU para não tirar quase nada.
+		WithFile("/out/"+image, imageTar).
 		// Caminhos relativos dentro do arquivo de checksum, para o `sha256sum -c`
 		// funcionar a partir de dist/ independentemente de onde foi construído.
 		WithExec([]string{"sh", "-c",
-			`cd /out && for f in *.tar.zst; do sha256sum "$f" > "$f.sha256"; done`}).
+			`cd /out && for f in *.tar.zst *.tar; do sha256sum "$f" > "$f.sha256"; done`}).
 		Directory("/out"), nil
 }

@@ -4,6 +4,8 @@
 
 Esta API é uma **segunda implementação da mesma API** que `back-php` serve, e o contrato de artefato é deliberadamente idêntico: os mesmos nomes de asset, o mesmo par de tarballs, o mesmo `.sha256` ao lado. A infraestrutura escolhe qual das duas implanta sem saber que a linguagem mudou.
 
+> **O par é o contrato, e não mudou.** Ao lado dele esta variante publica também `portmaster-api-<versão>-image.tar`, a imagem de contêiner que sai do mesmo `Dockerfile` que a suíte de integração sobe. É um asset **a mais**, nunca no lugar de um: quem lê a release pelo par não percebe que ela está lá.
+
 O que difere é o conteúdo. Aqui o tarball da API é **um binário estático musl**; no PHP é `src/` mais `vendor/` minificados. Quem precisa saber a diferença é a role do Ansible que desempacota — ver `ansible/roles/rust-api` na infraestrutura.
 
 -----

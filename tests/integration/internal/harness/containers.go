@@ -28,7 +28,24 @@ const (
 // refuses to send a Secure cookie over the http:// URL these containers expose —
 // so without the arg the whole session story would fail on a cookie the server
 // did set.
+//
+// INTEGRATION_API_PREBUILT skips the build entirely, and the Dagger pipeline is
+// what sets it: there the image is built by Dagger — same Dockerfile, same build
+// arg — and loaded into the daemon under this tag before the suite starts.
+// Building again would rebuild what is already there, and the cost is not the
+// compile (that one is cached) but the build context: this repository lives on a
+// FUSE filesystem, where transferring it and re-checking the COPY layers costs
+// around seventy seconds per run.
+//
+// The variable is opt-in rather than a presence check on the tag. Reusing
+// whatever image happens to carry the tag would silently test a stale binary the
+// first time someone forgot to rebuild — so an unset variable always builds,
+// which is what keeps `go test` run by hand correct on its own.
 func buildAPIImage(ctx context.Context, repoRoot string) error {
+	if os.Getenv("INTEGRATION_API_PREBUILT") != "" {
+		return nil
+	}
+
 	cmd := exec.CommandContext(ctx, "docker", "build",
 		"--build-arg", "RUST_DEBUG_ASSERTIONS=on",
 		"-t", apiImageTag, repoRoot)

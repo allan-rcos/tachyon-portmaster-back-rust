@@ -29,6 +29,12 @@
 // mesmo par de tarballs, o mesmo .sha256 ao lado. A infraestrutura escolhe qual
 // das duas implanta sem saber que a linguagem mudou.
 //
+// O par é o contrato, e continua intocado. Ao lado dele esta variante publica
+// também uma imagem de contêiner — asset a mais, nunca no lugar de um —, porque
+// um binário estático se empacota em imagem por quase nada e nem toda
+// implantação quer um tarball. Quem lê a release pelo par não percebe que ela
+// está lá.
+//
 // O que difere é o conteúdo: aqui o tarball da API é um binário estático musl,
 // e o do PHP é src/ mais vendor/ minificados. É a role do Ansible que precisa
 // saber a diferença — ver ansible/roles/rust-api na infraestrutura.

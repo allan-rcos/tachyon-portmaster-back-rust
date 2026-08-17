@@ -23,6 +23,12 @@ import (
 // 32768, que é uma porta do HOST DO DAEMON. Do container de teste,
 // `127.0.0.1:32768` é outro lugar, e a suíte morre com connection refused depois
 // de minutos construindo a imagem.
+//
+// A imagem da API NÃO é construída aqui dentro. Ela vem pronta do
+// [BackRust.ApiImage], entra como tarball e é carregada no daemon antes do
+// `go test` — e o harness, vendo `INTEGRATION_API_PREBUILT`, pula o
+// `docker build` que refaria o que já está feito. Ver o doc daquela função para
+// por que o build mudou de lado.
 // ---------------------------------------------------------------------------
 func (m *BackRust) IntegrationTest(
 	ctx context.Context,
@@ -40,6 +46,8 @@ func (m *BackRust) IntegrationTest(
 		testCmd += " '" + strings.ReplaceAll(a, "'", `'\''`) + "'"
 	}
 
+	image := m.ApiImage(source, "on").AsTarball()
+
 	ctr := dag.Container().
 		From("docker:28-dind").
 		WithExec([]string{"apk", "add", "--no-cache", "git"}).
@@ -53,6 +61,11 @@ func (m *BackRust) IntegrationTest(
 		WithMountedCache("/root/.cache/go-build", dag.CacheVolume("rust-go-build")).
 		// O Ryuk não tem o que vigiar aqui: o daemon inteiro é descartado no fim.
 		WithEnvVariable("TESTCONTAINERS_RYUK_DISABLED", "true").
+		// O harness lê isto e não constrói imagem nenhuma: a que ele usaria já
+		// está carregada. Sem a variável ele constrói, que é o que mantém um
+		// `go test` rodado à mão, fora daqui, funcionando sozinho.
+		WithEnvVariable("INTEGRATION_API_PREBUILT", "1").
+		WithMountedFile("/tmp/api-image.tar", image).
 		WithMountedDirectory("/work", source).
 		WithWorkdir("/work")
 
@@ -70,6 +83,15 @@ func (m *BackRust) IntegrationTest(
 				sleep 1
 			done
 			docker info >/dev/null 2>&1 || { echo "dockerd nao subiu"; cat /tmp/dockerd.log; exit 1; }
+
+			# O tarball do Dagger e um arquivo OCI, e o "docker load" devolve
+			# "Loaded image:" ou "Loaded image ID:" conforme a referencia venha ou
+			# nao anotada. Marcar pelo que sair cobre os dois casos.
+			loaded=$(docker load -q -i /tmp/api-image.tar | tail -n1 \
+				| sed -e 's/^Loaded image ID: //' -e 's/^Loaded image: //')
+			[ -n "$loaded" ] || { echo "docker load nao devolveu imagem"; exit 1; }
+			docker tag "$loaded" ` + apiImageTag + `
+
 			cd tests/integration
 			` + testCmd + `
 		`}, dagger.ContainerWithExecOpts{
